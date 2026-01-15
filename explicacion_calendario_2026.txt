@@ -1,0 +1,95 @@
+Resumen de lo realizado
+
+- Construcción de un dashboard web (HTML + React 18 + Tailwind) para junio–septiembre 2026 (lunes a viernes), con vista tipo Gantt por integrante.
+- Carga de vacaciones reales por días para los 6 integrantes y cálculo diario de cobertura.
+- Lógica de turnos: alternancia semanal del grupo de tarde (18h) y asignación automática de O42 para garantizar cobertura hasta las 18h todos los días.
+- Límite de intensivas (O30): máximo 3 personas por día, con reparto rotativo y preferencia interna equilibrada.
+- Exclusión de intensiva en semanas donde el empleado tiene vacaciones (evita solapamiento semana de intensiva con vacaciones).
+- Alertas: cobertura mínima de 3 personas, ausencia de 18h, más de 3 intensivas, falta de presencia en oficina por grupos.
+- Interactividad: modal por día, filtro por integrante, y botón de “Resetear Plan” para recalcular con la última lógica.
+
+Condiciones aplicadas
+
+- Cobertura 18h (L–J): obligatorio que haya al menos un O42 (18:00).
+- Viernes: solo es necesario cubrir hasta las 17:00; el turno O42 termina a las 14:00 y se garantiza al menos un O40 en oficina ese día.
+- Alternancia semanal del turno de tarde (18h):
+  - Semana par (índice de semana 0, 2, 4…): Grupo A tarda.
+  - Semana impar (índice 1, 3, 5…): Grupo B tarda.
+- Máximo 3 personas en intensiva (30h) por día.
+- No asignar intensiva a empleados en semanas con vacaciones (L–V) para evitar solapamiento.
+- Presencia por grupos:
+  - Siempre al menos 1 de entre {Enrique, Luis, David} en oficina.
+  - Siempre al menos 1 de entre {Jose, Ariel, Kike} en oficina.
+  - Si falta alguno, se marca “O” para forzar presencia en oficina según disponibilidad.
+- Días en oficina fijos (teletrabajo/oficina) respetados por integrante.
+- Rango cubierto: junio–septiembre 2026, lunes a viernes.
+
+Detalles técnicos del algoritmo
+
+- Días generados con weekIndex semanal (incrementa los lunes).
+- Asignación base:
+  - Grupo en tarde → O42 todos los días de esa semana.
+  - Grupo no tarde → O40 por defecto.
+- Intensivas (O30):
+  - Selección entre los no tarde y no vacaciones.
+  - Rotación determinista (por id + weekIndex) para distribuir de forma estable.
+- Máximo 3 por día; el resto quedan en O40.
+- Garantía de 18h:
+  - Lunes a Jueves: si no queda O42 en un día, se reasigna automáticamente un disponible a O42.
+  - Viernes: no se exige O42; se garantiza al menos un O40 en oficina para cubrir hasta las 17:00.
+- Alertas:
+  - Cálculo diario de present/shift18hCount (solo L–J)/intensiveCount y presencia por grupos para pintar alertas.
+
+Uso
+
+- Abrir calendario_2026.html en navegador.
+- Filtro por integrante en el selector (arriba a la derecha).
+- Botón “Resetear Plan” para regenerar la planificación con la lógica actual.
+- Click en una celda para ver detalles del día y del integrante.
+
+Teletrabajo fijo (actualizado)
+
+- Kike: teletrabajo Jueves (oficina L, M, X, V)
+- Jose: teletrabajo Martes (oficina L, X, J, V)
+- Ariel: teletrabajo Miércoles (oficina L, M, J, V)
+- Enrique: teletrabajo Lunes, Martes y Viernes (oficina X, J)
+- Luis: teletrabajo Miércoles, Jueves y Viernes (oficina L, M)
+- David: teletrabajo Lunes, Martes y Miércoles (oficina J, V)
+
+Impacto en condiciones de oficina por grupos
+
+- Con los días fijos de teletrabajo anteriores y las vacaciones cargadas, el sistema mantiene que siempre haya al menos:
+  - 1 de {Enrique, Luis, David} en oficina
+  - 1 de {Jose, Ariel, Kike} en oficina
+- Si en algún día faltara presencia por vacaciones concurrentes, se fuerza “O” en ese día (visible en la celda y contabilizado en “Días con forzado oficina (O)” del panel).
+- Actualmente, la planificación garantiza 18h todos los días (al menos un O42 diario).
+
+Semanas de intensiva (objetivo y limitaciones)
+
+- Objetivo: intentar que cada integrante alcance al menos 7 semanas de intensiva.
+- Restricciones: máximo 2 intensivas por día; rango junio–septiembre ~17 semanas; capacidad total ≈ 34 semanas intensiva (2 por semana).
+- Con 6 integrantes y 34 semanas disponibles, el promedio teórico ≈ 5.7 semanas por integrante; no es posible que todos tengan ≥7 simultáneamente con el límite de 2 por día.
+- Nueva estrategia aplicada para alcanzar ≥7: asignación semanal amplia de intensiva (O30) a todos los integrantes disponibles excepto un “ancla” de tarde (O42) por semana y grupo, manteniendo siempre al menos un O42 diario. No se asigna intensiva en semanas con vacaciones del integrante.
+- Resultado: distribución que eleva las semanas intensiva de cada integrante; pueden aparecer más de 2 intensivas por día, manteniendo aún así cobertura 18h y presencia por grupos.
+
+Contadores por integrante (dashboard)
+
+- Semanas de intensiva: se cuentan semanas completas con O30 (L–V) para el integrante.
+- Horas totales en el periodo: suma diaria por tipo (O30=6h, O40=8h, O42=9h, V=0h).
+
+Permitir hasta 3 intensivas diarias
+
+- Se permite un máximo de 3 personas en intensiva (O30) por día, siempre con al menos un O42 diario y presencia por grupos garantizada.
+- Reparto semanal: selección de hasta 3 integrantes (sin vacaciones esa semana y con menos semanas acumuladas) excluyendo el “ancla” de tarde (O42).
+- Se mantiene tope de 7 semanas intensiva por integrante: nadie supera 7; se usa la mayor capacidad (3/día) para acercar a todos al objetivo mínimo 7.
+
+Cobertura adicional cuando hay vacaciones en turno de 40h
+
+- Si hay vacaciones en el grupo no-tarde (turno de 40h) en una semana, se reserva al menos un integrante de ese grupo en O40 toda la semana (no intensiva) para cubrir el turno de 40h.
+- Este ajuste evita que el grupo no-tarde quede sin O40 por exceso de intensivas cuando falta alguien por vacaciones.
+
+Cobertura específica de los viernes
+
+- Los viernes, el turno de 42h finaliza a las 14:00. Para asegurar presencia en oficina más allá de esa hora, se garantiza que al menos un integrante esté en 40h (O40) y en oficina ese día.
+- Si no hay ningún O40 en oficina por configuración de días fijos, se fuerza presencia en oficina (“O”) asignando O40 a un integrante que no tiene viernes como día de oficina (prioridad: Luis si disponible).
+- Caso ejemplar: el viernes 26/06/2026 se fuerza “O” para Luis para cubrir la tarde.
