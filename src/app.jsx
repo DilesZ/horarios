@@ -240,7 +240,10 @@ const generateInitialSchedule = () => {
       });
     });
 
-    const selected = safeForIntensive.filter((emp) => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
+    const selected = safeForIntensive.sort((a, b) => intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id])
+      .filter((emp) => intensiveWeeksByEmp[emp.id] < 7)
+      .slice(0, 3);
+
     selected.forEach((emp) => {
       weekDays.forEach((day) => {
         if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
