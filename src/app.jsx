@@ -172,297 +172,95 @@ const generateInitialSchedule = () => {
     weeks[day.weekIndex] = weeks[day.weekIndex] || [];
     weeks[day.weekIndex].push(day);
   });
+  // Asignación de semanas intensivas (O30) - Objetivo 7 semanas por persona
   const intensiveWeeksByEmp = {};
   EMPLOYEES.forEach((emp) => (intensiveWeeksByEmp[emp.id] = 0));
+
   Object.keys(weeks).forEach((wiStr) => {
     const wi = parseInt(wiStr, 10);
     const weekDays = weeks[wi];
+
+    // Identificar grupo de tarde (O42) para esta semana
     const lateGroupA = SHIFT_BASE_A_18H ? wi % 2 === 0 : wi % 2 !== 0;
     const lateGroup = lateGroupA ? "A" : "B";
-    const lateAvailable = EMPLOYEES.filter((emp) => emp.group === lateGroup && !vacWeeksByEmp[emp.id].has(wi)).sort((a, b) => {
-      const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
-      return diff !== 0 ? diff : a.id - b.id;
-    });
-    const anchor = lateAvailable.length ? lateAvailable[0] : null;
-    const allEligible = EMPLOYEES.filter((emp) => !vacWeeksByEmp[emp.id].has(wi) && (!anchor || emp.id !== anchor.id));
-    allEligible.sort((a, b) => {
-      const diff = intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id];
-      return diff !== 0 ? diff : a.id - b.id;
-    });
-    const nonLate = EMPLOYEES.filter((emp) => emp.group !== lateGroup);
-    const nonLateHasVacation = nonLate.some((emp) => vacWeeksByEmp[emp.id].has(wi));
-    let reserve = null;
-    if (nonLateHasVacation) {
-      const reserveCandidates = nonLate.filter((emp) => !vacWeeksByEmp[emp.id].has(wi));
-      reserveCandidates.sort((a, b) => {
-        const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
-        return diff !== 0 ? diff : a.id - b.id;
-      });
-      reserve = reserveCandidates[0] || null;
-    }
-    const eligibleIntensive = reserve ? allEligible.filter((emp) => emp.id !== reserve.id) : allEligible;
 
-    // Filtrar candidatos que NO pueden tener O30 porque son necesarios para cobertura de oficina
-    const safeForIntensive = eligibleIntensive.filter((emp) => {
-      // Verificar cada día de la semana
-      return weekDays.every((day) => {
-        const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
-        const isEmpInOffice = empOfficeDays.includes(day.weekdayLetter);
+    // 1. Asignar O42 primero al anchor (uno del grupo de tarde que no esté de vacas)
+    const lateAvailable = EMPLOYEES.filter(e => e.group === lateGroup && !vacWeeksByEmp[e.id].has(wi))
+      .sort((a, b) => a.id - b.id);
+    const anchor = lateAvailable[0] || null;
 
-        // Si no está en oficina ese día, puede tener O30
-        if (!isEmpInOffice) return true;
-
-        // Si está en oficina, verificar que haya otro del mismo grupo O que el otro grupo tenga O40
-        const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
-        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
-
-        // Verificar si hay otro del mismo grupo en oficina
-        const othersInOffice = EMPLOYEES.filter((other) => {
-          if (other.id === emp.id) return false;
-          if (!empGroup.includes(other.name)) return false;
-          if (vacWeeksByEmp[other.id].has(wi)) return false;
-          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
-          return otherOfficeDays.includes(day.weekdayLetter);
-        });
-
-        // Verificar si el otro grupo tiene O40 en oficina
-        const otherGroupHasO40 = EMPLOYEES.some((other) => {
-          if (!otherGroup.includes(other.name)) return false;
-          if (vacWeeksByEmp[other.id].has(wi)) return false;
-          const currentType = schedule[other.id][day.id];
-          if (currentType !== "O40") return false;
-          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
-          return otherOfficeDays.includes(day.weekdayLetter);
-        });
-
-        // Puede tener O30 si hay otro de su grupo O el otro grupo tiene O40 en oficina
-        return othersInOffice.length > 0 || otherGroupHasO40;
-      });
-    });
-
-    const selected = safeForIntensive.sort((a, b) => intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id])
-      .filter((emp) => intensiveWeeksByEmp[emp.id] < 7)
-      .slice(0, 3);
-
-    selected.forEach((emp) => {
-      weekDays.forEach((day) => {
-        if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
-      });
-      intensiveWeeksByEmp[emp.id] += 1;
-    });
     if (anchor) {
-      weekDays.forEach((day) => {
+      weekDays.forEach(day => {
         if (schedule[anchor.id][day.id] !== "V") schedule[anchor.id][day.id] = "O42";
       });
     }
-    EMPLOYEES.forEach((emp) => {
+
+    // 2. Determinar candidatos aptos para Intensiva (O30) esta semana
+    // Deben no estar de vacas y no ser el anchor
+    const candidates = EMPLOYEES.filter(emp => {
+      if (vacWeeksByEmp[emp.id].has(wi)) return false;
+      if (anchor && emp.id === anchor.id) return false;
+
+      // Chequeo de seguridad: ¿puede este empleado tener O30 sin romper la oficina?
+      return weekDays.every(day => {
+        const empOfficeDays = emp.officeDays.split(",").map(d => d.trim());
+        if (!empOfficeDays.includes(day.weekdayLetter)) return true; // No está en oficina
+
+        // Si está en oficina, necesitamos que haya otro del mismo grupo 
+        // O que el otro grupo cubra con O40 (O42 ya está cubierto por anchor)
+        const myGroupNames = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
+        const otherGroupNames = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
+
+        const othersFromMyGroupInOffice = EMPLOYEES.some(other =>
+          other.id !== emp.id &&
+          myGroupNames.includes(other.name) &&
+          !vacWeeksByEmp[other.id].has(wi) &&
+          other.officeDays.split(",").map(d => d.trim()).includes(day.weekdayLetter)
+        );
+
+        if (othersFromMyGroupInOffice) return true;
+
+        // Si no hay compañeros de grupo, el otro grupo debe tener al menos un O40 en oficina (para cubrir la tarde)
+        const otherGroupHasO40 = EMPLOYEES.some(other =>
+          otherGroupNames.includes(other.name) &&
+          !vacWeeksByEmp[other.id].has(wi) &&
+          other.officeDays.split(",").map(d => d.trim()).includes(day.weekdayLetter) &&
+          schedule[other.id][day.id] === "O40"
+        );
+
+        return otherGroupHasO40;
+      });
+    });
+
+    // 3. Ordenar candidatos por quienes llevan menos semanas intensivas y elegir 3
+    candidates.sort((a, b) => intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id]);
+    const selected = candidates.filter(e => intensiveWeeksByEmp[e.id] < 7).slice(0, 3);
+
+    selected.forEach(emp => {
+      weekDays.forEach(day => {
+        if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
+      });
+      intensiveWeeksByEmp[emp.id]++;
+    });
+
+    // 4. Los que no son ni anchor ni intensiva, se quedan con el turno base (O40/O42 según semana)
+    EMPLOYEES.forEach(emp => {
       if (vacWeeksByEmp[emp.id].has(wi)) return;
       if (anchor && emp.id === anchor.id) return;
-      if (!selected.includes(emp)) {
-        weekDays.forEach((day) => {
-          if (schedule[emp.id][day.id] !== "V" && schedule[emp.id][day.id] !== "O30") {
-            const isGroupA = emp.group === "A";
-            const isTurnoTarde = SHIFT_BASE_A_18H
-              ? isGroupA
-                ? wi % 2 === 0
-                : wi % 2 !== 0
-              : isGroupA
-                ? wi % 2 !== 0
-                : wi % 2 === 0;
-            if (!isTurnoTarde) schedule[emp.id][day.id] = "O40";
-            else schedule[emp.id][day.id] = "O42";
-          }
-        });
-      }
-    });
-    weekDays.forEach((day) => {
-      if (day.weekdayLetter === "V") return;
-      const hasO42 = EMPLOYEES.some((emp) => schedule[emp.id][day.id] === "O42");
-      if (!hasO42) {
-        const lateCandidates = EMPLOYEES.filter((emp) => {
-          const current = schedule[emp.id][day.id];
-          if (current === "V") return false;
-          return emp.group === lateGroup;
-        }).sort((a, b) => a.id - b.id);
-        const pick = lateCandidates[0] || EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
-        if (pick) schedule[pick.id][day.id] = "O42";
-      }
-    });
-    weekDays.forEach((day) => {
-      if (day.weekdayLetter !== "V") return;
+      if (selected.some(s => s.id === emp.id)) return;
 
-      // Verificar presencia global O40 en oficina
-      const group1HasO40InOffice = EMPLOYEES.some(emp => {
-        if (!GROUP1.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type !== "O40") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return daysOffice.includes("V");
-      });
-
-      const group2HasO40InOffice = EMPLOYEES.some(emp => {
-        if (!GROUP2.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type !== "O40") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return daysOffice.includes("V");
-      });
-
-      const anyO40InOffice = group1HasO40InOffice || group2HasO40InOffice;
-
-      // Si no hay NADIE en oficina (de ningún grupo), forzamos a alguien.
-      // Priorizamos al Grupo 1 para liberar al Grupo 2 si es posible (según petición de usuario).
-      if (!anyO40InOffice) {
-        // Intentar Grupo 1 primero
-        let candidates = GROUP1.map(name => EMPLOYEES.find(e => e.name === name))
-          .filter(emp => emp && schedule[emp.id][day.id] !== "V")
-          .sort((a, b) => {
-            // Priorizar NO O30
-            const typeA = schedule[a.id][day.id] === "O30";
-            const typeB = schedule[b.id][day.id] === "O30";
-            if (typeA && !typeB) return 1;
-            if (!typeA && typeB) return -1;
-            return a.id - b.id;
-          });
-        let candidate = candidates[0];
-
-        // Si no hay nadie válido en Grupo 1 (todos vacas?), intentar Grupo 2
-        if (!candidate) {
-          candidates = GROUP2.map(name => EMPLOYEES.find(e => e.name === name))
-            .filter(emp => emp && schedule[emp.id][day.id] !== "V")
-            .sort((a, b) => {
-              const typeA = schedule[a.id][day.id] === "O30";
-              const typeB = schedule[b.id][day.id] === "O30";
-              if (typeA && !typeB) return 1;
-              if (!typeA && typeB) return -1;
-              return a.id - b.id;
-            });
-          candidate = candidates[0];
+      weekDays.forEach(day => {
+        if (schedule[emp.id][day.id] !== "V") {
+          const isGroupA = emp.group === "A";
+          const isTurnoTarde = SHIFT_BASE_A_18H
+            ? isGroupA ? wi % 2 === 0 : wi % 2 !== 0
+            : isGroupA ? wi % 2 !== 0 : wi % 2 === 0;
+          schedule[emp.id][day.id] = isTurnoTarde ? "O42" : "O40";
         }
-
-        if (candidate) {
-          if (schedule[candidate.id][day.id] === "O30") {
-            intensiveWeeksByEmp[candidate.id] = (intensiveWeeksByEmp[candidate.id] || 0) - 1;
-          }
-          schedule[candidate.id][day.id] = "O40";
-        }
-      }
-    });
-  });
-
-  // Compensación: Recuperar semanas intensivas perdidas
-  const weeksBeforeCompensation = {};
-  DAYS.forEach((d) => {
-    weeksBeforeCompensation[d.weekIndex] = weeksBeforeCompensation[d.weekIndex] || [];
-    weeksBeforeCompensation[d.weekIndex].push(d);
-  });
-
-  GROUP2.forEach((empName) => {
-    const emp = EMPLOYEES.find((e) => e.name === empName);
-
-    // Contar semanas intensivas actuales
-    let intensiveWeeks = 0;
-    Object.keys(weeksBeforeCompensation).forEach((wiStr) => {
-      const daysInWeek = weeksBeforeCompensation[wiStr];
-      const allO30 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
-      if (allO30) intensiveWeeks++;
-    });
-
-    // Si tiene menos de 7, intentar compensar
-    while (intensiveWeeks < 7) {
-      // Buscar un día O40 que podamos cambiar a O30 sin romper cobertura
-      let swapped = false;
-
-      for (const day of DAYS) {
-        if (schedule[emp.id][day.id] !== "O40") continue;
-        if (schedule[emp.id][day.id] === "V") continue;
-
-        // Verificar si es seguro cambiar a O30
-        const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
-        const isInOffice = empOfficeDays.includes(day.weekdayLetter);
-
-        // Verificar límite de 3 intensivas
-        const currentIntensiveCount = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
-        if (currentIntensiveCount >= 3) continue;
-
-        // Si no está en oficina, es seguro cambiar
-        if (!isInOffice) {
-          schedule[emp.id][day.id] = "O30";
-          swapped = true;
-          break;
-        }
-
-        // Si está en oficina, verificar que el otro grupo tenga O40
-        const otherGroup = GROUP1;
-        const otherGroupHasO40 = otherGroup.some((name) => {
-          const other = EMPLOYEES.find((e) => e.name === name);
-          if (!other) return false;
-          const otherType = schedule[other.id][day.id];
-          if (otherType !== "O40") return false;
-          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
-          return otherOfficeDays.includes(day.weekdayLetter);
-        });
-
-        if (otherGroupHasO40) {
-          schedule[emp.id][day.id] = "O30";
-          swapped = true;
-          break;
-        }
-      }
-
-      if (!swapped) break; // No hay más días para compensar
-
-      // Recalcular semanas intensivas
-      intensiveWeeks = 0;
-      Object.keys(weeksBeforeCompensation).forEach((wiStr) => {
-        const daysInWeek = weeksBeforeCompensation[wiStr];
-        const allO30 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
-        if (allO30) intensiveWeeks++;
       });
-    }
+    });
   });
 
-  const weeksList = {};
-  DAYS.forEach((d) => {
-    weeksList[d.weekIndex] = weeksList[d.weekIndex] || [];
-    weeksList[d.weekIndex].push(d);
-  });
-  const currentIntensiveWeeks = {};
-  EMPLOYEES.forEach((emp) => {
-    let count = 0;
-    Object.keys(weeksList).forEach((wiStr) => {
-      const daysInWeek = weeksList[wiStr];
-      const allO30 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
-      if (allO30) count += 1;
-    });
-    currentIntensiveWeeks[emp.id] = count;
-  });
-  EMPLOYEES.forEach((emp) => {
-    while (currentIntensiveWeeks[emp.id] < 7) {
-      let improved = false;
-      Object.keys(weeksList).forEach((wiStr) => {
-        if (improved) return;
-        const wi = parseInt(wiStr, 10);
-        if (vacWeeksByEmp[emp.id].has(wi)) return;
-        const daysInWeek = weeksList[wi];
-        const hasO42ForEmp = daysInWeek.some((day) => schedule[emp.id][day.id] === "O42");
-        if (hasO42ForEmp) return;
-        const allO40 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O40");
-        if (!allO40) return;
-        const canFlip = daysInWeek.every((day) => {
-          const o30Count = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
-          return o30Count < 3;
-        });
-        if (!canFlip) return;
-        daysInWeek.forEach((day) => {
-          schedule[emp.id][day.id] = "O30";
-        });
-        currentIntensiveWeeks[emp.id] += 1;
-        improved = true;
-      });
-      if (!improved) break;
-    }
-  });
   return schedule;
 };
 
