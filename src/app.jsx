@@ -161,8 +161,8 @@ const generateInitialSchedule = () => {
           ? day.weekIndex % 2 === 0
           : day.weekIndex % 2 !== 0
         : isGroupA
-        ? day.weekIndex % 2 !== 0
-        : day.weekIndex % 2 === 0;
+          ? day.weekIndex % 2 !== 0
+          : day.weekIndex % 2 === 0;
       if (!isTurnoTarde) schedule[emp.id][day.id] = "O40";
       else schedule[emp.id][day.id] = "O42";
     });
@@ -201,7 +201,46 @@ const generateInitialSchedule = () => {
       reserve = reserveCandidates[0] || null;
     }
     const eligibleIntensive = reserve ? allEligible.filter((emp) => emp.id !== reserve.id) : allEligible;
-    const selected = eligibleIntensive.filter((emp) => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
+
+    // Filtrar candidatos que NO pueden tener O30 porque son necesarios para cobertura de oficina
+    const safeForIntensive = eligibleIntensive.filter((emp) => {
+      // Verificar cada día de la semana
+      return weekDays.every((day) => {
+        const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
+        const isEmpInOffice = empOfficeDays.includes(day.weekdayLetter);
+
+        // Si no está en oficina ese día, puede tener O30
+        if (!isEmpInOffice) return true;
+
+        // Si está en oficina, verificar que haya otro del mismo grupo O que el otro grupo tenga O40
+        const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
+        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
+
+        // Verificar si hay otro del mismo grupo en oficina
+        const othersInOffice = EMPLOYEES.filter((other) => {
+          if (other.id === emp.id) return false;
+          if (!empGroup.includes(other.name)) return false;
+          if (vacWeeksByEmp[other.id].has(wi)) return false;
+          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
+          return otherOfficeDays.includes(day.weekdayLetter);
+        });
+
+        // Verificar si el otro grupo tiene O40 en oficina
+        const otherGroupHasO40 = EMPLOYEES.some((other) => {
+          if (!otherGroup.includes(other.name)) return false;
+          if (vacWeeksByEmp[other.id].has(wi)) return false;
+          const currentType = schedule[other.id][day.id];
+          if (currentType !== "O40") return false;
+          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
+          return otherOfficeDays.includes(day.weekdayLetter);
+        });
+
+        // Puede tener O30 si hay otro de su grupo O el otro grupo tiene O40 en oficina
+        return othersInOffice.length > 0 || otherGroupHasO40;
+      });
+    });
+
+    const selected = safeForIntensive.filter((emp) => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
     selected.forEach((emp) => {
       weekDays.forEach((day) => {
         if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
@@ -225,8 +264,8 @@ const generateInitialSchedule = () => {
                 ? wi % 2 === 0
                 : wi % 2 !== 0
               : isGroupA
-              ? wi % 2 !== 0
-              : wi % 2 === 0;
+                ? wi % 2 !== 0
+                : wi % 2 === 0;
             if (!isTurnoTarde) schedule[emp.id][day.id] = "O40";
             else schedule[emp.id][day.id] = "O42";
           }
@@ -248,23 +287,138 @@ const generateInitialSchedule = () => {
     });
     weekDays.forEach((day) => {
       if (day.weekdayLetter !== "V") return;
-      const hasOfficeO40 = EMPLOYEES.some((emp) => {
+
+      // Verificar presencia global O40 en oficina
+      const group1HasO40InOffice = EMPLOYEES.some(emp => {
+        if (!GROUP1.includes(emp.name)) return false;
         const type = schedule[emp.id][day.id];
         if (type !== "O40") return false;
         const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
         return daysOffice.includes("V");
       });
-      if (!hasOfficeO40) {
-        let candidate = EMPLOYEES.find((e) => e.name === "Luis" && schedule[e.id][day.id] !== "V");
+
+      const group2HasO40InOffice = EMPLOYEES.some(emp => {
+        if (!GROUP2.includes(emp.name)) return false;
+        const type = schedule[emp.id][day.id];
+        if (type !== "O40") return false;
+        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+        return daysOffice.includes("V");
+      });
+
+      const anyO40InOffice = group1HasO40InOffice || group2HasO40InOffice;
+
+      // Si no hay NADIE en oficina (de ningún grupo), forzamos a alguien.
+      // Priorizamos al Grupo 1 para liberar al Grupo 2 si es posible (según petición de usuario).
+      if (!anyO40InOffice) {
+        // Intentar Grupo 1 primero
+        let candidates = GROUP1.map(name => EMPLOYEES.find(e => e.name === name))
+          .filter(emp => emp && schedule[emp.id][day.id] !== "V")
+          .sort((a, b) => {
+            // Priorizar NO O30
+            const typeA = schedule[a.id][day.id] === "O30";
+            const typeB = schedule[b.id][day.id] === "O30";
+            if (typeA && !typeB) return 1;
+            if (!typeA && typeB) return -1;
+            return a.id - b.id;
+          });
+        let candidate = candidates[0];
+
+        // Si no hay nadie válido en Grupo 1 (todos vacas?), intentar Grupo 2
         if (!candidate) {
-          candidate =
-            EMPLOYEES.find((e) => e.group !== lateGroup && schedule[e.id][day.id] !== "V") ||
-            EMPLOYEES.find((e) => schedule[e.id][day.id] !== "V");
+          candidates = GROUP2.map(name => EMPLOYEES.find(e => e.name === name))
+            .filter(emp => emp && schedule[emp.id][day.id] !== "V")
+            .sort((a, b) => {
+              const typeA = schedule[a.id][day.id] === "O30";
+              const typeB = schedule[b.id][day.id] === "O30";
+              if (typeA && !typeB) return 1;
+              if (!typeA && typeB) return -1;
+              return a.id - b.id;
+            });
+          candidate = candidates[0];
         }
-        if (candidate) schedule[candidate.id][day.id] = "O40";
+
+        if (candidate) {
+          if (schedule[candidate.id][day.id] === "O30") {
+            intensiveWeeksByEmp[candidate.id] = (intensiveWeeksByEmp[candidate.id] || 0) - 1;
+          }
+          schedule[candidate.id][day.id] = "O40";
+        }
       }
     });
   });
+
+  // Compensación: Recuperar semanas intensivas perdidas
+  const weeksBeforeCompensation = {};
+  DAYS.forEach((d) => {
+    weeksBeforeCompensation[d.weekIndex] = weeksBeforeCompensation[d.weekIndex] || [];
+    weeksBeforeCompensation[d.weekIndex].push(d);
+  });
+
+  GROUP2.forEach((empName) => {
+    const emp = EMPLOYEES.find((e) => e.name === empName);
+
+    // Contar semanas intensivas actuales
+    let intensiveWeeks = 0;
+    Object.keys(weeksBeforeCompensation).forEach((wiStr) => {
+      const daysInWeek = weeksBeforeCompensation[wiStr];
+      const allO30 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
+      if (allO30) intensiveWeeks++;
+    });
+
+    // Si tiene menos de 7, intentar compensar
+    while (intensiveWeeks < 7) {
+      // Buscar un día O40 que podamos cambiar a O30 sin romper cobertura
+      let swapped = false;
+
+      for (const day of DAYS) {
+        if (schedule[emp.id][day.id] !== "O40") continue;
+        if (schedule[emp.id][day.id] === "V") continue;
+
+        // Verificar si es seguro cambiar a O30
+        const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
+        const isInOffice = empOfficeDays.includes(day.weekdayLetter);
+
+        // Verificar límite de 3 intensivas
+        const currentIntensiveCount = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
+        if (currentIntensiveCount >= 3) continue;
+
+        // Si no está en oficina, es seguro cambiar
+        if (!isInOffice) {
+          schedule[emp.id][day.id] = "O30";
+          swapped = true;
+          break;
+        }
+
+        // Si está en oficina, verificar que el otro grupo tenga O40
+        const otherGroup = GROUP1;
+        const otherGroupHasO40 = otherGroup.some((name) => {
+          const other = EMPLOYEES.find((e) => e.name === name);
+          if (!other) return false;
+          const otherType = schedule[other.id][day.id];
+          if (otherType !== "O40") return false;
+          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
+          return otherOfficeDays.includes(day.weekdayLetter);
+        });
+
+        if (otherGroupHasO40) {
+          schedule[emp.id][day.id] = "O30";
+          swapped = true;
+          break;
+        }
+      }
+
+      if (!swapped) break; // No hay más días para compensar
+
+      // Recalcular semanas intensivas
+      intensiveWeeks = 0;
+      Object.keys(weeksBeforeCompensation).forEach((wiStr) => {
+        const daysInWeek = weeksBeforeCompensation[wiStr];
+        const allO30 = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
+        if (allO30) intensiveWeeks++;
+      });
+    }
+  });
+
   const weeksList = {};
   DAYS.forEach((d) => {
     weeksList[d.weekIndex] = weeksList[d.weekIndex] || [];
@@ -322,55 +476,55 @@ const App = () => {
       typeKey === "O42"
         ? "18:00 (Viernes 14:00)"
         : typeKey === "O40"
-        ? "17:00"
-        : typeKey === "O30" || typeKey === "T30"
-        ? "14:00 (Intensiva)"
-        : "N/A";
+          ? "17:00"
+          : typeKey === "O30" || typeKey === "T30"
+            ? "14:00 (Intensiva)"
+            : "N/A";
     const diasOficina = emp.officeDays;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-        <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
-          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-white mb-1">
-              {emp.name} <span className="text-slate-500 text-sm font-normal">({emp.role})</span>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">
+              {emp.name} <span className="text-gray-500 text-sm font-normal">({emp.role})</span>
             </h3>
-            <p className="text-blue-400 font-medium">Fecha {day.label}</p>
+            <p className="text-brand-blue font-medium">Fecha {day.label}</p>
           </div>
           <div className="space-y-4">
-            <div className="bg-slate-700/50 p-4 rounded-lg">
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Estado Actual</p>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Estado Actual</p>
               <div className="flex items-center gap-3">
                 <div className={`w-3 h-3 rounded-full ${typeInfo.color}`}></div>
-                <span className="text-lg font-semibold text-white">{typeInfo.label}</span>
+                <span className="text-lg font-semibold text-gray-800">{typeInfo.label}</span>
               </div>
             </div>
             {typeKey !== "V" && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                    <p className="text-xs text-slate-400 mb-1">Horario Salida</p>
-                    <p className={`text-lg font-bold ${typeKey.includes("30") ? "text-emerald-400" : "text-amber-400"}`}>{horarioSalida}</p>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Horario Salida</p>
+                    <p className={`text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`}>{horarioSalida}</p>
                   </div>
-                  <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                    <p className="text-xs text-slate-400 mb-1">Grupo Turno</p>
-                    <p className="text-lg font-bold text-slate-200">Grupo {emp.group}</p>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Grupo Turno</p>
+                    <p className="text-lg font-bold text-gray-700">Grupo {emp.group}</p>
                   </div>
                 </div>
-                <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                  <p className="text-xs text-slate-400 mb-1">Días en Oficina (Fijos)</p>
-                  <p className="text-white font-medium">{diasOficina}</p>
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500 mb-1">Días en Oficina (Fijos)</p>
+                  <p className="text-gray-800 font-medium">{diasOficina}</p>
                 </div>
               </>
             )}
             {typeKey === "V" && (
-              <div className="bg-rose-900/20 p-4 rounded-lg border border-rose-900/50 text-center">
-                <p className="text-rose-300">🌴 Disfrutando de vacaciones</p>
+              <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 text-center">
+                <p className="text-rose-600">🌴 Disfrutando de vacaciones</p>
               </div>
             )}
           </div>
@@ -389,36 +543,36 @@ const App = () => {
       })
       .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-        <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
-          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-white">Listado de O forzadas</h3>
-            <p className="text-slate-400 text-sm">Motivo por el que deben asistir a la oficina</p>
+            <h3 className="text-xl font-bold text-gray-900">Listado de O forzadas</h3>
+            <p className="text-gray-500 text-sm">Motivo por el que deben asistir a la oficina</p>
           </div>
           <div className="overflow-auto max-h-[60vh]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="p-2 border-b border-slate-700 text-slate-300">Fecha</th>
-                  <th className="p-2 border-b border-slate-700 text-slate-300">Día</th>
-                  <th className="p-2 border-b border-slate-700 text-slate-300">Integrante</th>
-                  <th className="p-2 border-b border-slate-700 text-slate-300">Motivo</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Fecha</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Día</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Integrante</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Motivo</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-slate-500">No hay O forzadas en el periodo.</td></tr>}
+                {entries.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-500">No hay O forzadas en el periodo.</td></tr>}
                 {entries.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-700/30">
-                    <td className="p-2 border-b border-slate-700 text-slate-200">{row.day.label}</td>
-                    <td className="p-2 border-b border-slate-700 text-slate-400">{WEEKDAY_FULL[row.day.weekdayLetter]}</td>
-                    <td className="p-2 border-b border-slate-700 text-slate-200">{row.emp.name}</td>
-                    <td className="p-2 border-b border-slate-700 text-slate-300">{row.reason}</td>
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.day.label}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-500">{WEEKDAY_FULL[row.day.weekdayLetter]}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.emp.name}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-600">{row.reason}</td>
                   </tr>
                 ))}
               </tbody>
@@ -449,7 +603,10 @@ const App = () => {
         if (type === "O30") intensiveCount++;
         if (type === "O42") shift18hCount++;
         const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        if (daysOffice.includes(day.weekdayLetter)) {
+        const isInOffice = daysOffice.includes(day.weekdayLetter);
+        // En viernes, O42 termina a las 14:00, solo O40 cubre toda la tarde
+        const hasFullSchedule = day.weekdayLetter === "V" ? (type === "O40") : (type === "O40" || type === "O42");
+        if (isInOffice && hasFullSchedule) {
           if (GROUP1.includes(emp.name)) group1HasOffice = true;
           if (GROUP2.includes(emp.name)) group2HasOffice = true;
         }
@@ -542,19 +699,19 @@ const App = () => {
   const filteredEmployees = selectedEmp === "all" ? EMPLOYEES : EMPLOYEES.filter((e) => e.id === parseInt(selectedEmp));
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6">
+    <div className="min-h-screen bg-white p-6 text-brand-dark">
       <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
       <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            <span className="text-blue-500">IT Ops</span> Calendar 2026
-          </h1>
-          <p className="text-slate-400 mt-1">Gestión de Vacaciones, Turnos y Presencialidad</p>
+      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+        <div className="flex items-center gap-6">
+          <img src="logo.png" alt="Logo" className="h-16 w-auto object-contain" />
+          <div>
+            <h2 className="text-2xl font-bold text-brand-blue tracking-tight">Gestion Horaria Dept. Sistemas</h2>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <select
-            className="bg-slate-800 text-white border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm"
             value={selectedEmp}
             onChange={(e) => setSelectedEmp(e.target.value)}
           >
@@ -565,17 +722,17 @@ const App = () => {
               </option>
             ))}
           </select>
-          <button onClick={() => setOListOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm border border-slate-700 transition-colors">
+          <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
             Ver O forzadas
           </button>
-          <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm border border-slate-700 transition-colors">
+          <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors">
             Resetear Plan
           </button>
         </div>
       </header>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="p-4 rounded-lg bg-slate-800 border border-slate-700 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-blue-500 bg-opacity-20 text-blue-400">
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
@@ -584,12 +741,12 @@ const App = () => {
             </svg>
           </div>
           <div>
-            <p className="text-sm text-slate-400">Total Integrantes</p>
-            <p className="text-2xl font-bold text-white">{EMPLOYEES.length}</p>
+            <p className="text-sm text-gray-500">Total Integrantes</p>
+            <p className="text-2xl font-bold text-gray-800">{EMPLOYEES.length}</p>
           </div>
         </div>
-        <div className="p-4 rounded-lg bg-slate-800 border border-slate-700 flex items-center space-x-4">
-          <div className={`p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-white`}>
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className={`p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-gray-800`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
               <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -597,62 +754,62 @@ const App = () => {
             </svg>
           </div>
           <div>
-            <p className="text-sm text-slate-400">Conflictos / Alertas</p>
-            <p className="text-2xl font-bold text-white">{stats.alerts.length}</p>
+            <p className="text-sm text-gray-500">Conflictos / Alertas</p>
+            <p className="text-2xl font-bold text-gray-800">{stats.alerts.length}</p>
           </div>
         </div>
-        <div className="p-4 rounded-lg bg-slate-800 border border-slate-700 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-400">
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="9" y1="9" x2="15" y2="9"></line>
               <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
-          </div>
+          </div >
           <div>
-            <p className="text-sm text-slate-400">Días con forzado oficina (O)</p>
-            <p className="text-2xl font-bold text-white">{stats.forcedOfficeDetails.length}</p>
+            <p className="text-sm text-gray-500">Días con forzado oficina (O)</p>
+            <p className="text-2xl font-bold text-gray-800">{stats.forcedOfficeDetails.length}</p>
           </div>
         </div>
-        <div className="p-4 rounded-lg bg-slate-800 border border-slate-700 flex flex-col justify-center">
-          <p className="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center">
+          <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-emerald-500"></div>
-              <span className="text-xs text-slate-300">Intensiva 30h</span>
+              <span className="text-xs text-gray-600">Intensiva 30h</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-blue-600"></div>
-              <span className="text-xs text-slate-300">40h (17:00)</span>
+              <span className="text-xs text-gray-600">40h (17:00)</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-indigo-600"></div>
-              <span className="text-xs text-slate-300">42h (18:00, V 14:00)</span>
+              <span className="text-xs text-gray-600">42h (18:00, V 14:00)</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-rose-500"></div>
-              <span className="text-xs text-slate-300">Vacaciones</span>
+              <span className="text-xs text-gray-600">Vacaciones</span>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-2">* Click en celda para ver detalle de turno</p>
+          <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
         </div>
       </div>
-      <div className="overflow-x-auto pb-4 border border-slate-700 rounded-xl bg-slate-850 shadow-2xl">
+      <div className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr>
-              <th className="sticky left-0 z-20 bg-slate-850 p-4 border-b border-r border-slate-700 w-48 min-w-[12rem]">
-                <div className="font-bold text-slate-200">Integrante</div>
+              <th className="sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]">
+                <div className="font-bold text-brand-blue">Integrante</div>
               </th>
               {DAYS.map((day) => {
                 const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
                 return (
-                  <th key={day.id} className={`p-2 border-b border-slate-700 min-w-[4.5rem] text-center border-l border-slate-800`}>
-                    <div className="text-[11px] text-slate-300">{WEEKDAY_FULL[day.weekdayLetter]}</div>
-                    <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
-                    <div className="text-xs font-mono text-slate-300">{day.label.split(" ")[1]}</div>
-                    <div className="mt-1 text-[9px] text-slate-500 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
-                    <div className="mt-2 h-1 w-full bg-slate-800 rounded overflow-hidden">
+                  <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
+                    <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
+                    <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
+                    <div className="mt-1 text-[9px] text-gray-400 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
+                    <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
                       <div
                         className={`h-full ${stats.dailyCoverage.find((s) => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`}
                         style={{ width: `${(stats.dailyCoverage.find((s) => s.dayId === day.id).present / 6) * 100}%` }}
@@ -665,13 +822,13 @@ const App = () => {
           </thead>
           <tbody>
             {filteredEmployees.map((emp) => (
-              <tr key={emp.id} className="group hover:bg-slate-800/50 transition-colors">
-                <td className="sticky left-0 z-10 bg-slate-850 p-3 border-r border-b border-slate-700 group-hover:bg-slate-800/50">
-                  <div className="font-medium text-slate-200">{emp.name}</div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1">
+              <tr key={emp.id} className="group hover:bg-gray-50 transition-colors">
+                <td className="sticky left-0 z-10 bg-white p-3 border-r border-b border-gray-200 group-hover:bg-gray-50">
+                  <div className="font-medium text-gray-900">{emp.name}</div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
                     <span className={`w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`}></span>Grupo {emp.group}
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="text-[11px] text-gray-400 mt-1">
                     Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
                   </div>
                 </td>
@@ -682,12 +839,12 @@ const App = () => {
                   const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
                   const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
                   return (
-                    <td key={day.id} className={`p-1 border-b border-slate-700 relative cursor-pointer border-l border-slate-800`} onClick={() => handleCellClick(emp, day)}>
+                    <td key={day.id} className={`p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`} onClick={() => handleCellClick(emp, day)}>
                       <div className={`w-full h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} hover:brightness-110 hover:scale-105 transform`}>
                         <span>{style.short}</span>
                         {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
-                        {isWFH && <div className="absolute top-1 left-1 text-[10px] font-bold bg-slate-900/60 border border-slate-700 rounded px-1">T</div>}
-                        {isForcedOffice && <div className="absolute top-1 right-1 text-[10px] font-bold bg-slate-900/60 border border-slate-700 rounded px-1">O</div>}
+                        {isWFH && <div className="absolute top-1 left-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">T</div>}
+                        {isForcedOffice && <div className="absolute top-1 right-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">O</div>}
                       </div>
                     </td>
                   );
@@ -697,9 +854,8 @@ const App = () => {
           </tbody>
         </table>
       </div>
-      <footer className="mt-8 text-center text-slate-500 text-sm">
-        <p>Generado por AI Assistant • 2026 Planning Dashboard</p>
-        <p className="mt-2 text-xs opacity-60">Barra amarilla inferior en celda = Turno hasta 18h</p>
+      <footer className="mt-8 text-center text-gray-500 text-sm">
+        <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
     </div>
   );

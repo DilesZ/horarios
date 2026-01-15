@@ -1,35 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planificación Vacaciones IT 2026</title>
-    
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
+
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #e2e8f0; /* Slate 200 */
+            background-color: #ffffff;
+            color: #333333;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
         .cell-transition {
             transition: all 0.2s ease-in-out;
         }
+
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
+
         .scrollbar-hide {
             -ms-overflow-style: none;
             scrollbar-width: none;
@@ -37,13 +41,14 @@
     </style>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        slate: {
-                            850: '#1e293b',
-                            900: '#0f172a',
+                        brand: {
+                            blue: '#050D9E',
+                            cyan: '#00C1DE',
+                            dark: '#333333',
+                            gray: '#f5f7fa'
                         }
                     }
                 }
@@ -51,6 +56,7 @@
         }
     </script>
 </head>
+
 <body>
     <div id="root"></div>
 
@@ -69,7 +75,7 @@
         ];
 
         // Días generados para L-V Junio - Septiembre 2026
-        const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const WEEKDAY_LETTER = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V' }; // Mon..Fri
         const WEEKDAY_FULL = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes' };
         const buildDaysRange = () => {
@@ -81,9 +87,9 @@
                 const day = d.getDay(); // 0=Sun ... 6=Sat
                 if (day === 0 || day === 6) continue; // solo L-V
                 if (day === 1) weekIndex++; // nuevo lunes => nueva semana
-                const id = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const id = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 const month = MONTH_NAMES[d.getMonth()];
-                const label = `${month.substring(0,3)} ${String(d.getDate()).padStart(2,'0')}`;
+                const label = `${month.substring(0, 3)} ${String(d.getDate()).padStart(2, '0')}`;
                 const weekdayLetter = WEEKDAY_LETTER[day];
                 days.push({ id, label, month, weekdayLetter, weekIndex });
             }
@@ -101,38 +107,38 @@
             O42: { label: '42h (hasta las 18:00, Viernes 14:00)', color: 'bg-indigo-600', text: 'text-white', short: '42' },
             O30: { label: 'Intensiva 30h (hasta las 14:00)', color: 'bg-emerald-500', text: 'text-white', short: '30' },
             T30: { label: 'Teletrabajo 30h', color: 'bg-teal-500', text: 'text-white', short: 'T30' },
-            V:   { label: 'Vacaciones', color: 'bg-rose-500', text: 'text-white', short: 'VAC' }
+            V: { label: 'Vacaciones', color: 'bg-rose-500', text: 'text-white', short: 'VAC' }
         };
 
         const VACATION_PLAN = {
             // Solo Junio-Septiembre, formato YYYY-MM-DD
             Kike: [
-                '2026-06-22','2026-06-23','2026-06-26','2026-06-29','2026-06-30',
-                '2026-08-17','2026-08-18','2026-08-19','2026-08-20','2026-08-21',
+                '2026-06-22', '2026-06-23', '2026-06-26', '2026-06-29', '2026-06-30',
+                '2026-08-17', '2026-08-18', '2026-08-19', '2026-08-20', '2026-08-21',
                 '2026-09-18'
             ],
             Jose: [
-                '2026-08-03','2026-08-04','2026-08-05','2026-08-06','2026-08-07'
+                '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07'
             ],
             Enrique: [
-                '2026-08-10','2026-08-11','2026-08-12','2026-08-13','2026-08-14',
-                '2026-08-17','2026-08-18','2026-08-19','2026-08-20','2026-08-21',
-                '2026-08-24','2026-08-25','2026-08-26','2026-08-27','2026-08-28'
+                '2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14',
+                '2026-08-17', '2026-08-18', '2026-08-19', '2026-08-20', '2026-08-21',
+                '2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28'
             ],
             David: [
-                '2026-06-25','2026-06-26','2026-06-29','2026-06-30',
-                '2026-07-01','2026-07-02','2026-07-03','2026-07-06','2026-07-07',
-                '2026-07-08','2026-07-09','2026-07-10'
+                '2026-06-25', '2026-06-26', '2026-06-29', '2026-06-30',
+                '2026-07-01', '2026-07-02', '2026-07-03', '2026-07-06', '2026-07-07',
+                '2026-07-08', '2026-07-09', '2026-07-10'
             ],
             Luis: [
                 '2026-08-31',
-                '2026-09-01','2026-09-02','2026-09-03','2026-09-04',
-                '2026-09-07','2026-09-08','2026-09-09','2026-09-10','2026-09-11',
-                '2026-09-14','2026-09-15','2026-09-16','2026-09-17','2026-09-18'
+                '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04',
+                '2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11',
+                '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'
             ],
             Ariel: [
-                '2026-07-14','2026-07-15','2026-07-16','2026-07-17',
-                '2026-07-27','2026-07-28','2026-07-29','2026-07-30','2026-07-31',
+                '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17',
+                '2026-07-27', '2026-07-28', '2026-07-29', '2026-07-30', '2026-07-31',
                 '2026-08-25'
             ]
         };
@@ -154,10 +160,10 @@
                 });
                 vacWeeksByEmp[emp.id] = set;
             });
-            
+
             EMPLOYEES.forEach(emp => {
                 schedule[emp.id] = {};
-                
+
                 DAYS.forEach(day => {
                     const vacationsForEmp = VACATION_PLAN[emp.name] || [];
                     if (vacationsForEmp.includes(day.id)) {
@@ -189,14 +195,14 @@
                 const lateGroup = lateGroupA ? 'A' : 'B';
                 const lateAvailable = EMPLOYEES
                     .filter(emp => emp.group === lateGroup && !vacWeeksByEmp[emp.id].has(wi))
-                    .sort((a,b) => {
+                    .sort((a, b) => {
                         const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
                         return diff !== 0 ? diff : (a.id - b.id);
                     });
                 const anchor = lateAvailable.length ? lateAvailable[0] : null;
 
                 const allEligible = EMPLOYEES.filter(emp => !vacWeeksByEmp[emp.id].has(wi) && (!anchor || emp.id !== anchor.id));
-                allEligible.sort((a,b) => {
+                allEligible.sort((a, b) => {
                     const diff = intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id];
                     return diff !== 0 ? diff : (a.id - b.id);
                 });
@@ -205,16 +211,55 @@
                 let reserve = null;
                 if (nonLateHasVacation) {
                     const reserveCandidates = nonLate.filter(emp => !vacWeeksByEmp[emp.id].has(wi));
-                    reserveCandidates.sort((a,b) => {
+                    reserveCandidates.sort((a, b) => {
                         const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
                         return diff !== 0 ? diff : (a.id - b.id);
                     });
                     reserve = reserveCandidates[0] || null;
                 }
-                const eligibleIntensive = reserve 
-                    ? allEligible.filter(emp => emp.id !== reserve.id) 
+                const eligibleIntensive = reserve
+                    ? allEligible.filter(emp => emp.id !== reserve.id)
                     : allEligible;
-                const selected = eligibleIntensive.filter(emp => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
+
+                // Filtrar candidatos que NO pueden tener O30 porque son necesarios para cobertura de oficina
+                const safeForIntensive = eligibleIntensive.filter(emp => {
+                    // Verificar cada día de la semana
+                    return weekDays.every(day => {
+                        const empOfficeDays = emp.officeDays.split(',').map(d => d.trim());
+                        const isEmpInOffice = empOfficeDays.includes(day.weekdayLetter);
+
+                        // Si no está en oficina ese día, puede tener O30
+                        if (!isEmpInOffice) return true;
+
+                        // Si está en oficina, verificar que haya otro del mismo grupo O que el otro grupo tenga O40
+                        const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
+                        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
+
+                        // Verificar si hay otro del mismo grupo en oficina
+                        const othersInOffice = EMPLOYEES.filter(other => {
+                            if (other.id === emp.id) return false;
+                            if (!empGroup.includes(other.name)) return false;
+                            if (vacWeeksByEmp[other.id].has(wi)) return false;
+                            const otherOfficeDays = other.officeDays.split(',').map(d => d.trim());
+                            return otherOfficeDays.includes(day.weekdayLetter);
+                        });
+
+                        // Verificar si el otro grupo tiene O40 en oficina
+                        const otherGroupHasO40 = EMPLOYEES.some(other => {
+                            if (!otherGroup.includes(other.name)) return false;
+                            if (vacWeeksByEmp[other.id].has(wi)) return false;
+                            const currentType = schedule[other.id][day.id];
+                            if (currentType !== 'O40') return false;
+                            const otherOfficeDays = other.officeDays.split(',').map(d => d.trim());
+                            return otherOfficeDays.includes(day.weekdayLetter);
+                        });
+
+                        // Puede tener O30 si hay otro de su grupo O el otro grupo tiene O40 en oficina
+                        return othersInOffice.length > 0 || otherGroupHasO40;
+                    });
+                });
+
+                const selected = safeForIntensive.filter(emp => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
 
                 selected.forEach(emp => {
                     weekDays.forEach(day => {
@@ -263,7 +308,7 @@
                             const current = schedule[emp.id][day.id];
                             if (current === 'V') return false;
                             return emp.group === lateGroup;
-                        }).sort((a,b) => a.id - b.id);
+                        }).sort((a, b) => a.id - b.id);
                         const pick = lateCandidates[0] || EMPLOYEES.find(emp => schedule[emp.id][day.id] !== 'V');
                         if (pick) schedule[pick.id][day.id] = 'O42';
                     }
@@ -271,24 +316,142 @@
                 // Cobertura en viernes después de 14:00 (asegurar O40 en oficina)
                 weekDays.forEach(day => {
                     if (day.weekdayLetter !== 'V') return;
-                    const hasOfficeO40 = EMPLOYEES.some(emp => {
+
+                    // Verificar presencia global O40 en oficina
+                    const group1HasO40InOffice = EMPLOYEES.some(emp => {
+                        if (!GROUP1.includes(emp.name)) return false;
                         const type = schedule[emp.id][day.id];
                         if (type !== 'O40') return false;
                         const daysOffice = emp.officeDays.split(',').map(d => d.trim());
                         return daysOffice.includes('V');
                     });
-                    if (!hasOfficeO40) {
-                        let candidate = EMPLOYEES.find(e => e.name === 'Luis' && schedule[e.id][day.id] !== 'V');
+
+                    const group2HasO40InOffice = EMPLOYEES.some(emp => {
+                        if (!GROUP2.includes(emp.name)) return false;
+                        const type = schedule[emp.id][day.id];
+                        if (type !== 'O40') return false;
+                        const daysOffice = emp.officeDays.split(',').map(d => d.trim());
+                        return daysOffice.includes('V');
+                    });
+
+                    const anyO40InOffice = group1HasO40InOffice || group2HasO40InOffice;
+
+                    // Si no hay NADIE en oficina (de ningún grupo), forzamos a alguien.
+                    // Priorizamos al Grupo 1 para liberar al Grupo 2 si es posible
+                    if (!anyO40InOffice) {
+                        // Intentar Grupo 1 primero
+                        let candidates = GROUP1.map(name => EMPLOYEES.find(e => e.name === name))
+                            .filter(emp => emp && schedule[emp.id][day.id] !== 'V')
+                            .sort((a, b) => {
+                                // Priorizar NO O30 (si es O30, penalizar)
+                                const typeA = schedule[a.id][day.id] === 'O30';
+                                const typeB = schedule[b.id][day.id] === 'O30';
+                                if (typeA && !typeB) return 1;
+                                if (!typeA && typeB) return -1;
+                                return a.id - b.id;
+                            });
+                        let candidate = candidates[0];
+
+                        // Si no hay nadie válido en Grupo 1 (todos vacas?), intentar Grupo 2
                         if (!candidate) {
-                            candidate = EMPLOYEES.find(e => e.group !== lateGroup && schedule[e.id][day.id] !== 'V') 
-                                || EMPLOYEES.find(e => schedule[e.id][day.id] !== 'V');
+                            candidates = GROUP2.map(name => EMPLOYEES.find(e => e.name === name))
+                                .filter(emp => emp && schedule[emp.id][day.id] !== 'V')
+                                .sort((a, b) => {
+                                    const typeA = schedule[a.id][day.id] === 'O30';
+                                    const typeB = schedule[b.id][day.id] === 'O30';
+                                    if (typeA && !typeB) return 1;
+                                    if (!typeA && typeB) return -1;
+                                    return a.id - b.id;
+                                });
+                            candidate = candidates[0];
                         }
+
                         if (candidate) {
+                            if (schedule[candidate.id][day.id] === 'O30') {
+                                intensiveWeeksByEmp[candidate.id] = (intensiveWeeksByEmp[candidate.id] || 0) - 1;
+                            }
                             schedule[candidate.id][day.id] = 'O40';
                         }
                     }
                 });
             });
+
+
+            // El bloque "problematicFridays" ha sido eliminado para confiar en la lógica de cobertura global.
+            // Compensación: Recuperar semanas intensivas perdidas por forzado de viernes
+            // Para cada empleado del grupo 2, verificar si tiene menos de 7 semanas y compensar
+            const weeksBeforeCompensation = {};
+            DAYS.forEach(d => {
+                weeksBeforeCompensation[d.weekIndex] = weeksBeforeCompensation[d.weekIndex] || [];
+                weeksBeforeCompensation[d.weekIndex].push(d);
+            });
+
+            GROUP2.forEach(empName => {
+                const emp = EMPLOYEES.find(e => e.name === empName);
+                if (!emp) return;
+
+                // Contar semanas intensivas actuales
+                let intensiveWeeks = 0;
+                Object.keys(weeksBeforeCompensation).forEach(wiStr => {
+                    const daysInWeek = weeksBeforeCompensation[wiStr];
+                    const allO30 = daysInWeek.every(day => schedule[emp.id][day.id] === 'O30');
+                    if (allO30) intensiveWeeks++;
+                });
+
+                // Si tiene menos de 7, intentar compensar
+                while (intensiveWeeks < 7) {
+                    // Buscar un día O40 que podamos cambiar a O30 sin romper cobertura
+                    let swapped = false;
+
+                    for (const day of DAYS) {
+                        if (schedule[emp.id][day.id] !== 'O40') continue;
+                        if (schedule[emp.id][day.id] === 'V') continue;
+
+                        // Verificar si es seguro cambiar a O30
+                        const empOfficeDays = emp.officeDays.split(',').map(d => d.trim());
+                        const isInOffice = empOfficeDays.includes(day.weekdayLetter);
+
+                        // Verificar límite de 3 intensivas
+                        const currentIntensiveCount = EMPLOYEES.filter(e => schedule[e.id][day.id] === 'O30').length;
+                        if (currentIntensiveCount >= 3) continue;
+
+                        // Si no está en oficina, es seguro cambiar
+                        if (!isInOffice) {
+                            schedule[emp.id][day.id] = 'O30';
+                            swapped = true;
+                            break;
+                        }
+
+                        // Si está en oficina, verificar que el otro grupo tenga O40
+                        const otherGroup = GROUP1;
+                        const otherGroupHasO40 = otherGroup.some(name => {
+                            const other = EMPLOYEES.find(e => e.name === name);
+                            if (!other) return false;
+                            const otherType = schedule[other.id][day.id];
+                            if (otherType !== 'O40') return false;
+                            const otherOfficeDays = other.officeDays.split(',').map(d => d.trim());
+                            return otherOfficeDays.includes(day.weekdayLetter);
+                        });
+
+                        if (otherGroupHasO40) {
+                            schedule[emp.id][day.id] = 'O30';
+                            swapped = true;
+                            break;
+                        }
+                    }
+
+                    if (!swapped) break; // No hay más días para compensar
+
+                    // Recalcular semanas intensivas
+                    intensiveWeeks = 0;
+                    Object.keys(weeksBeforeCompensation).forEach(wiStr => {
+                        const daysInWeek = weeksBeforeCompensation[wiStr];
+                        const allO30 = daysInWeek.every(day => schedule[emp.id][day.id] === 'O30');
+                        if (allO30) intensiveWeeks++;
+                    });
+                }
+            });
+
             const weeksList = {};
             DAYS.forEach(d => {
                 weeksList[d.weekIndex] = weeksList[d.weekIndex] || [];
@@ -336,13 +499,13 @@
         // --- COMPONENTS ---
 
         const StatCard = ({ title, value, color, icon }) => (
-            <div className={`p-4 rounded-lg bg-slate-800 border border-slate-700 flex items-center space-x-4`}>
-                <div className={`p-3 rounded-full ${color} bg-opacity-20 text-${color.split('-')[1]}-400`}>
+            <div className={`p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4`}>
+                <div className={`p-3 rounded-full ${color} bg-opacity-20 text-${color.split('-')[1]}-600`}>
                     {icon}
                 </div>
                 <div>
-                    <p className="text-sm text-slate-400">{title}</p>
-                    <p className="text-2xl font-bold text-white">{value}</p>
+                    <p className="text-sm text-gray-500">{title}</p>
+                    <p className="text-2xl font-bold text-gray-800">{value}</p>
                 </div>
             </div>
         );
@@ -353,7 +516,7 @@
             return (
                 <div className="flex items-center space-x-2">
                     <div className={`w-4 h-4 rounded ${type.color}`}></div>
-                    <span className="text-xs text-slate-300">{type.label}</span>
+                    <span className="text-xs text-gray-600">{type.label}</span>
                 </div>
             );
         };
@@ -362,60 +525,60 @@
             if (!isOpen || !emp || !day) return null;
 
             // Lógica de Turnos para el Modal por día
-            
+
             const typeInfo = TYPES[typeKey];
-            const horarioSalida = typeKey === 'O42' ? "18:00 (Viernes 14:00)" : 
-                                  typeKey === 'O40' ? "17:00" : 
-                                  typeKey === 'O30' || typeKey === 'T30' ? "14:00 (Intensiva)" : "N/A";
+            const horarioSalida = typeKey === 'O42' ? "18:00 (Viernes 14:00)" :
+                typeKey === 'O40' ? "17:00" :
+                    typeKey === 'O30' || typeKey === 'T30' ? "14:00 (Intensiva)" : "N/A";
 
             const diasOficina = emp.officeDays;
 
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-                    <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={e => e.stopPropagation()}>
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
-                        
+
                         <div className="mb-6">
-                            <h3 className="text-xl font-bold text-white mb-1">{emp.name} <span className="text-slate-500 text-sm font-normal">({emp.role})</span></h3>
-                            <p className="text-blue-400 font-medium">Fecha {day.label}</p>
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">{emp.name} <span className="text-gray-500 text-sm font-normal">({emp.role})</span></h3>
+                            <p className="text-brand-blue font-medium">Fecha {day.label}</p>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="bg-slate-700/50 p-4 rounded-lg">
-                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Estado Actual</p>
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Estado Actual</p>
                                 <div className="flex items-center gap-3">
                                     <div className={`w-3 h-3 rounded-full ${typeInfo.color}`}></div>
-                                    <span className="text-lg font-semibold text-white">{typeInfo.label}</span>
+                                    <span className="text-lg font-semibold text-gray-800">{typeInfo.label}</span>
                                 </div>
                             </div>
 
                             {typeKey !== 'V' && (
                                 <>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                                            <p className="text-xs text-slate-400 mb-1">Horario Salida</p>
-                                            <p className={`text-lg font-bold ${typeKey.includes('30') ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                        <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                            <p className="text-xs text-gray-500 mb-1">Horario Salida</p>
+                                            <p className={`text-lg font-bold ${typeKey.includes('30') ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                 {horarioSalida}
                                             </p>
                                         </div>
-                                        <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                                            <p className="text-xs text-slate-400 mb-1">Grupo Turno</p>
-                                            <p className="text-lg font-bold text-slate-200">Grupo {emp.group}</p>
+                                        <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                            <p className="text-xs text-gray-500 mb-1">Grupo Turno</p>
+                                            <p className="text-lg font-bold text-gray-700">Grupo {emp.group}</p>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-700">
-                                        <p className="text-xs text-slate-400 mb-1">Días en Oficina (Fijos)</p>
-                                        <p className="text-white font-medium">{diasOficina}</p>
+                                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                        <p className="text-xs text-gray-500 mb-1">Días en Oficina (Fijos)</p>
+                                        <p className="text-gray-800 font-medium">{diasOficina}</p>
                                     </div>
                                 </>
                             )}
 
-                             {typeKey === 'V' && (
-                                <div className="bg-rose-900/20 p-4 rounded-lg border border-rose-900/50 text-center">
-                                    <p className="text-rose-300">🌴 Disfrutando de vacaciones</p>
+                            {typeKey === 'V' && (
+                                <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 text-center">
+                                    <p className="text-rose-600">🌴 Disfrutando de vacaciones</p>
                                 </div>
                             )}
                         </div>
@@ -435,7 +598,7 @@
             const [selectedEmp, setSelectedEmp] = useState('all');
             const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
             const [oListOpen, setOListOpen] = useState(false);
-            
+
             const ForcedOfficeListModal = ({ open, onClose }) => {
                 if (!open) return null;
                 const entries = stats.forcedOfficeDetails
@@ -444,7 +607,7 @@
                         const emp = EMPLOYEES.find(e => e.id === it.empId);
                         return { day, emp, reason: it.reason };
                     })
-                    .sort((a,b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+                    .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
                         <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={e => e.stopPropagation()}>
@@ -498,6 +661,8 @@
                     let intensiveCount = 0;
                     let group1HasOffice = false;
                     let group2HasOffice = false;
+                    let group1Covering = [];
+                    let group2Covering = [];
 
                     EMPLOYEES.forEach(emp => {
                         const type = schedule[emp.id][day.id];
@@ -510,9 +675,18 @@
                         if (type === 'O42') shift18hCount++;
 
                         const daysOffice = emp.officeDays.split(',').map(d => d.trim());
-                        if (daysOffice.includes(day.weekdayLetter)) {
-                            if (GROUP1.includes(emp.name)) group1HasOffice = true;
-                            if (GROUP2.includes(emp.name)) group2HasOffice = true;
+                        const isInOffice = daysOffice.includes(day.weekdayLetter);
+                        // En viernes, O42 termina a las 14:00, solo O40 cubre toda la tarde
+                        const hasFullSchedule = day.weekdayLetter === 'V' ? (type === 'O40') : (type === 'O40' || type === 'O42');
+                        if (isInOffice && hasFullSchedule) {
+                            if (GROUP1.includes(emp.name)) {
+                                group1HasOffice = true;
+                                group1Covering.push(emp.name);
+                            }
+                            if (GROUP2.includes(emp.name)) {
+                                group2HasOffice = true;
+                                group2Covering.push(emp.name);
+                            }
                         }
                     });
 
@@ -534,6 +708,7 @@
                                 reason: 'Falta presencia del grupo {Enrique/Luis/David}'
                             });
                             group1HasOffice = true;
+                            group1Covering.push(candidate.name);
                         }
                     }
                     if (!group2HasOffice) {
@@ -553,6 +728,7 @@
                                 reason: 'Falta presencia del grupo {Jose/Ariel/Kike}'
                             });
                             group2HasOffice = true;
+                            group2Covering.push(candidate.name);
                         }
                     }
 
@@ -579,7 +755,7 @@
                         }
                     }
 
-                    return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice };
+                    return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
                 });
 
                 const alerts = dailyCoverage.filter(d => {
@@ -639,10 +815,10 @@
             const toggleStatus = () => {
                 if (!modalData.isOpen) return;
                 const { emp, day, typeKey } = modalData;
-                
+
                 // Ciclo simple: V <-> O30
                 const next = typeKey === 'V' ? 'O30' : 'V';
-                
+
                 setSchedule(prev => ({
                     ...prev,
                     [emp.id]: {
@@ -650,7 +826,7 @@
                         [day.id]: next
                     }
                 }));
-                
+
                 setModalData(prev => ({ ...prev, typeKey: next }));
             };
 
@@ -658,25 +834,25 @@
                 return TYPES[typeKey] || TYPES['O30'];
             };
 
-            const filteredEmployees = selectedEmp === 'all' 
-                ? EMPLOYEES 
+            const filteredEmployees = selectedEmp === 'all'
+                ? EMPLOYEES
                 : EMPLOYEES.filter(e => e.id === parseInt(selectedEmp));
 
             return (
-                <div className="min-h-screen bg-slate-900 p-6">
+                <div className="min-h-screen bg-white p-6">
                     <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
                     <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
 
-                    <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold text-white tracking-tight">
-                                <span className="text-blue-500">IT Ops</span> Calendar 2026
-                            </h1>
-                            <p className="text-slate-400 mt-1">Gestión de Vacaciones, Turnos y Presencialidad</p>
+                    <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+                        <div className="flex items-center gap-6">
+                            <img src="logo.png" alt="Logo" className="h-16 w-auto object-contain" />
+                            <div>
+                                <h2 className="text-2xl font-bold text-brand-blue tracking-tight">Gestion Horaria Dept. Sistemas</h2>
+                            </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <select 
-                                className="bg-slate-800 text-white border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            <select
+                                className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm"
                                 value={selectedEmp}
                                 onChange={(e) => setSelectedEmp(e.target.value)}
                             >
@@ -685,15 +861,15 @@
                                     <option key={e.id} value={e.id}>{e.name}</option>
                                 ))}
                             </select>
-                            <button 
+                            <button
                                 onClick={() => setOListOpen(true)}
-                                className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm border border-slate-700 transition-colors"
+                                className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
                             >
                                 Ver O forzadas
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setSchedule(generateInitialSchedule())}
-                                className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm border border-slate-700 transition-colors"
+                                className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
                             >
                                 Resetear Plan
                             </button>
@@ -702,53 +878,63 @@
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <StatCard 
-                            title="Total Integrantes" 
-                            value={EMPLOYEES.length} 
-                            color="bg-blue-500"
+                        <StatCard
+                            title="Total Integrantes"
+                            value={EMPLOYEES.length}
+                            color="bg-brand-blue"
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>}
                         />
-                        <StatCard 
-                            title="Conflictos / Alertas" 
-                            value={stats.alerts.length} 
+                        <StatCard
+                            title="Conflictos / Alertas"
+                            value={stats.alerts.length}
                             color={stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"}
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>}
                         />
-                        <StatCard 
-                            title="Días con forzado oficina (O)" 
-                            value={stats.forcedOfficeDetails.length} 
+                        <StatCard
+                            title="Días con forzado oficina (O)"
+                            value={stats.forcedOfficeDetails.length}
                             color="bg-amber-500"
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>}
                         />
-                        
-                         <div className="p-4 rounded-lg bg-slate-800 border border-slate-700 flex flex-col justify-center">
-                            <p className="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
+
+                        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center">
+                            <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
                             <div className="grid grid-cols-2 gap-2">
                                 <LegendItem typeKey="O30" />
                                 <LegendItem typeKey="O40" />
                                 <LegendItem typeKey="O42" />
                                 <LegendItem typeKey="V" />
                             </div>
-                            <p className="text-[10px] text-slate-500 mt-2">* Click en celda para ver detalle de turno</p>
+                            <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
                         </div>
                     </div>
 
                     {/* Alerts Section */}
                     {stats.alerts.length > 0 && (
-                        <div className="mb-6 p-4 bg-rose-900/30 border border-rose-800 rounded-lg">
-                            <h3 className="text-rose-400 font-bold flex items-center gap-2 mb-2">
+                        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg shadow-sm">
+                            <h3 className="text-rose-700 font-bold flex items-center gap-2 mb-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                                 Alertas de Cobertura
                             </h3>
-                            <ul className="text-sm text-rose-200 list-disc list-inside">
+                            <ul className="text-sm text-rose-800 list-disc list-inside">
                                 {stats.alerts.map(alert => {
                                     const day = DAYS.find(d => d.id === alert.dayId);
                                     let msg = `Día ${day.label}: `;
                                     if (alert.present < 3) msg += `Solo ${alert.present} disponibles (Mín: 3). `;
                                     if (alert.shift18hCount < 1) msg += `Sin cobertura hasta las 18h. `;
                                     if (alert.intensiveCount > 3) msg += `Más de 3 en intensiva (30h). `;
-                                    if (!alert.group1HasOffice) msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
-                                    if (!alert.group2HasOffice) msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
+                                    if (!alert.group1HasOffice) {
+                                        msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
+                                        if (alert.group2Covering && alert.group2Covering.length > 0) {
+                                            msg += `(Cubierto por: ${alert.group2Covering.join(', ')}). `;
+                                        }
+                                    }
+                                    if (!alert.group2HasOffice) {
+                                        msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
+                                        if (alert.group1Covering && alert.group1Covering.length > 0) {
+                                            msg += `(Cubierto por: ${alert.group1Covering.join(', ')}). `;
+                                        }
+                                    }
                                     return <li key={alert.dayId}>{msg}</li>;
                                 })}
                             </ul>
@@ -756,30 +942,30 @@
                     )}
 
                     {/* Main Calendar Gantt */}
-                    <div className="overflow-x-auto pb-4 border border-slate-700 rounded-xl bg-slate-850 shadow-2xl">
+                    <div className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr>
-                                    <th className="sticky left-0 z-20 bg-slate-850 p-4 border-b border-r border-slate-700 w-48 min-w-[12rem]">
-                                        <div className="font-bold text-slate-200">Integrante</div>
+                                    <th className="sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]">
+                                        <div className="font-bold text-brand-blue">Integrante</div>
                                     </th>
                                     {DAYS.map((day) => {
                                         const isNewMonth = day.label.includes('Jun') || day.label.includes('Jul') || day.label.includes('Ago') || day.label.includes('Sep');
                                         const turnoA_18h = SHIFT_BASE_A_18H ? (day.weekIndex % 2 === 0) : (day.weekIndex % 2 !== 0);
 
                                         return (
-                                            <th key={day.id} className={`p-2 border-b border-slate-700 min-w-[4.5rem] text-center border-l border-slate-800`}>
-                                                <div className="text-[11px] text-slate-300">{WEEKDAY_FULL[day.weekdayLetter]}</div>
-                                                <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">{day.month.substring(0,3)}</div>
-                                                <div className="text-xs font-mono text-slate-300">{day.label.split(' ')[1]}</div>
-                                                <div className="mt-1 text-[9px] text-slate-500 font-normal">
+                                            <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
+                                                <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
+                                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
+                                                <div className="text-xs font-mono text-gray-600">{day.label.split(' ')[1]}</div>
+                                                <div className="mt-1 text-[9px] text-gray-400 font-normal">
                                                     {turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}
                                                 </div>
                                                 {/* Cobertura Indicator */}
-                                                <div className="mt-2 h-1 w-full bg-slate-800 rounded overflow-hidden">
-                                                     <div 
-                                                        className={`h-full ${stats.dailyCoverage.find(s=>s.dayId===day.id).present < 3 ? 'bg-rose-500' : 'bg-emerald-500'}`} 
-                                                        style={{width: `${(stats.dailyCoverage.find(s=>s.dayId===day.id).present / 6) * 100}%`}}
+                                                <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${stats.dailyCoverage.find(s => s.dayId === day.id).present < 3 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${(stats.dailyCoverage.find(s => s.dayId === day.id).present / 6) * 100}%` }}
                                                     ></div>
                                                 </div>
                                             </th>
@@ -789,21 +975,21 @@
                             </thead>
                             <tbody>
                                 {filteredEmployees.map(emp => (
-                                    <tr key={emp.id} className="group hover:bg-slate-800/50 transition-colors">
-                                        <td className="sticky left-0 z-10 bg-slate-850 p-3 border-r border-b border-slate-700 group-hover:bg-slate-800/50">
-                                            <div className="font-medium text-slate-200">{emp.name}</div>
-                                            <div className="text-xs text-slate-500 flex items-center gap-1">
+                                    <tr key={emp.id} className="group hover:bg-gray-50 transition-colors">
+                                        <td className="sticky left-0 z-10 bg-white p-3 border-r border-b border-gray-200 group-hover:bg-gray-50">
+                                            <div className="font-medium text-gray-900">{emp.name}</div>
+                                            <div className="text-xs text-gray-500 flex items-center gap-1">
                                                 <span className={`w-2 h-2 rounded-full ${emp.group === 'A' ? 'bg-purple-500' : 'bg-orange-500'}`}></span>
                                                 Grupo {emp.group}
                                             </div>
-                                            <div className="text-[11px] text-slate-400 mt-1">
+                                            <div className="text-[11px] text-gray-400 mt-1">
                                                 Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
                                             </div>
                                         </td>
                                         {DAYS.map((day) => {
                                             const typeKey = schedule[emp.id][day.id];
                                             const style = getCellStyle(typeKey);
-                                            
+
                                             const isGroupA = emp.group === 'A';
                                             const isTurno18h = SHIFT_BASE_A_18H
                                                 ? (isGroupA ? (day.weekIndex % 2 === 0) : (day.weekIndex % 2 !== 0))
@@ -813,9 +999,9 @@
                                             const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== 'V' && !isForcedOffice;
 
                                             return (
-                                                <td 
-                                                    key={day.id} 
-                                                    className={`p-1 border-b border-slate-700 relative cursor-pointer border-l border-slate-800`}
+                                                <td
+                                                    key={day.id}
+                                                    className={`p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`}
                                                     onClick={() => handleCellClick(emp, day)}
                                                 >
                                                     <div className={`
@@ -828,12 +1014,12 @@
                                                             <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>
                                                         )}
                                                         {isWFH && (
-                                                            <div className="absolute top-1 left-1 text-[10px] font-bold bg-slate-900/60 border border-slate-700 rounded px-1">
+                                                            <div className="absolute top-1 left-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">
                                                                 T
                                                             </div>
                                                         )}
                                                         {isForcedOffice && (
-                                                            <div className="absolute top-1 right-1 text-[10px] font-bold bg-slate-900/60 border border-slate-700 rounded px-1">
+                                                            <div className="absolute top-1 right-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">
                                                                 O
                                                             </div>
                                                         )}
@@ -846,10 +1032,9 @@
                             </tbody>
                         </table>
                     </div>
-                    
-                    <footer className="mt-8 text-center text-slate-500 text-sm">
-                        <p>Generado por AI Assistant • 2026 Planning Dashboard</p>
-                        <p className="mt-2 text-xs opacity-60">Barra amarilla inferior en celda = Turno hasta 18h</p>
+
+                    <footer className="mt-8 text-center text-gray-400 text-sm">
+                        <p>Creado por David Ramos (Dept. Sistemas)</p>
                     </footer>
                 </div>
             );
@@ -859,4 +1044,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
