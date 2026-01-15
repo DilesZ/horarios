@@ -535,6 +535,13 @@ const App = () => {
 
   const ForcedOfficeListModal = ({ open, onClose }) => {
     if (!open) return null;
+
+    // Agrupar conteo por empleado
+    const countByEmp = {};
+    stats.forcedOfficeDetails.forEach(item => {
+      countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
+    });
+
     const entries = stats.forcedOfficeDetails
       .map((it) => {
         const day = DAYS.find((d) => d.id === it.dayId);
@@ -542,6 +549,7 @@ const App = () => {
         return { day, emp, reason: it.reason };
       })
       .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
         <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
@@ -551,11 +559,29 @@ const App = () => {
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
+
           <div className="mb-6">
             <h3 className="text-xl font-bold text-gray-900">Listado de O forzadas</h3>
-            <p className="text-gray-500 text-sm">Motivo por el que deben asistir a la oficina</p>
+            <p className="text-gray-500 text-sm mb-4">Motivo por el que deben asistir a la oficina</p>
+
+            {/* Resumen por integrante */}
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+              <h4 className="text-sm font-bold text-brand-blue mb-2">Resumen por Integrante:</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(countByEmp).length === 0 && <span className="text-xs text-gray-500">Sin registros.</span>}
+                {Object.entries(countByEmp).map(([empId, count]) => {
+                  const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
+                  return (
+                    <span key={empId} className="px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm">
+                      {emp.name}: {count}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div className="overflow-auto max-h-[60vh]">
+
+          <div className="overflow-auto max-h-[50vh]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
@@ -810,33 +836,97 @@ const App = () => {
       {/* Alerts Section */}
       {
         stats.alerts.length > 0 && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg shadow-sm">
-            <h3 className="text-rose-700 font-bold flex items-center gap-2 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              Alertas de Cobertura
-            </h3>
-            <ul className="text-sm text-rose-800 list-disc list-inside">
-              {stats.alerts.map(alert => {
-                const day = DAYS.find(d => d.id === alert.dayId);
-                let msg = `Día ${day.label}: `;
-                if (alert.present < 3) msg += `Solo ${alert.present} disponibles (Mín: 3). `;
-                if (alert.shift18hCount < 1) msg += `Sin cobertura hasta las 18h. `;
-                if (alert.intensiveCount > 3) msg += `Más de 3 en intensiva (30h). `;
-                if (!alert.group1HasOffice) {
-                  msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
-                  if (alert.group2Covering && alert.group2Covering.length > 0) {
-                    msg += `(Cubierto por: ${alert.group2Covering.join(', ')}). `;
+          <div className="mb-6 space-y-4">
+            {/* Status Banner */}
+            {(() => {
+              const unresolvedAlerts = stats.alerts.filter(a => {
+                const isGroup1Missing = !a.group1HasOffice;
+                const isGroup2Missing = !a.group2HasOffice;
+                const isCovered1 = a.group2Covering && a.group2Covering.length > 0;
+                const isCovered2 = a.group1Covering && a.group1Covering.length > 0;
+
+                if (isGroup1Missing && !isCovered1) return true;
+                if (isGroup2Missing && !isCovered2) return true;
+                if (a.present < 3 || a.shift18hCount < 1 || a.intensiveCount > 3) return true;
+
+                return false;
+              });
+              const allCovered = unresolvedAlerts.length === 0;
+
+              return (
+                <div className={`p-4 rounded-lg border flex items-center gap-3 ${allCovered ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className={`p-2 rounded-full ${allCovered ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                    {allCovered ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${allCovered ? 'text-emerald-800' : 'text-amber-800'}`}>
+                      {allCovered ? 'Todas las alertas cubiertas' : 'Atención requerida en la planificación'}
+                    </h3>
+                    <p className={`text-sm ${allCovered ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {allCovered
+                        ? 'Todas las ausencias de grupo están cubiertas por integrantes del otro grupo.'
+                        : `${unresolvedAlerts.length} alertas requieren revisión manual.`}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <h3 className="text-gray-700 font-bold flex items-center gap-2 mb-4">
+                Detalle de Alertas
+              </h3>
+              <ul className="space-y-3">
+                {stats.alerts.map(alert => {
+                  const day = DAYS.find(d => d.id === alert.dayId);
+                  let msgs = [];
+                  let isFullyCovered = true;
+
+                  if (alert.present < 3) { msgs.push(`Solo ${alert.present} disponibles (Mín: 3).`); isFullyCovered = false; }
+                  if (alert.shift18hCount < 1) { msgs.push(`Sin cobertura hasta las 18h.`); isFullyCovered = false; }
+                  if (alert.intensiveCount > 3) { msgs.push(`Más de 3 en intensiva (30h).`); isFullyCovered = false; }
+
+                  if (!alert.group1HasOffice) {
+                    let msg = `Falta alguien de {Enrique/Luis/David} en oficina.`;
+                    if (alert.group2Covering && alert.group2Covering.length > 0) {
+                      msg += ` (Cubierto por: ${alert.group2Covering.join(', ')}).`;
+                    } else {
+                      isFullyCovered = false;
+                    }
+                    msgs.push(msg);
                   }
-                }
-                if (!alert.group2HasOffice) {
-                  msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
-                  if (alert.group1Covering && alert.group1Covering.length > 0) {
-                    msg += `(Cubierto por: ${alert.group1Covering.join(', ')}). `;
+                  if (!alert.group2HasOffice) {
+                    let msg = `Falta alguien de {Jose/Ariel/Kike} en oficina.`;
+                    if (alert.group1Covering && alert.group1Covering.length > 0) {
+                      msg += ` (Cubierto por: ${alert.group1Covering.join(', ')}).`;
+                    } else {
+                      isFullyCovered = false;
+                    }
+                    msgs.push(msg);
                   }
-                }
-                return <li key={alert.dayId}>{msg}</li>;
-              })}
-            </ul>
+
+                  return (
+                    <li key={alert.dayId} className={`text-sm p-3 rounded border flex items-start gap-3 ${isFullyCovered ? 'bg-gray-50 border-gray-200 text-gray-600' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                      <div className={`mt-0.5 ${isFullyCovered ? 'text-gray-400' : 'text-rose-500'}`}>
+                        {isFullyCovered ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-semibold mr-1">Día {day.label}:</span>
+                        {msgs.join(' ')}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
         )
       }
