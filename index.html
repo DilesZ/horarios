@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planificación Vacaciones IT 2026</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
     
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -252,15 +254,8 @@
             });
             return schedule;
         };
-        const GROUP1 = ["Enrique", "Luis", "David"];
-        const GROUP2 = ["Jose", "Ariel", "Kike"];
-        const SHIFT_BASE_A_18H = true;
-        const WEEKDAYS = ["L", "M", "X", "J", "V"];
+        
         const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
-        const App = () => {
-            const [schedule, setSchedule] = useState(generateInitialSchedule);
-            const [selectedEmp, setSelectedEmp] = useState('all');
-            const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
             const [oListOpen, setOListOpen] = useState(false);
             const ForcedOfficeListModal = ({ open, onClose }) => {
                 if (!open) return null;
