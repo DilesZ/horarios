@@ -794,6 +794,41 @@ const App = () => {
           <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
         </div>
       </div>
+
+      {/* Alerts Section */}
+      {
+        stats.alerts.length > 0 && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg shadow-sm">
+            <h3 className="text-rose-700 font-bold flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Alertas de Cobertura
+            </h3>
+            <ul className="text-sm text-rose-800 list-disc list-inside">
+              {stats.alerts.map(alert => {
+                const day = DAYS.find(d => d.id === alert.dayId);
+                let msg = `Día ${day.label}: `;
+                if (alert.present < 3) msg += `Solo ${alert.present} disponibles (Mín: 3). `;
+                if (alert.shift18hCount < 1) msg += `Sin cobertura hasta las 18h. `;
+                if (alert.intensiveCount > 3) msg += `Más de 3 en intensiva (30h). `;
+                if (!alert.group1HasOffice) {
+                  msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
+                  if (alert.group2Covering && alert.group2Covering.length > 0) {
+                    msg += `(Cubierto por: ${alert.group2Covering.join(', ')}). `;
+                  }
+                }
+                if (!alert.group2HasOffice) {
+                  msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
+                  if (alert.group1Covering && alert.group1Covering.length > 0) {
+                    msg += `(Cubierto por: ${alert.group1Covering.join(', ')}). `;
+                  }
+                }
+                return <li key={alert.dayId}>{msg}</li>;
+              })}
+            </ul>
+          </div>
+        )
+      }
+
       <div className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -857,7 +892,7 @@ const App = () => {
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
-    </div>
+    </div >
   );
 };
 

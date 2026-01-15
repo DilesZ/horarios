@@ -5,7 +5,7 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles.css -o ./dist/tailwind.css --minify",
     "build:js": "babel ./src/app.jsx --out-file ./dist/app.js",
-    "build": "npm run build:css && npm run build:js && mkdir -p dist && cp ./index.html ./dist/index.html && cp ./favicon.* ./dist/"
+    "build": "npm run build:css && npm run build:js && mkdir -p dist && cp ./index.html ./dist/index.html && cp ./favicon.* ./dist/ && cp ./logo.png ./dist/"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.7",
