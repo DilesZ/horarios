@@ -634,6 +634,7 @@ const App = () => {
           forcedOfficeSet[day.id].add(candidate.id);
           forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Enrique/Luis/David}" });
           group1HasOffice = true;
+          group1Covering.push(candidate.name);
         }
       }
       if (!group2HasOffice) {
@@ -649,6 +650,7 @@ const App = () => {
           forcedOfficeSet[day.id].add(candidate.id);
           forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Jose/Ariel/Kike}" });
           group2HasOffice = true;
+          group2Covering.push(candidate.name);
         }
       }
       if (day.weekdayLetter === "V") {
