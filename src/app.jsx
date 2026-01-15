@@ -620,291 +620,290 @@ const App = () => {
           }
         }
       });
-      return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
-    });
-    if (!group1HasOffice) {
-      const candidate = EMPLOYEES.find((emp) => {
-        if (!GROUP1.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type === "V") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return !daysOffice.includes(day.weekdayLetter);
-      });
-      if (candidate) {
-        forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-        forcedOfficeSet[day.id].add(candidate.id);
-        forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Enrique/Luis/David}" });
-        group1HasOffice = true;
-      }
-    }
-    if (!group2HasOffice) {
-      const candidate = EMPLOYEES.find((emp) => {
-        if (!GROUP2.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type === "V") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return !daysOffice.includes(day.weekdayLetter);
-      });
-      if (candidate) {
-        forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-        forcedOfficeSet[day.id].add(candidate.id);
-        forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Jose/Ariel/Kike}" });
-        group2HasOffice = true;
-      }
-    }
-    if (day.weekdayLetter === "V") {
-      const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-      const lateGroup = isGroupALate ? "A" : "B";
-      const o40NotOffice = EMPLOYEES.filter((emp) => {
-        const type = schedule[emp.id][day.id];
-        if (type !== "O40") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return !daysOffice.includes("V");
-      });
-      if (o40NotOffice.length > 0) {
-        let candidate = o40NotOffice.find((e) => e.name === "Luis") || o40NotOffice.find((e) => e.group !== lateGroup) || o40NotOffice[0];
+
+      if (!group1HasOffice) {
+        const candidate = EMPLOYEES.find((emp) => {
+          if (!GROUP1.includes(emp.name)) return false;
+          const type = schedule[emp.id][day.id];
+          if (type === "V") return false;
+          const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+          return !daysOffice.includes(day.weekdayLetter);
+        });
         if (candidate) {
           forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
           forcedOfficeSet[day.id].add(candidate.id);
-          forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Viernes: se requiere 40h en oficina tras 14:00" });
+          forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Enrique/Luis/David}" });
+          group1HasOffice = true;
         }
       }
-    }
-    return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice };
-  });
-  const alerts = dailyCoverage.filter((d) => {
-    const day = DAYS.find((x) => x.id === d.dayId);
-    const need18h = day.weekdayLetter !== "V";
-    return d.present < 3 || (need18h && d.shift18hCount < 1) || d.intensiveCount > 3 || !d.group1HasOffice || !d.group2HasOffice;
-  });
-  const weeksMap = {};
-  DAYS.forEach((d) => {
-    weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-    weeksMap[d.weekIndex].push(d);
-  });
-  const intensiveWeeksByEmp = {};
-  const totalHoursByEmp = {};
-  EMPLOYEES.forEach((emp) => {
-    intensiveWeeksByEmp[emp.id] = 0;
-    totalHoursByEmp[emp.id] = 0;
-  });
-  DAYS.forEach((day) => {
-    EMPLOYEES.forEach((emp) => {
-      totalHoursByEmp[emp.id] += HOURS_PER_TYPE[schedule[emp.id][day.id]] || 0;
+      if (!group2HasOffice) {
+        const candidate = EMPLOYEES.find((emp) => {
+          if (!GROUP2.includes(emp.name)) return false;
+          const type = schedule[emp.id][day.id];
+          if (type === "V") return false;
+          const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+          return !daysOffice.includes(day.weekdayLetter);
+        });
+        if (candidate) {
+          forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+          forcedOfficeSet[day.id].add(candidate.id);
+          forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Jose/Ariel/Kike}" });
+          group2HasOffice = true;
+        }
+      }
+      if (day.weekdayLetter === "V") {
+        const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+        const lateGroup = isGroupALate ? "A" : "B";
+        const o40NotOffice = EMPLOYEES.filter((emp) => {
+          const type = schedule[emp.id][day.id];
+          if (type !== "O40") return false;
+          const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+          return !daysOffice.includes("V");
+        });
+        if (o40NotOffice.length > 0) {
+          let candidate = o40NotOffice.find((e) => e.name === "Luis") || o40NotOffice.find((e) => e.group !== lateGroup) || o40NotOffice[0];
+          if (candidate) {
+            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+            forcedOfficeSet[day.id].add(candidate.id);
+            forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Viernes: se requiere 40h en oficina tras 14:00" });
+          }
+        }
+      }
+      return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
     });
-  });
-  Object.keys(weeksMap).forEach((wiStr) => {
-    const daysInWeek = weeksMap[wiStr];
-    EMPLOYEES.forEach((emp) => {
-      if (daysInWeek.every((day) => schedule[emp.id][day.id] === "O30")) intensiveWeeksByEmp[emp.id] += 1;
+    const alerts = dailyCoverage.filter((d) => {
+      const day = DAYS.find((x) => x.id === d.dayId);
+      const need18h = day.weekdayLetter !== "V";
+      return d.present < 3 || (need18h && d.shift18hCount < 1) || d.intensiveCount > 3 || !d.group1HasOffice || !d.group2HasOffice;
     });
-  });
-  return { dailyCoverage, alerts, forcedOfficeSet, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp };
-}, [schedule]);
+    const weeksMap = {};
+    DAYS.forEach((d) => {
+      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+      weeksMap[d.weekIndex].push(d);
+    });
+    const intensiveWeeksByEmp = {};
+    const totalHoursByEmp = {};
+    EMPLOYEES.forEach((emp) => {
+      intensiveWeeksByEmp[emp.id] = 0;
+      totalHoursByEmp[emp.id] = 0;
+    });
+    DAYS.forEach((day) => {
+      EMPLOYEES.forEach((emp) => {
+        totalHoursByEmp[emp.id] += HOURS_PER_TYPE[schedule[emp.id][day.id]] || 0;
+      });
+    });
+    Object.keys(weeksMap).forEach((wiStr) => {
+      const daysInWeek = weeksMap[wiStr];
+      EMPLOYEES.forEach((emp) => {
+        if (daysInWeek.every((day) => schedule[emp.id][day.id] === "O30")) intensiveWeeksByEmp[emp.id] += 1;
+      });
+    });
+    return { dailyCoverage, alerts, forcedOfficeSet, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp };
+  }, [schedule]);
 
-const handleCellClick = (emp, day) => {
-  const typeKey = schedule[emp.id][day.id];
-  setModalData({ isOpen: true, emp, day, typeKey });
-};
+  const handleCellClick = (emp, day) => {
+    const typeKey = schedule[emp.id][day.id];
+    setModalData({ isOpen: true, emp, day, typeKey });
+  };
 
-const filteredEmployees = selectedEmp === "all" ? EMPLOYEES : EMPLOYEES.filter((e) => e.id === parseInt(selectedEmp));
+  const filteredEmployees = selectedEmp === "all" ? EMPLOYEES : EMPLOYEES.filter((e) => e.id === parseInt(selectedEmp));
 
-return (
-  <div className="min-h-screen bg-white p-6 text-brand-dark">
-    <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
-    <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
-    <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
-      <div className="flex items-center gap-6">
-        <img src="logo.png" alt="Logo" className="h-16 w-auto object-contain" />
-        <div>
-          <h2 className="text-2xl font-bold text-brand-blue tracking-tight">Gestion Horaria Dept. Sistemas</h2>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <select
-          className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm"
-          value={selectedEmp}
-          onChange={(e) => setSelectedEmp(e.target.value)}
-        >
-          <option value="all">Todos los integrantes</option>
-          {EMPLOYEES.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
-          Ver O forzadas
-        </button>
-        <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors">
-          Resetear Plan
-        </button>
-      </div>
-    </header>
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
-        <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Total Integrantes</p>
-          <p className="text-2xl font-bold text-gray-800">{EMPLOYEES.length}</p>
-        </div>
-      </div>
-      <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
-        <div className={`p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-gray-800`}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Conflictos / Alertas</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.alerts.length}</p>
-        </div>
-      </div>
-      <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
-        <div className="p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-600">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="9" x2="15" y2="9"></line>
-            <line x1="9" y1="15" x2="15" y2="15"></line>
-          </svg>
-        </div >
-        <div>
-          <p className="text-sm text-gray-500">Días con forzado oficina (O)</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.forcedOfficeDetails.length}</p>
-        </div>
-      </div>
-      <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center">
-        <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded bg-emerald-500"></div>
-            <span className="text-xs text-gray-600">Intensiva 30h</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded bg-blue-600"></div>
-            <span className="text-xs text-gray-600">40h (17:00)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded bg-indigo-600"></div>
-            <span className="text-xs text-gray-600">42h (18:00, V 14:00)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded bg-rose-500"></div>
-            <span className="text-xs text-gray-600">Vacaciones</span>
+  return (
+    <div className="min-h-screen bg-white p-6 text-brand-dark">
+      <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
+      <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
+      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+        <div className="flex items-center gap-6">
+          <img src="logo.png" alt="Logo" className="h-16 w-auto object-contain" />
+          <div>
+            <h2 className="text-2xl font-bold text-brand-blue tracking-tight">Gestion Horaria Dept. Sistemas</h2>
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
+        <div className="flex items-center gap-4">
+          <select
+            className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm"
+            value={selectedEmp}
+            onChange={(e) => setSelectedEmp(e.target.value)}
+          >
+            <option value="all">Todos los integrantes</option>
+            {EMPLOYEES.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+          <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
+            Ver O forzadas
+          </button>
+          <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors">
+            Resetear Plan
+          </button>
+        </div>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Total Integrantes</p>
+            <p className="text-2xl font-bold text-gray-800">{EMPLOYEES.length}</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className={`p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-gray-800`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Conflictos / Alertas</p>
+            <p className="text-2xl font-bold text-gray-800">{stats.alerts.length}</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="9" x2="15" y2="9"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div >
+          <div>
+            <p className="text-sm text-gray-500">Días con forzado oficina (O)</p>
+            <p className="text-2xl font-bold text-gray-800">{stats.forcedOfficeDetails.length}</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center">
+          <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Leyenda</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-emerald-500"></div>
+              <span className="text-xs text-gray-600">Intensiva 30h</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-blue-600"></div>
+              <span className="text-xs text-gray-600">40h (17:00)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-indigo-600"></div>
+              <span className="text-xs text-gray-600">42h (18:00, V 14:00)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-rose-500"></div>
+              <span className="text-xs text-gray-600">Vacaciones</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
+        </div>
       </div>
-    </div>
 
-    {/* Alerts Section */}
-    {
-      stats.alerts.length > 0 && (
-        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg shadow-sm">
-          <h3 className="text-rose-700 font-bold flex items-center gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-            Alertas de Cobertura
-          </h3>
-          <ul className="text-sm text-rose-800 list-disc list-inside">
-            {stats.alerts.map(alert => {
-              const day = DAYS.find(d => d.id === alert.dayId);
-              let msg = `Día ${day.label}: `;
-              if (alert.present < 3) msg += `Solo ${alert.present} disponibles (Mín: 3). `;
-              if (alert.shift18hCount < 1) msg += `Sin cobertura hasta las 18h. `;
-              if (alert.intensiveCount > 3) msg += `Más de 3 en intensiva (30h). `;
-              if (!alert.group1HasOffice) {
-                msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
-                if (alert.group2Covering && alert.group2Covering.length > 0) {
-                  msg += `(Cubierto por: ${alert.group2Covering.join(', ')}). `;
+      {/* Alerts Section */}
+      {
+        stats.alerts.length > 0 && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg shadow-sm">
+            <h3 className="text-rose-700 font-bold flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Alertas de Cobertura
+            </h3>
+            <ul className="text-sm text-rose-800 list-disc list-inside">
+              {stats.alerts.map(alert => {
+                const day = DAYS.find(d => d.id === alert.dayId);
+                let msg = `Día ${day.label}: `;
+                if (alert.present < 3) msg += `Solo ${alert.present} disponibles (Mín: 3). `;
+                if (alert.shift18hCount < 1) msg += `Sin cobertura hasta las 18h. `;
+                if (alert.intensiveCount > 3) msg += `Más de 3 en intensiva (30h). `;
+                if (!alert.group1HasOffice) {
+                  msg += `Falta alguien de {Enrique/Luis/David} en oficina. `;
+                  if (alert.group2Covering && alert.group2Covering.length > 0) {
+                    msg += `(Cubierto por: ${alert.group2Covering.join(', ')}). `;
+                  }
                 }
-              }
-              if (!alert.group2HasOffice) {
-                msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
-                if (alert.group1Covering && alert.group1Covering.length > 0) {
-                  msg += `(Cubierto por: ${alert.group1Covering.join(', ')}). `;
+                if (!alert.group2HasOffice) {
+                  msg += `Falta alguien de {Jose/Ariel/Kike} en oficina. `;
+                  if (alert.group1Covering && alert.group1Covering.length > 0) {
+                    msg += `(Cubierto por: ${alert.group1Covering.join(', ')}). `;
+                  }
                 }
-              }
-              return <li key={alert.dayId}>{msg}</li>;
-            })}
-          </ul>
-        </div>
-      )
-    }
+                return <li key={alert.dayId}>{msg}</li>;
+              })}
+            </ul>
+          </div>
+        )
+      }
 
-    <div className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr>
-            <th className="sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]">
-              <div className="font-bold text-brand-blue">Integrante</div>
-            </th>
-            {DAYS.map((day) => {
-              const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-              return (
-                <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
-                  <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
-                  <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
-                  <div className="mt-1 text-[9px] text-gray-400 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
-                  <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
-                    <div
-                      className={`h-full ${stats.dailyCoverage.find((s) => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`}
-                      style={{ width: `${(stats.dailyCoverage.find((s) => s.dayId === day.id).present / 6) * 100}%` }}
-                    ></div>
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredEmployees.map((emp) => (
-            <tr key={emp.id} className="group hover:bg-gray-50 transition-colors">
-              <td className="sticky left-0 z-10 bg-white p-3 border-r border-b border-gray-200 group-hover:bg-gray-50">
-                <div className="font-medium text-gray-900">{emp.name}</div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`}></span>Grupo {emp.group}
-                </div>
-                <div className="text-[11px] text-gray-400 mt-1">
-                  Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
-                </div>
-              </td>
+      <div className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]">
+                <div className="font-bold text-brand-blue">Integrante</div>
+              </th>
               {DAYS.map((day) => {
-                const typeKey = schedule[emp.id][day.id];
-                const style = TYPES[typeKey] || TYPES["O30"];
-                const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
-                const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-                const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
+                const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
                 return (
-                  <td key={day.id} className={`p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`} onClick={() => handleCellClick(emp, day)}>
-                    <div className={`w-full h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} hover:brightness-110 hover:scale-105 transform`}>
-                      <span>{style.short}</span>
-                      {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
-                      {isWFH && <div className="absolute top-1 left-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">T</div>}
-                      {isForcedOffice && <div className="absolute top-1 right-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">O</div>}
+                  <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
+                    <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
+                    <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
+                    <div className="mt-1 text-[9px] text-gray-400 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
+                    <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
+                      <div
+                        className={`h-full ${stats.dailyCoverage.find((s) => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`}
+                        style={{ width: `${(stats.dailyCoverage.find((s) => s.dayId === day.id).present / 6) * 100}%` }}
+                      ></div>
                     </div>
-                  </td>
+                  </th>
                 );
               })}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    <footer className="mt-8 text-center text-gray-500 text-sm">
-      <p>Creado por David Ramos (Dept. Sistemas)</p>
-    </footer>
-  </div >
-);
+          </thead>
+          <tbody>
+            {filteredEmployees.map((emp) => (
+              <tr key={emp.id} className="group hover:bg-gray-50 transition-colors">
+                <td className="sticky left-0 z-10 bg-white p-3 border-r border-b border-gray-200 group-hover:bg-gray-50">
+                  <div className="font-medium text-gray-900">{emp.name}</div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                    <span className={`w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`}></span>Grupo {emp.group}
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-1">
+                    Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
+                  </div>
+                </td>
+                {DAYS.map((day) => {
+                  const typeKey = schedule[emp.id][day.id];
+                  const style = TYPES[typeKey] || TYPES["O30"];
+                  const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+                  const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+                  const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
+                  return (
+                    <td key={day.id} className={`p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`} onClick={() => handleCellClick(emp, day)}>
+                      <div className={`w-full h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} hover:brightness-110 hover:scale-105 transform`}>
+                        <span>{style.short}</span>
+                        {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
+                        {isWFH && <div className="absolute top-1 left-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">T</div>}
+                        {isForcedOffice && <div className="absolute top-1 right-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">O</div>}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <footer className="mt-8 text-center text-gray-500 text-sm">
+        <p>Creado por David Ramos (Dept. Sistemas)</p>
+      </footer>
+    </div >
+  );
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
