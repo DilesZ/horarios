@@ -622,6 +622,33 @@ const generateSchedule = (year, vacationPlan) => {
     }
   });
 
+  if (year === 2026) {
+    const findEmp = (name) => EMPLOYEES.find((e) => e.name === name);
+
+    const enrique = findEmp("Enrique");
+    if (enrique) {
+      const weekDay19 = days.find((d) => d.id === "2026-06-19");
+      if (weekDay19) {
+        const wi19 = weekDay19.weekIndex;
+        days.forEach((day) => {
+          if (day.weekIndex !== wi19) return;
+          const current = schedule[enrique.id][day.id];
+          if (!current || current === "V") return;
+          schedule[enrique.id][day.id] = "O40";
+        });
+      }
+    }
+
+    const july24 = "2026-07-24";
+    const luis = findEmp("Luis");
+    if (luis && schedule[luis.id][july24] !== "V") {
+      schedule[luis.id][july24] = "O40";
+    }
+    if (enrique && schedule[enrique.id][july24] === "O40") {
+      schedule[enrique.id][july24] = "O42";
+    }
+  }
+
   return { schedule, days };
 };
 
