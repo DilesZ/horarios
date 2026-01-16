@@ -776,9 +776,17 @@ const generateSchedule = (year, vacationPlan) => {
           if (occupants.find((e) => e.id === emp.id)) continue; // Already has it
           if (!canTakeO30(emp, wi)) continue;
 
-          if (occupants.length < 3) {
+          // Check DAILY limits strictly for the candidate week
+          const daysInWeek = finalWeeksMap[wi];
+          const canAssignStrict = daysInWeek.every((day) => {
+             // If vacation, no problem (but already checked in canTakeO30)
+             if (schedule[emp.id][day.id] === "V") return true;
+             const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+             return dailyO30 < 3;
+          });
+
+          if (canAssignStrict) {
             // Take free slot
-            const daysInWeek = finalWeeksMap[wi];
             daysInWeek.forEach((day) => {
               if (schedule[emp.id][day.id] !== "V") {
                 schedule[emp.id][day.id] = "O30";
@@ -793,10 +801,17 @@ const generateSchedule = (year, vacationPlan) => {
               let moved = false;
               for (const destWi of weeksIndices) {
                 if (destWi === wi) continue;
-                const destOccupants = getOccupants(destWi);
-                if (destOccupants.length >= 3) continue;
-                if (destOccupants.find((e) => e.id === donor.id)) continue;
                 if (!canTakeO30(donor, destWi)) continue;
+                
+                // Verify donor can move to destWi without breaking daily limits there
+                const daysDest = finalWeeksMap[destWi];
+                const canMoveDonorStrict = daysDest.every(day => {
+                   if (schedule[donor.id][day.id] === "V") return true;
+                   const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+                   return dailyO30 < 3;
+                });
+                
+                if (!canMoveDonorStrict) continue;
 
                 // Move donor
                 const daysSrc = finalWeeksMap[wi];
@@ -818,7 +833,7 @@ const generateSchedule = (year, vacationPlan) => {
                 });
 
                 finalIntensiveWeeks[emp.id]++;
-                // Donor count stays same
+                // Donor count stays same (lost 1, gained 1)
                 moved = true;
                 balancing = true;
                 break;
