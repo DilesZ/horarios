@@ -179,9 +179,9 @@ const generateSchedule = (year, vacationPlan) => {
 
     // Overrides específicos solicitados por usuario para 2026
     if (year === 2026) {
-      // Semana 15-19 Junio (Week 2): Luis (A) a 40h -> A hace O40 -> B hace O42 (LATE)
+      // Semana 15-19 Junio (Week 2): Ariel (B) en oficina -> B hace O40 -> A hace O42 (LATE)
       if (wi === 2) {
-        weekAssignments[wi] = "B_LATE";
+        weekAssignments[wi] = "A_LATE";
         return;
       }
       // Semana 22-26 Junio (Week 3): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
@@ -252,6 +252,11 @@ const generateSchedule = (year, vacationPlan) => {
          isTurnoTarde = isGroupA;
       } else {
          isTurnoTarde = !isGroupA;
+      }
+
+      // Override: Enrique (B) en Semana 2 (15-19 Junio) pasa a O42 para no hacer tarde en teletrabajo
+      if (year === 2026 && day.weekIndex === 2 && emp.name === "Enrique") {
+        isTurnoTarde = true;
       }
 
       if (!isTurnoTarde) {
