@@ -1031,26 +1031,28 @@ const App = () => {
         }
       });
 
-      if (!group1HasOffice) {
-        const candidate = getBestCandidate(GROUP1, day);
-        if (candidate) {
-          forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-          forcedOfficeSet[day.id].add(candidate.id);
-          forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Enrique/Luis/David}" });
-          group1HasOffice = true;
-          group1Covering.push(candidate.name);
-          tempForcedCount[candidate.id]++;
+      if (day.weekdayLetter !== "V") {
+        if (!group1HasOffice) {
+          const candidate = getBestCandidate(GROUP1, day);
+          if (candidate) {
+            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+            forcedOfficeSet[day.id].add(candidate.id);
+            forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Enrique/Luis/David}" });
+            group1HasOffice = true;
+            group1Covering.push(candidate.name);
+            tempForcedCount[candidate.id]++;
+          }
         }
-      }
-      if (!group2HasOffice) {
-        const candidate = getBestCandidate(GROUP2, day);
-        if (candidate) {
-          forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-          forcedOfficeSet[day.id].add(candidate.id);
-          forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Jose/Ariel/Kike}" });
-          group2HasOffice = true;
-          group2Covering.push(candidate.name);
-          tempForcedCount[candidate.id]++;
+        if (!group2HasOffice) {
+          const candidate = getBestCandidate(GROUP2, day);
+          if (candidate) {
+            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+            forcedOfficeSet[day.id].add(candidate.id);
+            forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Falta presencia del grupo {Jose/Ariel/Kike}" });
+            group2HasOffice = true;
+            group2Covering.push(candidate.name);
+            tempForcedCount[candidate.id]++;
+          }
         }
       }
       if (day.weekdayLetter === "V") {
@@ -1094,7 +1096,13 @@ const App = () => {
     const alerts = dailyCoverage.filter((d) => {
       const day = days.find((x) => x.id === d.dayId);
       const need18h = day.weekdayLetter !== "V";
-      return d.present < 3 || (need18h && d.shift18hCount < 1) || d.intensiveCount > 3 || !d.group1HasOffice || !d.group2HasOffice;
+      const needGroups = day.weekdayLetter !== "V";
+      return (
+        d.present < 3 ||
+        (need18h && d.shift18hCount < 1) ||
+        d.intensiveCount > 3 ||
+        (needGroups && (!d.group1HasOffice || !d.group2HasOffice))
+      );
     });
     const weeksMap = {};
     days.forEach((d) => {
