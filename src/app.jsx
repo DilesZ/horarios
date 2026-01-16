@@ -478,7 +478,7 @@ const generateSchedule = (year, vacationPlan) => {
         const currentIntensiveCount = EMPLOYEES.filter(
           (e) => schedule[e.id][day.id] === "O30"
         ).length;
-        if (currentIntensiveCount >= 4) continue;
+        if (currentIntensiveCount >= 3) continue;
 
         if (!isInOffice) {
           schedule[emp.id][day.id] = "O30";
@@ -593,7 +593,7 @@ const generateSchedule = (year, vacationPlan) => {
           const o30Count = EMPLOYEES.filter(
             (e) => schedule[e.id][day.id] === "O30"
           ).length;
-          return o30Count < 4;
+          return o30Count < 3;
         });
         if (!canFlip) return;
         daysInWeek.forEach((day) => {
@@ -668,7 +668,7 @@ const generateSchedule = (year, vacationPlan) => {
             const o30Count = EMPLOYEES.filter(
               (e) => schedule[e.id][day.id] === "O30"
             ).length;
-            if (o30Count >= 4) {
+            if (o30Count >= 3) {
               canFlip = false;
             }
           });
@@ -725,65 +725,112 @@ const generateSchedule = (year, vacationPlan) => {
       luisDay24 && luis ? luisDay24.weekIndex : null;
     const criticalKikeSet = new Set(criticalDays);
 
-    EMPLOYEES.forEach((emp) => {
-      while (finalIntensiveWeeks[emp.id] < 7) {
-        let improved = false;
-        Object.keys(finalWeeksMap).forEach((wiStr) => {
-          if (improved) return;
-          const wi = parseInt(wiStr, 10);
-          if (vacWeeksByEmp[emp.id].has(wi)) return;
+    const canTakeO30 = (emp, wi) => {
+      if (vacWeeksByEmp[emp.id].has(wi)) return false;
+      if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
+      if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+      if (emp.name === "Kike") {
+        const daysInWeekCheck = finalWeeksMap[wi];
+        if (daysInWeekCheck.some((day) => criticalKikeSet.has(day.id)))
+          return false;
+      }
+      const daysInWeek = finalWeeksMap[wi];
+      // Check specific day constraints and O42
+      for (const day of daysInWeek) {
+        if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
+        if (emp.name === "Luis" && day.id === "2026-07-24") return false;
+        if (schedule[emp.id][day.id] === "O42") return false;
+      }
+      return true;
+    };
 
-          if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return;
-          if (emp.name === "Luis" && forbiddenWeekLuis === wi) return;
-          if (emp.name === "Kike") {
-            const daysInWeekCheck = finalWeeksMap[wi];
-            if (
-              daysInWeekCheck.some((day) => criticalKikeSet.has(day.id))
-            ) {
-              return;
+    const getOccupants = (wi) => {
+      const daysInWeek = finalWeeksMap[wi];
+      return EMPLOYEES.filter((e) => {
+        return daysInWeek.every((d) => schedule[e.id][d.id] === "O30");
+      });
+    };
+
+    let balancing = true;
+    let loops = 0;
+    while (balancing && loops < 100) {
+      balancing = false;
+      loops++;
+
+      // Sort by deficit (ascending)
+      const sortedEmps = [...EMPLOYEES].sort(
+        (a, b) => finalIntensiveWeeks[a.id] - finalIntensiveWeeks[b.id]
+      );
+
+      for (const emp of sortedEmps) {
+        if (finalIntensiveWeeks[emp.id] >= 7) continue;
+
+        const weeksIndices = Object.keys(finalWeeksMap)
+          .map((k) => parseInt(k, 10))
+          .sort((a, b) => a - b);
+
+        for (const wi of weeksIndices) {
+          if (finalIntensiveWeeks[emp.id] >= 7) break;
+
+          const occupants = getOccupants(wi);
+          if (occupants.find((e) => e.id === emp.id)) continue; // Already has it
+          if (!canTakeO30(emp, wi)) continue;
+
+          if (occupants.length < 3) {
+            // Take free slot
+            const daysInWeek = finalWeeksMap[wi];
+            daysInWeek.forEach((day) => {
+              if (schedule[emp.id][day.id] !== "V") {
+                schedule[emp.id][day.id] = "O30";
+              }
+            });
+            finalIntensiveWeeks[emp.id]++;
+            balancing = true;
+          } else {
+            // Try to swap with a donor
+            for (const donor of occupants) {
+              // Try to move donor to another week
+              let moved = false;
+              for (const destWi of weeksIndices) {
+                if (destWi === wi) continue;
+                const destOccupants = getOccupants(destWi);
+                if (destOccupants.length >= 3) continue;
+                if (destOccupants.find((e) => e.id === donor.id)) continue;
+                if (!canTakeO30(donor, destWi)) continue;
+
+                // Move donor
+                const daysSrc = finalWeeksMap[wi];
+                const daysDest = finalWeeksMap[destWi];
+
+                daysSrc.forEach((d) => {
+                  if (schedule[donor.id][d.id] !== "V")
+                    schedule[donor.id][d.id] = "O40";
+                });
+                daysDest.forEach((d) => {
+                  if (schedule[donor.id][d.id] !== "V")
+                    schedule[donor.id][d.id] = "O30";
+                });
+
+                // Assign emp to src
+                daysSrc.forEach((d) => {
+                  if (schedule[emp.id][d.id] !== "V")
+                    schedule[emp.id][d.id] = "O30";
+                });
+
+                finalIntensiveWeeks[emp.id]++;
+                // Donor count stays same
+                moved = true;
+                balancing = true;
+                break;
+              }
+              if (moved) break;
             }
           }
-
-          const daysInWeek = finalWeeksMap[wi];
-          let canFlip = true;
-
-          daysInWeek.forEach((day) => {
-            if (!canFlip) return;
-            const current = schedule[emp.id][day.id];
-            if (!current || current === "V") {
-              canFlip = false;
-              return;
-            }
-            if (
-              (emp.name === "Enrique" && day.id === "2026-06-19") ||
-              (emp.name === "Luis" && day.id === "2026-07-24") ||
-              (emp.name === "Kike" && criticalKikeSet.has(day.id))
-            ) {
-              canFlip = false;
-              return;
-            }
-            const o30Count = EMPLOYEES.filter(
-              (e) => schedule[e.id][day.id] === "O30"
-            ).length;
-            if (o30Count >= 3) {
-              canFlip = false;
-            }
-          });
-
-          if (!canFlip) return;
-
-          daysInWeek.forEach((day) => {
-            if (schedule[emp.id][day.id] !== "V") {
-              schedule[emp.id][day.id] = "O30";
-            }
-          });
-
-          finalIntensiveWeeks[emp.id] += 1;
-          improved = true;
-        });
-        if (!improved) break;
+          if (balancing) break;
+        }
+        if (balancing) break;
       }
-    });
+    }
   }
 
   return { schedule, days };
