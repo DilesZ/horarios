@@ -478,7 +478,7 @@ const generateSchedule = (year, vacationPlan) => {
         const currentIntensiveCount = EMPLOYEES.filter(
           (e) => schedule[e.id][day.id] === "O30"
         ).length;
-        if (currentIntensiveCount >= 3) continue;
+        if (currentIntensiveCount >= 4) continue;
 
         if (!isInOffice) {
           schedule[emp.id][day.id] = "O30";
@@ -593,7 +593,7 @@ const generateSchedule = (year, vacationPlan) => {
           const o30Count = EMPLOYEES.filter(
             (e) => schedule[e.id][day.id] === "O30"
           ).length;
-          return o30Count < 3;
+          return o30Count < 4;
         });
         if (!canFlip) return;
         daysInWeek.forEach((day) => {
@@ -668,7 +668,7 @@ const generateSchedule = (year, vacationPlan) => {
             const o30Count = EMPLOYEES.filter(
               (e) => schedule[e.id][day.id] === "O30"
             ).length;
-            if (o30Count >= 3) {
+            if (o30Count >= 4) {
               canFlip = false;
             }
           });
