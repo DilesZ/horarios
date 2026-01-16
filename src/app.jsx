@@ -703,6 +703,16 @@ const generateSchedule = (year, vacationPlan) => {
         }
       }
     }
+
+    const criticalDays = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23"];
+    const kike = findEmp("Kike");
+    if (kike) {
+      criticalDays.forEach((dayId) => {
+        const current = schedule[kike.id][dayId];
+        if (!current || current === "V") return;
+        schedule[kike.id][dayId] = "O42";
+      });
+    }
   }
 
   return { schedule, days };
