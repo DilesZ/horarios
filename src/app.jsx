@@ -825,6 +825,21 @@ const App = () => {
     return { dailyCoverage, alerts, forcedOfficeSet, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp };
   }, [schedule]);
 
+  const exportToExcel = () => {
+    const header = ["Empleado", ...DAYS.map((d) => `${d.id} (${d.weekdayLetter})`)];
+    const data = EMPLOYEES.map((emp) => {
+      const row = [emp.name];
+      DAYS.forEach((day) => {
+        row.push(schedule[emp.id][day.id]);
+      });
+      return row;
+    });
+    const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Horarios");
+    XLSX.writeFile(wb, "planificacion_horarios_2026.xlsx");
+  };
+
   const handleCellClick = (emp, day) => {
     const typeKey = schedule[emp.id][day.id];
     setModalData({ isOpen: true, emp, day, typeKey });
@@ -858,6 +873,16 @@ const App = () => {
           </select>
           <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
             Ver O forzadas
+          </button>
+          <button onClick={exportToExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Exportar Excel
           </button>
           <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors">
             Resetear Plan
