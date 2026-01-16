@@ -475,10 +475,54 @@ const generateInitialSchedule = () => {
         const wi = parseInt(wiStr, 10);
         if (vacWeeksByEmp[emp.id].has(wi)) return;
         const daysInWeek = weeksList[wi];
-        const hasO42ForEmp = daysInWeek.some(
+        let hasO42ForEmp = daysInWeek.some(
           (day) => schedule[emp.id][day.id] === "O42"
         );
-        if (hasO42ForEmp) return;
+        if (hasO42ForEmp) {
+          // Intentar mover los turnos O42 a otros empleados para liberar esta semana
+          const daysWithO42 = daysInWeek.filter(
+            (day) => schedule[emp.id][day.id] === "O42"
+          );
+          let allMoved = true;
+          const tempSwaps = []; // Para revertir si no podemos mover todos
+
+          for (const day of daysWithO42) {
+            // Buscar candidato para tomar el O42
+            // Preferiblemente alguien que no esté persiguiendo intensivas desesperadamente, o cualquiera disponible en O40
+            const candidates = EMPLOYEES.filter((e) => {
+              if (e.id === emp.id) return false;
+              if (schedule[e.id][day.id] !== "O40") return false;
+              // Verificar que no esté de vacaciones
+              if (vacWeeksByEmp[e.id].has(wi)) return false;
+              return true;
+            }).sort((a, b) => {
+              // Priorizar a quienes ya tienen muchas intensivas (para no perjudicar a los que tienen pocas)
+              return (
+                (currentIntensiveWeeks[b.id] || 0) -
+                (currentIntensiveWeeks[a.id] || 0)
+              );
+            });
+
+            if (candidates.length > 0) {
+              const sub = candidates[0];
+              tempSwaps.push({ sub, day });
+            } else {
+              allMoved = false;
+              break;
+            }
+          }
+
+          if (allMoved) {
+            // Aplicar cambios
+            tempSwaps.forEach(({ sub, day }) => {
+              schedule[sub.id][day.id] = "O42";
+              schedule[emp.id][day.id] = "O40";
+            });
+            hasO42ForEmp = false;
+          } else {
+            return; // No se pudo liberar la semana
+          }
+        }
         const allO40 = daysInWeek.every(
           (day) => schedule[emp.id][day.id] === "O40"
         );
