@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles.css -o ./dist/tailwind.css --minify",
-    "build:js": "babel ./src/app.jsx --out-file ./dist/app.js --presets @babel/preset-react",
-    "build": "npm run build:css && npm run build:js && mkdir -p dist && cp ./index.html ./dist/index.html && cp ./favicon.* ./dist/ && cp ./logo.png ./dist/"
+    "build:js": "babel ./src/app.jsx --out-file ./dist/app.js",
+    "build": "mkdir -p dist && npm run build:css && npm run build:js && cp ./index.html ./dist/index.html && cp ./favicon.* ./dist/ && cp ./logo.png ./dist/"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.7",
