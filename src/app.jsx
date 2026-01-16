@@ -552,6 +552,7 @@ const App = () => {
   const [selectedEmp, setSelectedEmp] = useState("all");
   const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
   const [oListOpen, setOListOpen] = useState(false);
+  const [alertsExpanded, setAlertsExpanded] = useState(true);
 
   const WeekDetailModal = ({ isOpen, onClose, emp, day, typeKey }) => {
     if (!isOpen || !emp || !day) return null;
@@ -1074,10 +1075,33 @@ const App = () => {
             })()}
 
             <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <h3 className="text-gray-700 font-bold flex items-center gap-2 mb-4">
-                Detalle de Alertas
-              </h3>
-              <ul className="space-y-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-700 font-bold flex items-center gap-2">
+                  Detalle de Alertas
+                </h3>
+                <button
+                  onClick={() => setAlertsExpanded(!alertsExpanded)}
+                  className="text-gray-500 hover:text-brand-blue transition-colors focus:outline-none"
+                >
+                  {alertsExpanded ? (
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>Ocultar</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>Mostrar</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              </div>
+              {alertsExpanded && (
+                <ul className="space-y-3">
                 {stats.alerts.map(alert => {
                   const day = DAYS.find(d => d.id === alert.dayId);
                   let msgs = [];
@@ -1123,6 +1147,7 @@ const App = () => {
                   );
                 })}
               </ul>
+              )}
             </div>
           </div>
         )
