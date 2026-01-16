@@ -161,6 +161,77 @@ const generateSchedule = (year, vacationPlan) => {
     vacWeeksByEmp[emp.id] = set;
   });
 
+  const weeks = {};
+  days.forEach((day) => {
+    weeks[day.weekIndex] = weeks[day.weekIndex] || [];
+    weeks[day.weekIndex].push(day);
+  });
+
+  // Determinar asignación base de turnos (O40 vs O42) por semana
+  // O42 (Tarde L-J) vs O40 (Tarde V)
+  // Estrategia: Asignar O40 (requiere presencia V hasta 17:00) al grupo con más presencia física en Viernes.
+  const weekAssignments = {}; // index -> "A_LATE" (A hace O42, B hace O40) o "B_LATE" (B hace O42, A hace O40)
+
+  Object.keys(weeks).forEach((wiStr) => {
+    const wi = parseInt(wiStr, 10);
+    const weekDays = weeks[wi];
+    const friday = weekDays.find((d) => d.weekdayLetter === "V");
+
+    // Overrides específicos solicitados por usuario para 2026
+    if (year === 2026) {
+      // Semana 15-19 Junio (Week 2): Luis (A) a 40h -> A hace O40 -> B hace O42 (LATE)
+      if (wi === 2) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      // Semana 22-26 Junio (Week 3): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
+      if (wi === 3) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Semana 20-24 Julio (Week 7): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
+      if (wi === 7) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+    }
+
+    if (!friday) {
+      // Fallback a rotación simple si no hay viernes
+      weekAssignments[wi] = wi % 2 === 0 ? "A_LATE" : "B_LATE";
+      return;
+    }
+
+    // Calcular disponibilidad presencial para el viernes
+    const getScore = (groupName) => {
+      const groupMembers = EMPLOYEES.filter((e) => e.group === groupName);
+      let score = 0;
+      groupMembers.forEach((emp) => {
+        // Si está de vacaciones, no cuenta
+        if (vacWeeksByEmp[emp.id].has(wi)) return;
+        // Si sus días de oficina incluyen Viernes, suma punto
+        const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+        if (officeDays.includes("V")) score++;
+      });
+      return score;
+    };
+
+    const scoreA = getScore("A");
+    const scoreB = getScore("B");
+
+    if (scoreA > scoreB) {
+      // A tiene más presencia en viernes -> A hace O40 -> B hace O42
+      weekAssignments[wi] = "B_LATE";
+    } else if (scoreB > scoreA) {
+      // B tiene más presencia en viernes -> B hace O40 -> A hace O42
+      weekAssignments[wi] = "A_LATE";
+    } else {
+      // Empate -> Rotación estándar basada en SHIFT_BASE_A_18H y paridad
+      const defaultIsALate = SHIFT_BASE_A_18H ? wi % 2 === 0 : wi % 2 !== 0;
+      weekAssignments[wi] = defaultIsALate ? "A_LATE" : "B_LATE";
+    }
+  });
+
   EMPLOYEES.forEach((emp) => {
     schedule[emp.id] = {};
     days.forEach((day) => {
@@ -169,26 +240,26 @@ const generateSchedule = (year, vacationPlan) => {
         schedule[emp.id][day.id] = "V";
         return;
       }
+      
+      const assignment = weekAssignments[day.weekIndex];
       const isGroupA = emp.group === "A";
-      const isTurnoTarde = SHIFT_BASE_A_18H
-        ? isGroupA
-          ? day.weekIndex % 2 === 0
-          : day.weekIndex % 2 !== 0
-        : isGroupA
-          ? day.weekIndex % 2 !== 0
-          : day.weekIndex % 2 === 0;
+      
+      // Si assignment es A_LATE: A tiene O42, B tiene O40
+      // Si assignment es B_LATE: B tiene O42, A tiene O40
+      
+      let isTurnoTarde = false; // O42
+      if (assignment === "A_LATE") {
+         isTurnoTarde = isGroupA;
+      } else {
+         isTurnoTarde = !isGroupA;
+      }
+
       if (!isTurnoTarde) {
         schedule[emp.id][day.id] = "O40";
       } else {
         schedule[emp.id][day.id] = "O42";
       }
     });
-  });
-
-  const weeks = {};
-  days.forEach((day) => {
-    weeks[day.weekIndex] = weeks[day.weekIndex] || [];
-    weeks[day.weekIndex].push(day);
   });
 
   const intensiveWeeksByEmp = {};
