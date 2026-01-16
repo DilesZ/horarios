@@ -313,7 +313,6 @@ const generateSchedule = (year, vacationPlan) => {
         if (!isEmpInOffice) return true;
 
         const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
-        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
 
         const othersInOffice = EMPLOYEES.filter((other) => {
           if (other.id === emp.id) return false;
@@ -323,16 +322,7 @@ const generateSchedule = (year, vacationPlan) => {
           return otherOfficeDays.includes(day.weekdayLetter);
         });
 
-        const otherGroupHasO40 = EMPLOYEES.some((other) => {
-          if (!otherGroup.includes(other.name)) return false;
-          if (vacWeeksByEmp[other.id].has(wi)) return false;
-          const currentType = schedule[other.id][day.id];
-          if (currentType !== "O40") return false;
-          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
-          return otherOfficeDays.includes(day.weekdayLetter);
-        });
-
-        return othersInOffice.length > 0 || otherGroupHasO40;
+        return othersInOffice.length > 0;
       })
     );
 
@@ -424,31 +414,45 @@ const generateSchedule = (year, vacationPlan) => {
       if (!anyO40InOffice) {
         let candidates = GROUP1.map((name) =>
           EMPLOYEES.find((e) => e.name === name)
-        )
-          .filter((emp) => emp && schedule[emp.id][day.id] !== "V")
-          .sort((a, b) => {
-            const typeA = schedule[a.id][day.id] === "O30";
-            const typeB = schedule[b.id][day.id] === "O30";
-            if (typeA && !typeB) return 1;
-            if (!typeA && typeB) return -1;
-            return a.id - b.id;
-          });
-        let candidate = candidates[0];
+        ).filter(
+          (emp) =>
+            emp &&
+            schedule[emp.id][day.id] !== "V" &&
+            emp.officeDays.split(",").map((d) => d.trim()).includes("V")
+        );
 
-        if (!candidate) {
+        if (candidates.length === 0) {
           candidates = GROUP2.map((name) =>
             EMPLOYEES.find((e) => e.name === name)
-          )
-            .filter((emp) => emp && schedule[emp.id][day.id] !== "V")
-            .sort((a, b) => {
-              const typeA = schedule[a.id][day.id] === "O30";
-              const typeB = schedule[b.id][day.id] === "O30";
-              if (typeA && !typeB) return 1;
-              if (!typeA && typeB) return -1;
-              return a.id - b.id;
-            });
-          candidate = candidates[0];
+          ).filter(
+            (emp) =>
+              emp &&
+              schedule[emp.id][day.id] !== "V" &&
+              emp.officeDays.split(",").map((d) => d.trim()).includes("V")
+          );
         }
+
+        if (candidates.length === 0) {
+          candidates = GROUP1.map((name) =>
+            EMPLOYEES.find((e) => e.name === name)
+          ).filter((emp) => emp && schedule[emp.id][day.id] !== "V");
+        }
+
+        if (candidates.length === 0) {
+          candidates = GROUP2.map((name) =>
+            EMPLOYEES.find((e) => e.name === name)
+          ).filter((emp) => emp && schedule[emp.id][day.id] !== "V");
+        }
+
+        candidates.sort((a, b) => {
+          const typeA = schedule[a.id][day.id] === "O30";
+          const typeB = schedule[b.id][day.id] === "O30";
+          if (typeA && !typeB) return 1;
+          if (!typeA && typeB) return -1;
+          return a.id - b.id;
+        });
+
+        const candidate = candidates[0];
 
         if (candidate) {
           if (schedule[candidate.id][day.id] === "O30") {
