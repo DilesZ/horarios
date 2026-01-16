@@ -826,15 +826,91 @@ const App = () => {
   }, [schedule]);
 
   const exportToExcel = () => {
-    const header = ["Empleado", ...DAYS.map((d) => `${d.id} (${d.weekdayLetter})`)];
-    const data = EMPLOYEES.map((emp) => {
+    // Definir estilos
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "2563EB" } }, // blue-600
+      alignment: { horizontal: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    const getCellStyle = (type) => {
+      let fgColor = "FFFFFF"; // default white
+      let fontColor = "000000";
+
+      if (type === "O40") { fgColor = "2563EB"; fontColor = "FFFFFF"; } // blue-600
+      else if (type === "O42") { fgColor = "4F46E5"; fontColor = "FFFFFF"; } // indigo-600
+      else if (type === "O30") { fgColor = "10B981"; fontColor = "FFFFFF"; } // emerald-500
+      else if (type === "T30") { fgColor = "14B8A6"; fontColor = "FFFFFF"; } // teal-500
+      else if (type === "V") { fgColor = "F43F5E"; fontColor = "FFFFFF"; } // rose-500
+
+      return {
+        fill: { fgColor: { rgb: fgColor } },
+        font: { color: { rgb: fontColor } },
+        alignment: { horizontal: "center" },
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" }
+        }
+      };
+    };
+
+    // Crear datos
+    const headers = ["Empleado", ...DAYS.map((d) => `${d.id} (${d.weekdayLetter})`)];
+    const dataRows = EMPLOYEES.map((emp) => {
       const row = [emp.name];
       DAYS.forEach((day) => {
         row.push(schedule[emp.id][day.id]);
       });
       return row;
     });
-    const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+
+    // Crear hoja
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+    // Aplicar estilos
+    // Headers (Row 0)
+    for (let c = 0; c < headers.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+      if (!ws[cellRef]) continue;
+      ws[cellRef].s = headerStyle;
+    }
+
+    // Data Rows
+    dataRows.forEach((row, rIndex) => {
+      const rowIndex = rIndex + 1; // +1 porque row 0 es headers
+      row.forEach((cellValue, cIndex) => {
+        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: cIndex });
+        if (!ws[cellRef]) return;
+        
+        if (cIndex === 0) {
+           // Columna Empleado
+           ws[cellRef].s = {
+             font: { bold: true },
+             alignment: { horizontal: "left" },
+             border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }
+           };
+        } else {
+           // Columnas de días
+           ws[cellRef].s = getCellStyle(cellValue);
+        }
+      });
+    });
+
+    // Ajustar ancho de columnas
+    const colWidths = [{ wch: 15 }]; // Primera columna más ancha
+    for (let i = 1; i < headers.length; i++) {
+      colWidths.push({ wch: 12 });
+    }
+    ws["!cols"] = colWidths;
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Horarios");
     XLSX.writeFile(wb, "planificacion_horarios_2026.xlsx");
