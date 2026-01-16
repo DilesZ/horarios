@@ -1054,22 +1054,38 @@ const App = () => {
         }
       }
       if (day.weekdayLetter === "V") {
-        const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-        const lateGroup = isGroupALate ? "A" : "B";
-        const o40NotOffice = EMPLOYEES.filter((emp) => {
+        const hasO40InOffice = EMPLOYEES.some((emp) => {
           const type = schedule[emp.id][day.id];
           if (type !== "O40") return false;
           const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-          return !daysOffice.includes("V");
+          return daysOffice.includes("V");
         });
-        if (o40NotOffice.length > 0) {
-          o40NotOffice.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
-          let candidate = o40NotOffice.find((e) => e.name === "Luis") || o40NotOffice.find((e) => e.group !== lateGroup) || o40NotOffice[0];
-          if (candidate) {
-            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-            forcedOfficeSet[day.id].add(candidate.id);
-            forcedOfficeDetails.push({ dayId: day.id, empId: candidate.id, reason: "Viernes: se requiere 40h en oficina tras 14:00" });
-            tempForcedCount[candidate.id]++;
+
+        if (!hasO40InOffice) {
+          const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+          const lateGroup = isGroupALate ? "A" : "B";
+          const o40NotOffice = EMPLOYEES.filter((emp) => {
+            const type = schedule[emp.id][day.id];
+            if (type !== "O40") return false;
+            const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+            return !daysOffice.includes("V");
+          });
+          if (o40NotOffice.length > 0) {
+            o40NotOffice.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
+            let candidate =
+              o40NotOffice.find((e) => e.name === "Luis") ||
+              o40NotOffice.find((e) => e.group !== lateGroup) ||
+              o40NotOffice[0];
+            if (candidate) {
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Viernes: se requiere 40h en oficina hasta las 17:00",
+              });
+              tempForcedCount[candidate.id]++;
+            }
           }
         }
       }
