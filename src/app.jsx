@@ -306,34 +306,39 @@ const generateSchedule = (year, vacationPlan) => {
       ? allEligible.filter((emp) => emp.id !== reserve.id)
       : allEligible;
 
-    const selected = [];
-    for (const emp of eligibleIntensive) {
-      if (selected.length >= 3) break;
-      if (intensiveWeeksByEmp[emp.id] >= 7) continue;
-
-      const isSafe = weekDays.every((day) => {
+    const safeForIntensive = eligibleIntensive.filter((emp) =>
+      weekDays.every((day) => {
         const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
-        if (!empOfficeDays.includes(day.weekdayLetter)) return true;
+        const isEmpInOffice = empOfficeDays.includes(day.weekdayLetter);
+        if (!isEmpInOffice) return true;
 
         const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
+        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
 
         const othersInOffice = EMPLOYEES.filter((other) => {
           if (other.id === emp.id) return false;
           if (!empGroup.includes(other.name)) return false;
           if (vacWeeksByEmp[other.id].has(wi)) return false;
-          if (selected.some((s) => s.id === other.id)) return false;
-
           const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
           return otherOfficeDays.includes(day.weekdayLetter);
         });
 
-        return othersInOffice.length > 0;
-      });
+        const otherGroupHasO40 = EMPLOYEES.some((other) => {
+          if (!otherGroup.includes(other.name)) return false;
+          if (vacWeeksByEmp[other.id].has(wi)) return false;
+          const currentType = schedule[other.id][day.id];
+          if (currentType !== "O40") return false;
+          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
+          return otherOfficeDays.includes(day.weekdayLetter);
+        });
 
-      if (isSafe) {
-        selected.push(emp);
-      }
-    }
+        return othersInOffice.length > 0 || otherGroupHasO40;
+      })
+    );
+
+    const selected = safeForIntensive
+      .filter((emp) => intensiveWeeksByEmp[emp.id] < 7)
+      .slice(0, 3);
 
     selected.forEach((emp) => {
       weekDays.forEach((day) => {
