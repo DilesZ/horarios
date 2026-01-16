@@ -1,4 +1,4 @@
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
 
 const EMPLOYEES = [
   { id: 1, name: "Kike", role: "SysAdmin", officeDays: "L, M, X, V", group: "A" },
@@ -26,9 +26,9 @@ const MONTH_NAMES = [
 const WEEKDAY_LETTER = { 1: "L", 2: "M", 3: "X", 4: "J", 5: "V" };
 const WEEKDAY_FULL = { L: "Lunes", M: "Martes", X: "Miércoles", J: "Jueves", V: "Viernes" };
 
-const buildDaysRange = () => {
-  const start = new Date(2026, 5, 1);
-  const end = new Date(2026, 8, 30);
+const buildDaysRange = (year) => {
+  const start = new Date(year, 5, 1);
+  const end = new Date(year, 8, 30);
   const days = [];
   let weekIndex = -1;
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -43,7 +43,6 @@ const buildDaysRange = () => {
   }
   return days;
 };
-const DAYS = buildDaysRange();
 
 const TYPES = {
   O40: { label: "40h (hasta las 17:00)", color: "bg-blue-600", text: "text-white", short: "40" },
@@ -53,7 +52,7 @@ const TYPES = {
   V: { label: "Vacaciones", color: "bg-rose-500", text: "text-white", short: "VAC" },
 };
 
-const VACATION_PLAN = {
+const DEFAULT_VACATION_PLAN_2026 = {
   Kike: [
     "2026-06-22",
     "2026-06-23",
@@ -130,19 +129,28 @@ const VACATION_PLAN = {
   ],
 };
 
+const createEmptyVacationPlan = () => {
+  const plan = {};
+  EMPLOYEES.forEach((emp) => {
+    plan[emp.name] = [];
+  });
+  return plan;
+};
+
 const GROUP1 = ["Enrique", "Luis", "David"];
 const GROUP2 = ["Jose", "Ariel", "Kike"];
 const SHIFT_BASE_A_18H = true;
 const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
 
-const generateInitialSchedule = () => {
+const generateSchedule = (year, vacationPlan) => {
+  const days = buildDaysRange(year);
   const schedule = {};
   const vacWeeksByEmp = {};
   EMPLOYEES.forEach((emp) => {
     const set = new Set();
-    const vacs = VACATION_PLAN[emp.name] || [];
+    const vacs = vacationPlan[emp.name] || [];
     vacs.forEach((dateStr) => {
-      const dayEntry = DAYS.find((d) => d.id === dateStr);
+      const dayEntry = days.find((d) => d.id === dateStr);
       if (dayEntry) set.add(dayEntry.weekIndex);
     });
     vacWeeksByEmp[emp.id] = set;
@@ -150,8 +158,8 @@ const generateInitialSchedule = () => {
 
   EMPLOYEES.forEach((emp) => {
     schedule[emp.id] = {};
-    DAYS.forEach((day) => {
-      const vacationsForEmp = VACATION_PLAN[emp.name] || [];
+    days.forEach((day) => {
+      const vacationsForEmp = vacationPlan[emp.name] || [];
       if (vacationsForEmp.includes(day.id)) {
         schedule[emp.id][day.id] = "V";
         return;
@@ -173,7 +181,7 @@ const generateInitialSchedule = () => {
   });
 
   const weeks = {};
-  DAYS.forEach((day) => {
+  days.forEach((day) => {
     weeks[day.weekIndex] = weeks[day.weekIndex] || [];
     weeks[day.weekIndex].push(day);
   });
@@ -378,7 +386,7 @@ const generateInitialSchedule = () => {
   });
 
   const weeksBeforeCompensation = {};
-  DAYS.forEach((d) => {
+  days.forEach((d) => {
     weeksBeforeCompensation[d.weekIndex] =
       weeksBeforeCompensation[d.weekIndex] || [];
     weeksBeforeCompensation[d.weekIndex].push(d);
@@ -400,7 +408,7 @@ const generateInitialSchedule = () => {
     while (intensiveWeeks < 7) {
       let swapped = false;
 
-      for (const day of DAYS) {
+      for (const day of days) {
         if (schedule[emp.id][day.id] !== "O40") continue;
         if (schedule[emp.id][day.id] === "V") continue;
 
@@ -449,7 +457,7 @@ const generateInitialSchedule = () => {
   });
 
   const weeksList = {};
-  DAYS.forEach((d) => {
+  days.forEach((d) => {
     weeksList[d.weekIndex] = weeksList[d.weekIndex] || [];
     weeksList[d.weekIndex].push(d);
   });
@@ -479,24 +487,19 @@ const generateInitialSchedule = () => {
           (day) => schedule[emp.id][day.id] === "O42"
         );
         if (hasO42ForEmp) {
-          // Intentar mover los turnos O42 a otros empleados para liberar esta semana
           const daysWithO42 = daysInWeek.filter(
             (day) => schedule[emp.id][day.id] === "O42"
           );
           let allMoved = true;
-          const tempSwaps = []; // Para revertir si no podemos mover todos
+          const tempSwaps = [];
 
           for (const day of daysWithO42) {
-            // Buscar candidato para tomar el O42
-            // Preferiblemente alguien que no esté persiguiendo intensivas desesperadamente, o cualquiera disponible en O40
             const candidates = EMPLOYEES.filter((e) => {
               if (e.id === emp.id) return false;
               if (schedule[e.id][day.id] !== "O40") return false;
-              // Verificar que no esté de vacaciones
               if (vacWeeksByEmp[e.id].has(wi)) return false;
               return true;
             }).sort((a, b) => {
-              // Priorizar a quienes ya tienen muchas intensivas (para no perjudicar a los que tienen pocas)
               return (
                 (currentIntensiveWeeks[b.id] || 0) -
                 (currentIntensiveWeeks[a.id] || 0)
@@ -513,14 +516,13 @@ const generateInitialSchedule = () => {
           }
 
           if (allMoved) {
-            // Aplicar cambios
             tempSwaps.forEach(({ sub, day }) => {
               schedule[sub.id][day.id] = "O42";
               schedule[emp.id][day.id] = "O40";
             });
             hasO42ForEmp = false;
           } else {
-            return; // No se pudo liberar la semana
+            return;
           }
         }
         const allO40 = daysInWeek.every(
@@ -544,15 +546,139 @@ const generateInitialSchedule = () => {
     }
   });
 
-  return schedule;
+  return { schedule, days };
 };
 
 const App = () => {
-  const [schedule, setSchedule] = useState(generateInitialSchedule);
+  const [year, setYear] = useState(2026);
+  const [vacationPlan, setVacationPlan] = useState(DEFAULT_VACATION_PLAN_2026);
+  const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
   const [selectedEmp, setSelectedEmp] = useState("all");
   const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
   const [oListOpen, setOListOpen] = useState(false);
   const [alertsExpanded, setAlertsExpanded] = useState(true);
+  const [mode, setMode] = useState("config");
+  const [acceptedDashboards, setAcceptedDashboards] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem("horarios_dashboards");
+      if (!stored) return {};
+      const parsed = JSON.parse(stored);
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
+  const [activeDashboardYear, setActiveDashboardYear] = useState(null);
+  const [selectedVacationEmpName, setSelectedVacationEmpName] = useState(EMPLOYEES[0].name);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
+    } catch {}
+  }, [acceptedDashboards]);
+
+  const savedYears = useMemo(
+    () =>
+      Object.keys(acceptedDashboards)
+        .map((y) => parseInt(y, 10))
+        .filter((y) => !isNaN(y))
+        .sort((a, b) => a - b),
+    [acceptedDashboards]
+  );
+
+  const currentDashboard =
+    mode === "dashboard" && activeDashboardYear && acceptedDashboards[activeDashboardYear]
+      ? acceptedDashboards[activeDashboardYear]
+      : null;
+
+  const schedule = currentDashboard ? currentDashboard.schedule : planning.schedule;
+  const days = currentDashboard ? currentDashboard.days : planning.days;
+  const currentYear = currentDashboard ? activeDashboardYear : year;
+
+  const daysByMonth = useMemo(() => {
+    const map = {};
+    days.forEach((d) => {
+      map[d.month] = map[d.month] || [];
+      map[d.month].push(d);
+    });
+    return Object.entries(map);
+  }, [days]);
+
+  const handleYearChange = (value) => {
+    const nextYear = parseInt(value, 10);
+    if (isNaN(nextYear)) return;
+    let basePlan;
+    if (nextYear === 2026) {
+      basePlan = DEFAULT_VACATION_PLAN_2026;
+    } else if (acceptedDashboards[nextYear]) {
+      basePlan = acceptedDashboards[nextYear].vacationPlan || {};
+    } else {
+      basePlan = createEmptyVacationPlan();
+    }
+    const nextPlan = {};
+    EMPLOYEES.forEach((emp) => {
+      nextPlan[emp.name] = [...(basePlan[emp.name] || [])];
+    });
+    setYear(nextYear);
+    setVacationPlan(nextPlan);
+    setPlanning(generateSchedule(nextYear, nextPlan));
+    setMode("config");
+  };
+
+  const toggleVacationDay = (empName, dayId) => {
+    const current = vacationPlan;
+    const next = {};
+    EMPLOYEES.forEach((emp) => {
+      const list = current[emp.name] || [];
+      if (emp.name === empName) {
+        if (list.includes(dayId)) {
+          next[emp.name] = list.filter((id) => id !== dayId);
+        } else {
+          next[emp.name] = [...list, dayId].sort();
+        }
+      } else {
+        next[emp.name] = [...list];
+      }
+    });
+    setVacationPlan(next);
+    setPlanning(generateSchedule(year, next));
+  };
+
+  const handleAcceptCalendar = () => {
+    const generated = generateSchedule(year, vacationPlan);
+    const snapshotVacationPlan = {};
+    EMPLOYEES.forEach((emp) => {
+      snapshotVacationPlan[emp.name] = [...(vacationPlan[emp.name] || [])];
+    });
+    const entry = {
+      year,
+      schedule: generated.schedule,
+      days: generated.days,
+      vacationPlan: snapshotVacationPlan,
+    };
+    setAcceptedDashboards((prev) => {
+      const next = { ...prev, [year]: entry };
+      return next;
+    });
+    setActiveDashboardYear(year);
+    setMode("dashboard");
+  };
+
+  const handleModeChange = (nextMode) => {
+    if (nextMode === "dashboard") {
+      if (!savedYears.length) return;
+      const initialYear = activeDashboardYear || savedYears[0];
+      setActiveDashboardYear(initialYear);
+      setMode("dashboard");
+    } else {
+      setMode("config");
+    }
+  };
+
+  const handleSelectDashboardYear = (y) => {
+    setActiveDashboardYear(y);
+    setMode("dashboard");
+  };
 
   const WeekDetailModal = ({ isOpen, onClose, emp, day, typeKey }) => {
     if (!isOpen || !emp || !day) return null;
@@ -629,7 +755,7 @@ const App = () => {
 
     const entries = stats.forcedOfficeDetails
       .map((it) => {
-        const day = DAYS.find((d) => d.id === it.dayId);
+        const day = days.find((d) => d.id === it.dayId);
         const emp = EMPLOYEES.find((e) => e.id === it.empId);
         return { day, emp, reason: it.reason };
       })
@@ -717,7 +843,7 @@ const App = () => {
       candidates.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
       return candidates[0];
     };
-    const dailyCoverage = DAYS.map((day) => {
+    const dailyCoverage = days.map((day) => {
       let present = 0,
         vacation = 0,
         shift18hCount = 0,
@@ -797,12 +923,12 @@ const App = () => {
       return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
     });
     const alerts = dailyCoverage.filter((d) => {
-      const day = DAYS.find((x) => x.id === d.dayId);
+      const day = days.find((x) => x.id === d.dayId);
       const need18h = day.weekdayLetter !== "V";
       return d.present < 3 || (need18h && d.shift18hCount < 1) || d.intensiveCount > 3 || !d.group1HasOffice || !d.group2HasOffice;
     });
     const weeksMap = {};
-    DAYS.forEach((d) => {
+    days.forEach((d) => {
       weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
       weeksMap[d.weekIndex].push(d);
     });
@@ -812,7 +938,7 @@ const App = () => {
       intensiveWeeksByEmp[emp.id] = 0;
       totalHoursByEmp[emp.id] = 0;
     });
-    DAYS.forEach((day) => {
+    days.forEach((day) => {
       EMPLOYEES.forEach((emp) => {
         totalHoursByEmp[emp.id] += HOURS_PER_TYPE[schedule[emp.id][day.id]] || 0;
       });
@@ -824,7 +950,7 @@ const App = () => {
       });
     });
     return { dailyCoverage, alerts, forcedOfficeSet, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp };
-  }, [schedule]);
+  }, [schedule, days]);
 
   const exportToExcel = () => {
     // Definir estilos
@@ -864,10 +990,10 @@ const App = () => {
     };
 
     // Crear datos
-    const headers = ["Empleado", ...DAYS.map((d) => `${d.id} (${d.weekdayLetter})`)];
+    const headers = ["Empleado", ...days.map((d) => `${d.id} (${d.weekdayLetter})`)];
     const dataRows = EMPLOYEES.map((emp) => {
       const row = [emp.name];
-      DAYS.forEach((day) => {
+      days.forEach((day) => {
         row.push(schedule[emp.id][day.id]);
       });
       return row;
@@ -914,7 +1040,7 @@ const App = () => {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Horarios");
-    XLSX.writeFile(wb, "planificacion_horarios_2026.xlsx");
+    XLSX.writeFile(wb, `planificacion_horarios_${currentYear}.xlsx`);
   };
 
   const handleCellClick = (emp, day) => {
@@ -961,11 +1087,138 @@ const App = () => {
             </svg>
             Exportar Excel
           </button>
-          <button onClick={() => setSchedule(generateInitialSchedule())} className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors">
+          <button
+            onClick={() => setPlanning(generateSchedule(year, vacationPlan))}
+            className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
+          >
             Resetear Plan
           </button>
         </div>
       </header>
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleModeChange("config")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "config" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"}`}
+            >
+              Configuración
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange("dashboard")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "dashboard" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"} ${savedYears.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={savedYears.length === 0}
+            >
+              Dashboards definitivos
+            </button>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Año activo:</span>
+              <span className="text-gray-800 font-bold">{currentYear}</span>
+            </div>
+            {mode === "dashboard" && savedYears.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span>Años guardados:</span>
+                <div className="flex flex-wrap gap-1">
+                  {savedYears.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => handleSelectDashboardYear(y)}
+                      className={`px-2 py-0.5 rounded-full border text-[11px] ${activeDashboardYear === y ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-600 border-gray-300"}`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {mode === "config" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-800">Gestor de vacaciones</h3>
+                <span className="text-[11px] text-gray-400">Año {year}</span>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Año de planificación</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue"
+                    value={year}
+                    min="2024"
+                    max="2100"
+                    onChange={(e) => handleYearChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Integrante</label>
+                  <select
+                    className="w-full bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue"
+                    value={selectedVacationEmpName}
+                    onChange={(e) => setSelectedVacationEmpName(e.target.value)}
+                  >
+                    {EMPLOYEES.map((e) => (
+                      <option key={e.id} value={e.name}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Días seleccionados: {vacationPlan[selectedVacationEmpName]?.length || 0}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAcceptCalendar}
+                  className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-sm font-semibold shadow-md transition-colors"
+                >
+                  Aceptar calendario {year}
+                </button>
+              </div>
+            </div>
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-800">Calendario de vacaciones</h4>
+                <span className="text-[11px] text-gray-500">Click en un día para alternar vacaciones</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {daysByMonth.map(([monthName, monthDays]) => (
+                  <div key={monthName}>
+                    <div className="text-xs font-semibold text-gray-500 mb-1">{monthName}</div>
+                    <div className="grid grid-cols-5 gap-1">
+                      {monthDays.map((day) => {
+                        const isSelected = (vacationPlan[selectedVacationEmpName] || []).includes(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            onClick={() => toggleVacationDay(selectedVacationEmpName, day.id)}
+                            className={`h-10 rounded-md border text-[11px] flex flex-col items-center justify-center ${
+                              isSelected
+                                ? "bg-rose-500 text-white border-rose-500"
+                                : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                            }`}
+                          >
+                            <span className="font-mono">{day.label.split(" ")[1]}</span>
+                            <span className="text-[9px] opacity-80">{day.weekdayLetter}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
           <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
@@ -1103,7 +1356,7 @@ const App = () => {
               {alertsExpanded && (
                 <ul className="space-y-3">
                 {stats.alerts.map(alert => {
-                  const day = DAYS.find(d => d.id === alert.dayId);
+                  const day = days.find(d => d.id === alert.dayId);
                   let msgs = [];
                   let isFullyCovered = true;
 
@@ -1160,7 +1413,7 @@ const App = () => {
               <th className="sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]">
                 <div className="font-bold text-brand-blue">Integrante</div>
               </th>
-              {DAYS.map((day) => {
+              {days.map((day) => {
                 const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
                 return (
                   <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
@@ -1191,7 +1444,7 @@ const App = () => {
                     Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
                   </div>
                 </td>
-                {DAYS.map((day) => {
+                {days.map((day) => {
                   const typeKey = schedule[emp.id][day.id];
                   const style = TYPES[typeKey] || TYPES["O30"];
                   const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
