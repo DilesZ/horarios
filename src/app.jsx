@@ -697,6 +697,93 @@ const generateSchedule = (year, vacationPlan) => {
         schedule[kike.id][dayId] = "O42";
       });
     }
+
+    const finalWeeksMap = {};
+    days.forEach((d) => {
+      finalWeeksMap[d.weekIndex] = finalWeeksMap[d.weekIndex] || [];
+      finalWeeksMap[d.weekIndex].push(d);
+    });
+
+    const finalIntensiveWeeks = {};
+    EMPLOYEES.forEach((emp) => {
+      let count = 0;
+      Object.keys(finalWeeksMap).forEach((wiStr) => {
+        const daysInWeek = finalWeeksMap[wiStr];
+        const allO30 = daysInWeek.every(
+          (day) => schedule[emp.id][day.id] === "O30"
+        );
+        if (allO30) count += 1;
+      });
+      finalIntensiveWeeks[emp.id] = count;
+    });
+
+    const enriqueDay19 = days.find((d) => d.id === "2026-06-19");
+    const forbiddenWeekEnrique =
+      enriqueDay19 && enrique ? enriqueDay19.weekIndex : null;
+    const luisDay24 = days.find((d) => d.id === "2026-07-24");
+    const forbiddenWeekLuis =
+      luisDay24 && luis ? luisDay24.weekIndex : null;
+    const criticalKikeSet = new Set(criticalDays);
+
+    EMPLOYEES.forEach((emp) => {
+      while (finalIntensiveWeeks[emp.id] < 7) {
+        let improved = false;
+        Object.keys(finalWeeksMap).forEach((wiStr) => {
+          if (improved) return;
+          const wi = parseInt(wiStr, 10);
+          if (vacWeeksByEmp[emp.id].has(wi)) return;
+
+          if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return;
+          if (emp.name === "Luis" && forbiddenWeekLuis === wi) return;
+          if (emp.name === "Kike") {
+            const daysInWeekCheck = finalWeeksMap[wi];
+            if (
+              daysInWeekCheck.some((day) => criticalKikeSet.has(day.id))
+            ) {
+              return;
+            }
+          }
+
+          const daysInWeek = finalWeeksMap[wi];
+          let canFlip = true;
+
+          daysInWeek.forEach((day) => {
+            if (!canFlip) return;
+            const current = schedule[emp.id][day.id];
+            if (!current || current === "V") {
+              canFlip = false;
+              return;
+            }
+            if (
+              (emp.name === "Enrique" && day.id === "2026-06-19") ||
+              (emp.name === "Luis" && day.id === "2026-07-24") ||
+              (emp.name === "Kike" && criticalKikeSet.has(day.id))
+            ) {
+              canFlip = false;
+              return;
+            }
+            const o30Count = EMPLOYEES.filter(
+              (e) => schedule[e.id][day.id] === "O30"
+            ).length;
+            if (o30Count >= 3) {
+              canFlip = false;
+            }
+          });
+
+          if (!canFlip) return;
+
+          daysInWeek.forEach((day) => {
+            if (schedule[emp.id][day.id] !== "V") {
+              schedule[emp.id][day.id] = "O30";
+            }
+          });
+
+          finalIntensiveWeeks[emp.id] += 1;
+          improved = true;
+        });
+        if (!improved) break;
+      }
+    });
   }
 
   return { schedule, days };
