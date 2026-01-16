@@ -306,39 +306,34 @@ const generateSchedule = (year, vacationPlan) => {
       ? allEligible.filter((emp) => emp.id !== reserve.id)
       : allEligible;
 
-    const safeForIntensive = eligibleIntensive.filter((emp) =>
-      weekDays.every((day) => {
+    const selected = [];
+    for (const emp of eligibleIntensive) {
+      if (selected.length >= 3) break;
+      if (intensiveWeeksByEmp[emp.id] >= 7) continue;
+
+      const isSafe = weekDays.every((day) => {
         const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
-        const isEmpInOffice = empOfficeDays.includes(day.weekdayLetter);
-        if (!isEmpInOffice) return true;
+        if (!empOfficeDays.includes(day.weekdayLetter)) return true;
 
         const empGroup = GROUP1.includes(emp.name) ? GROUP1 : GROUP2;
-        const otherGroup = GROUP1.includes(emp.name) ? GROUP2 : GROUP1;
 
         const othersInOffice = EMPLOYEES.filter((other) => {
           if (other.id === emp.id) return false;
           if (!empGroup.includes(other.name)) return false;
           if (vacWeeksByEmp[other.id].has(wi)) return false;
+          if (selected.some((s) => s.id === other.id)) return false;
+
           const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
           return otherOfficeDays.includes(day.weekdayLetter);
         });
 
-        const otherGroupHasO40 = EMPLOYEES.some((other) => {
-          if (!otherGroup.includes(other.name)) return false;
-          if (vacWeeksByEmp[other.id].has(wi)) return false;
-          const currentType = schedule[other.id][day.id];
-          if (currentType !== "O40") return false;
-          const otherOfficeDays = other.officeDays.split(",").map((d) => d.trim());
-          return otherOfficeDays.includes(day.weekdayLetter);
-        });
+        return othersInOffice.length > 0;
+      });
 
-        return othersInOffice.length > 0 || otherGroupHasO40;
-      })
-    );
-
-    const selected = safeForIntensive
-      .filter((emp) => intensiveWeeksByEmp[emp.id] < 7)
-      .slice(0, 3);
+      if (isSafe) {
+        selected.push(emp);
+      }
+    }
 
     selected.forEach((emp) => {
       weekDays.forEach((day) => {
@@ -403,61 +398,45 @@ const generateSchedule = (year, vacationPlan) => {
     weekDays.forEach((day) => {
       if (day.weekdayLetter !== "V") return;
 
-      const group1HasO40InOffice = EMPLOYEES.some((emp) => {
-        if (!GROUP1.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type !== "O40") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return daysOffice.includes("V");
-      });
+      const checkAndForceGroup = (groupNames) => {
+        const hasCoverage = EMPLOYEES.some((emp) => {
+          if (!groupNames.includes(emp.name)) return false;
+          if (schedule[emp.id][day.id] !== "O40") return false;
+          const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+          return officeDays.includes("V");
+        });
 
-      const group2HasO40InOffice = EMPLOYEES.some((emp) => {
-        if (!GROUP2.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type !== "O40") return false;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        return daysOffice.includes("V");
-      });
-
-      const anyO40InOffice = group1HasO40InOffice || group2HasO40InOffice;
-
-      if (!anyO40InOffice) {
-        let candidates = GROUP1.map((name) =>
-          EMPLOYEES.find((e) => e.name === name)
-        )
-          .filter((emp) => emp && schedule[emp.id][day.id] !== "V")
-          .sort((a, b) => {
-            const typeA = schedule[a.id][day.id] === "O30";
-            const typeB = schedule[b.id][day.id] === "O30";
-            if (typeA && !typeB) return 1;
-            if (!typeA && typeB) return -1;
-            return a.id - b.id;
-          });
-        let candidate = candidates[0];
-
-        if (!candidate) {
-          candidates = GROUP2.map((name) =>
-            EMPLOYEES.find((e) => e.name === name)
-          )
+        if (!hasCoverage) {
+          const candidates = groupNames
+            .map((name) => EMPLOYEES.find((e) => e.name === name))
             .filter((emp) => emp && schedule[emp.id][day.id] !== "V")
             .sort((a, b) => {
-              const typeA = schedule[a.id][day.id] === "O30";
-              const typeB = schedule[b.id][day.id] === "O30";
-              if (typeA && !typeB) return 1;
-              if (!typeA && typeB) return -1;
+              const aInOffice = a.officeDays.includes("V");
+              const bInOffice = b.officeDays.includes("V");
+              if (aInOffice && !bInOffice) return -1;
+              if (!aInOffice && bInOffice) return 1;
+
+              const typeA = schedule[a.id][day.id] === "O40";
+              const typeB = schedule[b.id][day.id] === "O40";
+              if (typeA && !typeB) return -1;
+              if (!typeA && typeB) return 1;
+
               return a.id - b.id;
             });
-          candidate = candidates[0];
-        }
 
-        if (candidate) {
-          if (schedule[candidate.id][day.id] === "O30") {
-            intensiveWeeksByEmp[candidate.id] =
-              (intensiveWeeksByEmp[candidate.id] || 0) - 1;
+          const pick = candidates[0];
+          if (pick) {
+            if (schedule[pick.id][day.id] === "O30") {
+              intensiveWeeksByEmp[pick.id] =
+                (intensiveWeeksByEmp[pick.id] || 0) - 1;
+            }
+            schedule[pick.id][day.id] = "O40";
           }
-          schedule[candidate.id][day.id] = "O40";
         }
-      }
+      };
+
+      checkAndForceGroup(GROUP1);
+      checkAndForceGroup(GROUP2);
     });
   });
 
