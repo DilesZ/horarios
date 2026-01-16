@@ -627,15 +627,9 @@ const generateSchedule = (year, vacationPlan) => {
 
     const enrique = findEmp("Enrique");
     if (enrique) {
-      const weekDay19 = days.find((d) => d.id === "2026-06-19");
-      if (weekDay19) {
-        const wi19 = weekDay19.weekIndex;
-        days.forEach((day) => {
-          if (day.weekIndex !== wi19) return;
-          const current = schedule[enrique.id][day.id];
-          if (!current || current === "V") return;
-          schedule[enrique.id][day.id] = "O40";
-        });
+      const day19 = days.find((d) => d.id === "2026-06-19");
+      if (day19 && schedule[enrique.id][day19.id] !== "V") {
+        schedule[enrique.id][day19.id] = "O40";
       }
     }
 
@@ -646,6 +640,68 @@ const generateSchedule = (year, vacationPlan) => {
     }
     if (enrique && schedule[enrique.id][july24] === "O40") {
       schedule[enrique.id][july24] = "O42";
+    }
+
+    if (enrique) {
+      let intensiveCount = 0;
+      const intensiveWeeksIndices = [];
+      Object.keys(weeksList).forEach((wiStr) => {
+        const wi = parseInt(wiStr, 10);
+        const daysInWeek = weeksList[wi];
+        const allO30 = daysInWeek.every(
+          (day) => schedule[enrique.id][day.id] === "O30"
+        );
+        if (allO30) {
+          intensiveCount += 1;
+          intensiveWeeksIndices.push(wi);
+        }
+      });
+
+      if (intensiveCount < 7) {
+        const day19 = days.find((d) => d.id === "2026-06-19");
+        const forbiddenWeek = day19 ? day19.weekIndex : null;
+        const candidateWeeks = Object.keys(weeksList)
+          .map((wiStr) => parseInt(wiStr, 10))
+          .sort((a, b) => a - b)
+          .filter(
+            (wi) =>
+              wi !== forbiddenWeek &&
+              !intensiveWeeksIndices.includes(wi) &&
+              !vacWeeksByEmp[enrique.id].has(wi)
+          );
+
+        for (const wi of candidateWeeks) {
+          const daysInWeek = weeksList[wi];
+          let canFlip = true;
+
+          daysInWeek.forEach((day) => {
+            if (!canFlip) return;
+            const current = schedule[enrique.id][day.id];
+            if (!current || current === "V") {
+              canFlip = false;
+              return;
+            }
+            const o30Count = EMPLOYEES.filter(
+              (e) => schedule[e.id][day.id] === "O30"
+            ).length;
+            if (o30Count >= 3) {
+              canFlip = false;
+            }
+          });
+
+          if (!canFlip) {
+            continue;
+          }
+
+          daysInWeek.forEach((day) => {
+            if (schedule[enrique.id][day.id] !== "V") {
+              schedule[enrique.id][day.id] = "O30";
+            }
+          });
+
+          break;
+        }
+      }
     }
   }
 
