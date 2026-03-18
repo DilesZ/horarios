@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import ReactDOM from 'react-dom/client';
+/* global React, ReactDOM */
+/* eslint-disable no-undef */const { useState, useMemo, useEffect } = React;
+/* eslint-enable no-undef */
 
 /* global XLSX */
 
