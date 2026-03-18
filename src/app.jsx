@@ -1,4 +1,7 @@
-const { useState, useMemo, useEffect } = React;
+import React, { useState, useMemo, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+
+/* global XLSX */
 
 const EMPLOYEES = [
   { id: 1, name: "Kike", role: "SysAdmin", officeDays: "L, M, X, V", group: "A" },
@@ -815,16 +818,16 @@ const generateSchedule = (year, vacationPlan) => {
 
                 // Move donor
                 const daysSrc = finalWeeksMap[wi];
-                const daysDest = finalWeeksMap[destWi];
+                const daysDest_ = finalWeeksMap[destWi];
 
                 daysSrc.forEach((d) => {
-                  if (schedule[donor.id][d.id] !== "V")
-                    schedule[donor.id][d.id] = "O40";
-                });
-                daysDest.forEach((d) => {
-                  if (schedule[donor.id][d.id] !== "V")
-                    schedule[donor.id][d.id] = "O30";
-                });
+                   if (schedule[donor.id][d.id] !== "V")
+                     schedule[donor.id][d.id] = "O40";
+                 });
+                 daysDest_.forEach((d) => {
+                   if (schedule[donor.id][d.id] !== "V")
+                     schedule[donor.id][d.id] = "O30";
+                 });
 
                 // Assign emp to src
                 daysSrc.forEach((d) => {
@@ -873,11 +876,13 @@ const App = () => {
   const [activeDashboardYear, setActiveDashboardYear] = useState(null);
   const [selectedVacationEmpName, setSelectedVacationEmpName] = useState(EMPLOYEES[0].name);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
-    } catch {}
-  }, [acceptedDashboards]);
+   useEffect(() => {
+     try {
+       window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
+     } catch (error) {
+       console.error('Failed to save to localStorage:', error);
+     }
+   }, [acceptedDashboards]);
 
   const savedYears = useMemo(
     () =>
@@ -993,9 +998,9 @@ const App = () => {
           : typeKey === "O30" || typeKey === "T30"
             ? "14:00 (Intensiva)"
             : "N/A";
-    const diasOficina = emp.officeDays;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+     const diasOficina = emp.officeDays;
+     return (
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
         <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
           <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1063,8 +1068,8 @@ const App = () => {
       })
       .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+     return (
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
         <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
           <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
