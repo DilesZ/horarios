@@ -1035,7 +1035,7 @@ const App = () => {
   const [selectedEmp, setSelectedEmp] = useState("all");
   const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
   const [oListOpen, setOListOpen] = useState(false);
-  const [alertsExpanded, setAlertsExpanded] = useState(true);
+  const [selectedAlertDayId, setSelectedAlertDayId] = useState(null);
   const [mode, setMode] = useState("config");
   const [acceptedDashboards, setAcceptedDashboards] = useState(() => {
     try {
@@ -1219,6 +1219,69 @@ const App = () => {
                 <p className="text-rose-600">🌴 Disfrutando de vacaciones</p>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const AlertDetailModal = ({ isOpen, onClose, dayId }) => {
+    if (!isOpen || !dayId) return null;
+    const alert = stats.alerts.find(a => a.dayId === dayId);
+    if (!alert) return null;
+    const day = days.find(d => d.id === dayId);
+    
+    const hasCritical = alert.reasons.some(r => r.severity === "critical");
+    const hasWarning = alert.reasons.some(r => r.severity === "warning");
+    const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
+    const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+        <div className={`bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`} onClick={(e) => e.stopPropagation()}>
+          <div className={`${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`}>
+            <div className="flex items-center gap-3">
+              <span className={`text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
+                {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
+              </span>
+              <span className="text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm">
+                {alert.present}/6 disponibles
+              </span>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <div className="p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto">
+            {alert.reasons.map((reason, idx) => {
+              const severityStyles = {
+                critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
+                warning: { bg: "bg-amber-50", border: "border-amber-200", titleColor: "text-amber-700", iconColor: "text-amber-500", detailColor: "text-amber-600" },
+                info: { bg: "bg-blue-50", border: "border-blue-100", titleColor: "text-blue-700", iconColor: "text-blue-500", detailColor: "text-blue-600" }
+              };
+              const s = severityStyles[reason.severity] || severityStyles.info;
+              const iconMap = {
+                people: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>,
+                clock: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+                alert: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
+                group: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+                check: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              };
+              return (
+                <div key={idx} className={`${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`}>
+                      {iconMap[reason.icon] || iconMap.alert}
+                    </div>
+                    <div>
+                      <h4 className={`text-sm font-bold ${s.titleColor}`}>{reason.title}</h4>
+                      <p className={`text-sm mt-1 leading-relaxed ${s.detailColor}`}>{reason.detail}</p>
+                      {reason.context && <p className="text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5">{reason.context}</p>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1958,107 +2021,6 @@ const App = () => {
                 </div>
               );
             })()}
-
-            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-700 font-bold flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                  Detalle de Alertas por Día
-                  <span className="text-xs font-normal text-gray-400">({stats.alerts.length} días)</span>
-                </h3>
-                <button
-                  onClick={() => setAlertsExpanded(!alertsExpanded)}
-                  className="text-gray-500 hover:text-brand-blue transition-colors focus:outline-none"
-                >
-                  {alertsExpanded ? (
-                    <div className="flex items-center gap-1 text-sm">
-                      <span>Ocultar</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-sm">
-                      <span>Mostrar</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </div>
-                  )}
-                </button>
-              </div>
-              {alertsExpanded && (
-                <div className="space-y-4">
-                {stats.alerts.map(alert => {
-                  const day = days.find(d => d.id === alert.dayId);
-                  const hasCritical = alert.reasons.some(r => r.severity === "critical");
-                  const hasWarning = alert.reasons.some(r => r.severity === "warning");
-                  const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
-                  const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
-
-                  return (
-                    <details key={alert.dayId} id={`alert-${alert.dayId}`} className={`rounded-lg border ${borderColor} overflow-hidden group/alert [&>summary::-webkit-details-marker]:hidden`}>
-                      {/* Day Header */}
-                      <summary className={`${headerBg} px-4 py-2.5 flex items-center justify-between cursor-pointer list-none select-none hover:brightness-95 transition-all`}>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-sm font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
-                            {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {alert.present}/6 disponibles
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1.5 mr-2">
-                            {alert.reasons.map((r, i) => (
-                              <span key={i} className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-rose-500' : r.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'}`}></span>
-                            ))}
-                          </div>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform duration-200 group-open/alert:rotate-180`}><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </div>
-                      </summary>
-                      {/* Reason Cards */}
-                      <div className="p-3 space-y-2 bg-white border-t border-gray-100">
-                        {alert.reasons.map((reason, idx) => {
-                          const severityStyles = {
-                            critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
-                            warning: { bg: "bg-amber-50", border: "border-amber-200", titleColor: "text-amber-700", iconColor: "text-amber-500", detailColor: "text-amber-600" },
-                            info: { bg: "bg-blue-50", border: "border-blue-100", titleColor: "text-blue-700", iconColor: "text-blue-500", detailColor: "text-blue-600" }
-                          };
-                          const s = severityStyles[reason.severity] || severityStyles.info;
-
-                          const iconMap = {
-                            people: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>,
-                            clock: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
-                            alert: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
-                            group: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-                            check: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                          };
-
-                          return (
-                            <div key={idx} className={`${s.bg} ${s.border} border rounded-md px-3 py-2`}>
-                              <div className="flex items-start gap-2">
-                                <div className={`mt-0.5 shrink-0 ${s.iconColor}`}>
-                                  {iconMap[reason.icon] || iconMap.alert}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className={`text-sm font-semibold ${s.titleColor}`}>{reason.title}</p>
-                                  <p className={`text-xs mt-0.5 ${s.detailColor}`}>{reason.detail}</p>
-                                  {reason.context && (
-                                    <p className="text-[11px] text-gray-500 mt-1 italic">{reason.context}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-              )}
-            </div>
           </div>
         )
       }
@@ -2081,14 +2043,7 @@ const App = () => {
                         title="Día con alertas (Click para ver)"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setAlertsExpanded(true);
-                          setTimeout(() => {
-                            const el = document.getElementById(`alert-${day.id}`);
-                            if (el) {
-                              el.open = true;
-                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                          }, 50);
+                          setSelectedAlertDayId(day.id);
                         }}
                       >
                         !
@@ -2155,6 +2110,7 @@ const App = () => {
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
+      <AlertDetailModal isOpen={!!selectedAlertDayId} onClose={() => setSelectedAlertDayId(null)} dayId={selectedAlertDayId} />
     </div >
   );
 };
