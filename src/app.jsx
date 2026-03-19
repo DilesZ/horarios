@@ -225,35 +225,56 @@ const generateSchedule = (year, vacationPlan) => {
     return valid;
   };
 
-  const MAX_FORCED_OFFICE_DAYS = 5;
+  const MAX_FORCED_OFFICE_DAYS = 10;
 
   const countForcedDays = (currentSchedule, allDays) => {
     let count = 0;
-    allDays.forEach(day => {
+    for (const day of allDays) {
       let group1HasOffice = false, group2HasOffice = false;
       let group1Covering = 0, group2Covering = 0;
       let hasO40InOfficeOnFriday = false;
+      
+      let candidateG1 = 0, candidateG2 = 0, candidateFriday = 0;
+
       EMPLOYEES.forEach(e => {
         const type = currentSchedule[e.id][day.id];
         if (type === 'V') return;
         const od = e.officeDays.split(',').map(d => d.trim());
         const inOffice = od.includes(day.weekdayLetter);
+        
         if (day.weekdayLetter !== 'V') {
-          if (inOffice && (type === 'O40' || type === 'O42')) {
-            if (GROUP1.includes(e.name)) { group1HasOffice = true; group1Covering++; }
-            if (GROUP2.includes(e.name)) { group2HasOffice = true; group2Covering++; }
+          if (type === 'O40' || type === 'O42') {
+            if (inOffice) {
+              if (GROUP1.includes(e.name)) { group1HasOffice = true; group1Covering++; }
+              if (GROUP2.includes(e.name)) { group2HasOffice = true; group2Covering++; }
+            } else {
+              if (GROUP1.includes(e.name)) candidateG1++;
+              if (GROUP2.includes(e.name)) candidateG2++;
+            }
           }
         } else {
-          if (inOffice && type === 'O40') hasO40InOfficeOnFriday = true;
+          if (type === 'O40') {
+            if (inOffice) hasO40InOfficeOnFriday = true;
+            else candidateFriday++;
+          }
         }
       });
+      
       if (day.weekdayLetter !== 'V') {
-        if (!group1HasOffice && group2Covering === 0) count++;
-        if (!group2HasOffice && group1Covering === 0) count++;
+        if (!group1HasOffice && group2Covering === 0) {
+          if (candidateG1 > 0 || candidateG2 > 0) count++;
+          else return Infinity; // Unfixable
+        } else if (!group2HasOffice && group1Covering === 0) {
+          if (candidateG2 > 0 || candidateG1 > 0) count++;
+          else return Infinity; // Unfixable
+        }
       } else {
-        if (!hasO40InOfficeOnFriday) count++;
+        if (!hasO40InOfficeOnFriday) {
+          if (candidateFriday > 0) count++;
+          else return Infinity; // Unfixable
+        }
       }
-    });
+    }
     return count;
   };
 
@@ -399,7 +420,7 @@ const generateSchedule = (year, vacationPlan) => {
     const selected = [];
     for (const emp of eligibleIntensive) {
       if (intensiveWeeksByEmp[emp.id] >= 7) continue;
-      if (selected.length >= 4) continue;
+      if (selected.length >= 3) continue;
       
       if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
         selected.push(emp);
@@ -529,7 +550,7 @@ const generateSchedule = (year, vacationPlan) => {
         const currentIntensiveCount = EMPLOYEES.filter(
           (e) => schedule[e.id][day.id] === "O30"
         ).length;
-        if (currentIntensiveCount >= 4) continue;
+        if (currentIntensiveCount >= 3) continue;
 
         if (!isInOffice) {
           schedule[emp.id][day.id] = "O30";
@@ -659,7 +680,7 @@ const generateSchedule = (year, vacationPlan) => {
           const o30Count = EMPLOYEES.filter(
             (e) => schedule[e.id][day.id] === "O30"
           ).length;
-          return o30Count < 4;
+          return o30Count < 3;
         });
         if (!canFlip) return;
         if (!preservesOfficeCoverage(emp.id, daysInWeek, schedule)) {
@@ -741,7 +762,7 @@ const generateSchedule = (year, vacationPlan) => {
             const o30Count = EMPLOYEES.filter(
               (e) => schedule[e.id][day.id] === "O30"
             ).length;
-            if (o30Count >= 4) {
+            if (o30Count >= 3) {
               canFlip = false;
             }
           });
@@ -925,7 +946,7 @@ const generateSchedule = (year, vacationPlan) => {
                 const canMoveDonorStrict = daysDest.every(day => {
                    if (schedule[donor.id][day.id] === "V") return true;
                    const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
-                   return dailyO30 < 4;
+                   return dailyO30 < 3;
                 });
                 
                 if (!canMoveDonorStrict) continue;
@@ -1293,6 +1314,7 @@ const App = () => {
         if (!groupNames.includes(emp.name)) return false;
         const type = schedule[emp.id][day.id];
         if (type === "V") return false;
+        if (type === "O30") return false; // Enforce afternoon coverage
         const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
         return !daysOffice.includes(day.weekdayLetter);
       });
