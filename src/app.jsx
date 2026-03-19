@@ -1802,6 +1802,26 @@ const App = () => {
               <span className="text-xs text-gray-600">Vacaciones</span>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-gray-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </div>
+              <span className="text-xs text-gray-600">Teletrabajo</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-gray-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
+              </div>
+              <span className="text-xs text-gray-600">En oficina</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded bg-amber-500 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
+              </div>
+              <span className="text-xs text-gray-600">Forzado oficina</span>
+            </div>
+          </div>
           <p className="text-[10px] text-gray-400 mt-2">* Click en celda para ver detalle de turno</p>
         </div>
       </div>
@@ -2007,14 +2027,23 @@ const App = () => {
                   const style = TYPES[typeKey] || TYPES["O30"];
                   const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
                   const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+                  const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
                   const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
                   return (
                     <td key={day.id} className={`p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`} onClick={() => handleCellClick(emp, day)}>
                       <div className={`w-full h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} hover:brightness-110 hover:scale-105 transform`}>
                         <span>{style.short}</span>
                         {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
-                        {isWFH && <div className="absolute top-1 left-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">T</div>}
-                        {isForcedOffice && <div className="absolute top-1 right-1 text-[10px] font-bold bg-gray-900/60 text-white border border-gray-500 rounded px-1">O</div>}
+                        {isWFH && (
+                          <div className="absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5" title="Teletrabajo">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                          </div>
+                        )}
+                        {(isInOffice || isForcedOffice) && typeKey !== "V" && (
+                          <div className={`absolute top-0.5 right-0.5 rounded p-0.5 ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`} title={isForcedOffice ? "Forzado oficina" : "En oficina"}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
+                          </div>
+                        )}
                       </div>
                     </td>
                   );
