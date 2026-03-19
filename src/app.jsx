@@ -419,7 +419,7 @@ const generateSchedule = (year, vacationPlan) => {
 
     const selected = [];
     for (const emp of eligibleIntensive) {
-      if (intensiveWeeksByEmp[emp.id] >= 7) continue;
+      if (intensiveWeeksByEmp[emp.id] >= 6) continue;
       if (selected.length >= 3) continue;
       
       if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
@@ -848,7 +848,7 @@ const generateSchedule = (year, vacationPlan) => {
     // Optimize and balance intensive weeks across all employees
     let balancing = true;
     let loops = 0;
-    const targetIntensiveWeeks = 7;
+    const targetIntensiveWeeks = 6;
 
     while (balancing && loops < 150) {
       balancing = false;
