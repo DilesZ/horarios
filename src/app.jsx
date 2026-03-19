@@ -755,26 +755,29 @@ const generateSchedule = (year, vacationPlan) => {
       });
     };
 
+    // Optimize and balance intensive weeks across all employees
     let balancing = true;
     let loops = 0;
-    while (balancing && loops < 100) {
+    const targetIntensiveWeeks = 7;
+
+    while (balancing && loops < 150) {
       balancing = false;
       loops++;
 
-      // Sort by deficit (ascending)
+      // Sort by deficit (ascending) to prioritize those with fewer weeks
       const sortedEmps = [...EMPLOYEES].sort(
         (a, b) => finalIntensiveWeeks[a.id] - finalIntensiveWeeks[b.id]
       );
 
       for (const emp of sortedEmps) {
-        if (finalIntensiveWeeks[emp.id] >= 7) continue;
+        if (finalIntensiveWeeks[emp.id] >= targetIntensiveWeeks) continue;
 
         const weeksIndices = Object.keys(finalWeeksMap)
           .map((k) => parseInt(k, 10))
           .sort((a, b) => a - b);
 
         for (const wi of weeksIndices) {
-          if (finalIntensiveWeeks[emp.id] >= 7) break;
+          if (finalIntensiveWeeks[emp.id] >= targetIntensiveWeeks) break;
 
           const occupants = getOccupants(wi);
           if (occupants.find((e) => e.id === emp.id)) continue; // Already has it
@@ -786,7 +789,7 @@ const generateSchedule = (year, vacationPlan) => {
              // If vacation, no problem (but already checked in canTakeO30)
              if (schedule[emp.id][day.id] === "V") return true;
              const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
-             return dailyO30 < 3;
+             return dailyO30 < 3; // Maximum 3 intensive shifts per day
           });
 
           if (canAssignStrict) {
@@ -799,10 +802,30 @@ const generateSchedule = (year, vacationPlan) => {
             finalIntensiveWeeks[emp.id]++;
             balancing = true;
           } else {
-            // Try to swap with a donor
-            for (const donor of occupants) {
-              // Try to move donor to another week
+            // Try to swap with a donor who has MORE than the target (or at least more than this emp + 1)
+            const validDonors = occupants.filter(donor => 
+               finalIntensiveWeeks[donor.id] > targetIntensiveWeeks || 
+               finalIntensiveWeeks[donor.id] > finalIntensiveWeeks[emp.id] + 1
+            ).sort((a, b) => finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id]); // Donors with most weeks first
+            
+            for (const donor of validDonors) {
               let moved = false;
+              
+              // If donor has surplus, we can just downgrade them directly
+              if (finalIntensiveWeeks[donor.id] > targetIntensiveWeeks) {
+                  const daysSrc = finalWeeksMap[wi];
+                  daysSrc.forEach((d) => {
+                     if (schedule[donor.id][d.id] !== "V") schedule[donor.id][d.id] = "O40";
+                     if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O30";
+                  });
+                  finalIntensiveWeeks[donor.id]--;
+                  finalIntensiveWeeks[emp.id]++;
+                  moved = true;
+                  balancing = true;
+                  break;
+              }
+              
+              // Otherwise, try to relocate donor
               for (const destWi of weeksIndices) {
                 if (destWi === wi) continue;
                 if (!canTakeO30(donor, destWi)) continue;
@@ -850,6 +873,36 @@ const generateSchedule = (year, vacationPlan) => {
         if (balancing) break;
       }
     }
+
+    // Final check to ensure we didn't break O42 coverage during swapping
+    days.forEach((day) => {
+      if (day.weekdayLetter === "V") return; // Friday doesn't need O42
+      
+      const hasO42 = EMPLOYEES.some((emp) => schedule[emp.id][day.id] === "O42");
+      if (!hasO42) {
+          // Restore O42 using the correct group for the week
+          const lateGroupA = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+          const lateGroup = lateGroupA ? "A" : "B";
+          
+          const candidates = EMPLOYEES.filter(
+              (emp) => emp.group === lateGroup && schedule[emp.id][day.id] !== "V"
+          ).sort((a, b) => {
+              // Prefer O40s to become O42s to avoid breaking intensives
+              const typeA = schedule[a.id][day.id];
+              const typeB = schedule[b.id][day.id];
+              if (typeA === "O40" && typeB !== "O40") return -1;
+              if (typeB === "O40" && typeA !== "O40") return 1;
+              // Then prefer those with more intensive weeks
+              return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
+          });
+          
+          const pick = candidates[0] || EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
+          if (pick) {
+              if (schedule[pick.id][day.id] === "O30") finalIntensiveWeeks[pick.id]--;
+              schedule[pick.id][day.id] = "O42";
+          }
+      }
+    });
   }
 
   return { schedule, days };
