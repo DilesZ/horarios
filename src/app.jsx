@@ -1347,17 +1347,108 @@ const App = () => {
       }
       return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
     });
-    const alerts = dailyCoverage.filter((d) => {
+    const alerts = [];
+    dailyCoverage.forEach((d) => {
       const day = days.find((x) => x.id === d.dayId);
       const need18h = day.weekdayLetter !== "V";
-      const needGroups = day.weekdayLetter !== "V";
-      return (
-        d.present < 3 ||
-        (need18h && d.shift18hCount < 1) ||
-        d.intensiveCount > 3 ||
-        (needGroups && (!d.group1HasOffice || !d.group2HasOffice))
-      );
+      const reasons = [];
+
+      if (d.present < 3) {
+        const onVacation = EMPLOYEES.filter(e => schedule[e.id][day.id] === "V").map(e => e.name);
+        reasons.push({
+          category: "cobertura",
+          severity: "critical",
+          title: "Cobertura insuficiente",
+          detail: `Solo ${d.present} de 6 integrantes disponibles (mínimo 3).`,
+          context: onVacation.length > 0 ? `De vacaciones: ${onVacation.join(", ")}` : null,
+          icon: "people"
+        });
+      }
+
+      if (need18h && d.shift18hCount < 1) {
+        reasons.push({
+          category: "turno18h",
+          severity: "critical",
+          title: "Sin cobertura de tarde (18h)",
+          detail: `Nadie está asignado al turno O42 (hasta las 18:00) en ${WEEKDAY_FULL[day.weekdayLetter]}.`,
+          context: "Se requiere al menos 1 persona con turno O42 de lunes a jueves.",
+          icon: "clock"
+        });
+      }
+
+      if (d.intensiveCount > 3) {
+        const inIntensive = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").map(e => e.name);
+        reasons.push({
+          category: "intensiva",
+          severity: "warning",
+          title: "Exceso de intensivas",
+          detail: `${d.intensiveCount} personas en intensiva (máximo permitido: 3).`,
+          context: `En intensiva: ${inIntensive.join(", ")}`,
+          icon: "alert"
+        });
+      }
+
+      if (need18h && !d.group1HasOffice) {
+        const g1OnVac = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
+        const g1OnIntensive = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
+        const g1OnTelework = EMPLOYEES.filter(e => {
+          if (!GROUP1.includes(e.name)) return false;
+          if (schedule[e.id][day.id] === "V") return false;
+          const od = e.officeDays.split(",").map(x => x.trim());
+          return !od.includes(day.weekdayLetter);
+        }).map(e => e.name);
+
+        const isCovered = d.group2Covering && d.group2Covering.length > 0;
+        let contextParts = [];
+        if (g1OnVac.length > 0) contextParts.push(`Vacaciones: ${g1OnVac.join(", ")}`);
+        if (g1OnIntensive.length > 0) contextParts.push(`Intensiva: ${g1OnIntensive.join(", ")}`);
+        if (g1OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g1OnTelework.join(", ")}`);
+
+        reasons.push({
+          category: "grupo1",
+          severity: isCovered ? "info" : "critical",
+          title: isCovered ? "Grupo {Enrique/Luis/David} ausente (cubierto)" : "Grupo {Enrique/Luis/David} sin presencia",
+          detail: isCovered
+            ? `Ningún miembro del grupo está en oficina, pero el otro grupo cubre: ${d.group2Covering.join(", ")}.`
+            : `Ningún miembro del grupo está en oficina con turno completo.`,
+          context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+          icon: isCovered ? "check" : "group"
+        });
+      }
+
+      if (need18h && !d.group2HasOffice) {
+        const g2OnVac = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
+        const g2OnIntensive = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
+        const g2OnTelework = EMPLOYEES.filter(e => {
+          if (!GROUP2.includes(e.name)) return false;
+          if (schedule[e.id][day.id] === "V") return false;
+          const od = e.officeDays.split(",").map(x => x.trim());
+          return !od.includes(day.weekdayLetter);
+        }).map(e => e.name);
+
+        const isCovered = d.group1Covering && d.group1Covering.length > 0;
+        let contextParts = [];
+        if (g2OnVac.length > 0) contextParts.push(`Vacaciones: ${g2OnVac.join(", ")}`);
+        if (g2OnIntensive.length > 0) contextParts.push(`Intensiva: ${g2OnIntensive.join(", ")}`);
+        if (g2OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g2OnTelework.join(", ")}`);
+
+        reasons.push({
+          category: "grupo2",
+          severity: isCovered ? "info" : "critical",
+          title: isCovered ? "Grupo {Jose/Ariel/Kike} ausente (cubierto)" : "Grupo {Jose/Ariel/Kike} sin presencia",
+          detail: isCovered
+            ? `Ningún miembro del grupo está en oficina, pero el otro grupo cubre: ${d.group1Covering.join(", ")}.`
+            : `Ningún miembro del grupo está en oficina con turno completo.`,
+          context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+          icon: isCovered ? "check" : "group"
+        });
+      }
+
+      if (reasons.length > 0) {
+        alerts.push({ ...d, reasons });
+      }
     });
+
     const weeksMap = {};
     days.forEach((d) => {
       weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
@@ -1719,40 +1810,54 @@ const App = () => {
       {
         stats.alerts.length > 0 && (
           <div className="mb-6 space-y-4">
-            {/* Status Banner */}
+            {/* Status Banner with Category Counters */}
             {(() => {
-              const unresolvedAlerts = stats.alerts.filter(a => {
-                const isGroup1Missing = !a.group1HasOffice;
-                const isGroup2Missing = !a.group2HasOffice;
-                const isCovered1 = a.group2Covering && a.group2Covering.length > 0;
-                const isCovered2 = a.group1Covering && a.group1Covering.length > 0;
-
-                if (isGroup1Missing && !isCovered1) return true;
-                if (isGroup2Missing && !isCovered2) return true;
-                if (a.present < 3 || a.shift18hCount < 1 || a.intensiveCount > 3) return true;
-
-                return false;
-              });
-              const allCovered = unresolvedAlerts.length === 0;
+              const allReasons = stats.alerts.flatMap(a => a.reasons);
+              const criticalCount = allReasons.filter(r => r.severity === "critical").length;
+              const warningCount = allReasons.filter(r => r.severity === "warning").length;
+              const infoCount = allReasons.filter(r => r.severity === "info").length;
+              const allCovered = criticalCount === 0 && warningCount === 0;
 
               return (
-                <div className={`p-4 rounded-lg border flex items-center gap-3 ${allCovered ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                  <div className={`p-2 rounded-full ${allCovered ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                    {allCovered ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    )}
+                <div className={`p-4 rounded-lg border flex flex-col md:flex-row md:items-center gap-4 ${allCovered ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`p-2 rounded-full shrink-0 ${allCovered ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {allCovered ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className={`font-bold ${allCovered ? 'text-emerald-800' : 'text-amber-800'}`}>
+                        {allCovered ? 'Planificación sin conflictos' : 'Atención requerida en la planificación'}
+                      </h3>
+                      <p className={`text-sm ${allCovered ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {allCovered
+                          ? `${stats.alerts.length} días con observaciones informativas, todas cubiertas.`
+                          : `${stats.alerts.length} días con alertas · ${criticalCount + warningCount} requieren revisión.`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className={`font-bold ${allCovered ? 'text-emerald-800' : 'text-amber-800'}`}>
-                      {allCovered ? 'Todas las alertas cubiertas' : 'Atención requerida en la planificación'}
-                    </h3>
-                    <p className={`text-sm ${allCovered ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {allCovered
-                        ? 'Todas las ausencias de grupo están cubiertas por integrantes del otro grupo.'
-                        : `${unresolvedAlerts.length} alertas requieren revisión manual.`}
-                    </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {criticalCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        {criticalCount} críticas
+                      </span>
+                    )}
+                    {warningCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        {warningCount} advertencias
+                      </span>
+                    )}
+                    {infoCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        {infoCount} cubiertas
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -1761,7 +1866,9 @@ const App = () => {
             <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-700 font-bold flex items-center gap-2">
-                  Detalle de Alertas
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  Detalle de Alertas por Día
+                  <span className="text-xs font-normal text-gray-400">({stats.alerts.length} días)</span>
                 </h3>
                 <button
                   onClick={() => setAlertsExpanded(!alertsExpanded)}
@@ -1785,52 +1892,72 @@ const App = () => {
                 </button>
               </div>
               {alertsExpanded && (
-                <ul className="space-y-3">
+                <div className="space-y-4">
                 {stats.alerts.map(alert => {
                   const day = days.find(d => d.id === alert.dayId);
-                  let msgs = [];
-                  let isFullyCovered = true;
-
-                  if (alert.present < 3) { msgs.push(`Solo ${alert.present} disponibles (Mín: 3).`); isFullyCovered = false; }
-                  if (alert.shift18hCount < 1) { msgs.push(`Sin cobertura hasta las 18h.`); isFullyCovered = false; }
-                  if (alert.intensiveCount > 3) { msgs.push(`Más de 3 en intensiva (30h).`); isFullyCovered = false; }
-
-                  if (!alert.group1HasOffice) {
-                    let msg = `Falta alguien de {Enrique/Luis/David} en oficina.`;
-                    if (alert.group2Covering && alert.group2Covering.length > 0) {
-                      msg += ` (Cubierto por: ${alert.group2Covering.join(', ')}).`;
-                    } else {
-                      isFullyCovered = false;
-                    }
-                    msgs.push(msg);
-                  }
-                  if (!alert.group2HasOffice) {
-                    let msg = `Falta alguien de {Jose/Ariel/Kike} en oficina.`;
-                    if (alert.group1Covering && alert.group1Covering.length > 0) {
-                      msg += ` (Cubierto por: ${alert.group1Covering.join(', ')}).`;
-                    } else {
-                      isFullyCovered = false;
-                    }
-                    msgs.push(msg);
-                  }
+                  const hasCritical = alert.reasons.some(r => r.severity === "critical");
+                  const hasWarning = alert.reasons.some(r => r.severity === "warning");
+                  const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
+                  const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
 
                   return (
-                    <li key={alert.dayId} className={`text-sm p-3 rounded border flex items-start gap-3 ${isFullyCovered ? 'bg-gray-50 border-gray-200 text-gray-600' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
-                      <div className={`mt-0.5 ${isFullyCovered ? 'text-gray-400' : 'text-rose-500'}`}>
-                        {isFullyCovered ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        )}
+                    <div key={alert.dayId} className={`rounded-lg border ${borderColor} overflow-hidden`}>
+                      {/* Day Header */}
+                      <div className={`${headerBg} px-4 py-2.5 flex items-center justify-between`}>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-sm font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
+                            {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {alert.present}/6 disponibles
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {alert.reasons.map((r, i) => (
+                            <span key={i} className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-rose-500' : r.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'}`}></span>
+                          ))}
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-semibold mr-1">Día {day.label}:</span>
-                        {msgs.join(' ')}
+                      {/* Reason Cards */}
+                      <div className="p-3 space-y-2 bg-white">
+                        {alert.reasons.map((reason, idx) => {
+                          const severityStyles = {
+                            critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
+                            warning: { bg: "bg-amber-50", border: "border-amber-200", titleColor: "text-amber-700", iconColor: "text-amber-500", detailColor: "text-amber-600" },
+                            info: { bg: "bg-blue-50", border: "border-blue-100", titleColor: "text-blue-700", iconColor: "text-blue-500", detailColor: "text-blue-600" }
+                          };
+                          const s = severityStyles[reason.severity] || severityStyles.info;
+
+                          const iconMap = {
+                            people: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>,
+                            clock: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+                            alert: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
+                            group: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+                            check: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                          };
+
+                          return (
+                            <div key={idx} className={`${s.bg} ${s.border} border rounded-md px-3 py-2`}>
+                              <div className="flex items-start gap-2">
+                                <div className={`mt-0.5 shrink-0 ${s.iconColor}`}>
+                                  {iconMap[reason.icon] || iconMap.alert}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className={`text-sm font-semibold ${s.titleColor}`}>{reason.title}</p>
+                                  <p className={`text-xs mt-0.5 ${s.detailColor}`}>{reason.detail}</p>
+                                  {reason.context && (
+                                    <p className="text-[11px] text-gray-500 mt-1 italic">{reason.context}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </li>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
               )}
             </div>
           </div>
