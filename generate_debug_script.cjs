@@ -54,13 +54,31 @@ const DEFAULT_VACATION_PLAN_2026 = {
   Ariel: ["2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21"]
 };
 
+const WEEKDAY_FULL = {
+  L: "Lunes", M: "Martes", X: "Miércoles", J: "Jueves", V: "Viernes",
+};
+
 const result = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
 const { schedule, days } = result;
 
-console.dir({
-  kikeIntensive: Object.keys(schedule[EMPLOYEES[0].id]).filter(d => schedule[EMPLOYEES[0].id][d] === 'O30').length / 5,
-  arielIntensive: Object.keys(schedule[EMPLOYEES[5].id]).filter(d => schedule[EMPLOYEES[5].id][d] === 'O30').length / 5
+const currentIntensiveWeeks = {};
+EMPLOYEES.forEach((emp) => {
+  let count = 0;
+  const daysInWeek = {};
+  days.forEach(d => {
+    daysInWeek[d.weekIndex] = daysInWeek[d.weekIndex] || [];
+    daysInWeek[d.weekIndex].push(d);
+  });
+  Object.values(daysInWeek).forEach(week => {
+    if (week.every(day => schedule[emp.id][day.id] === "O30")) count++;
+  });
+  currentIntensiveWeeks[emp.name] = count;
 });
+
+// Calculate stats using the same logic we extracted but wait, calculateStats requires React so it's not extracted!
+// I'll just see currentIntensiveWeeks.
+console.dir(currentIntensiveWeeks);
+
 `;
 
 fs.writeFileSync('debug4.cjs', scriptBody);

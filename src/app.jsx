@@ -1538,21 +1538,21 @@ const App = () => {
         }).map(e => e.name);
 
         const isCovered = d.group2Covering && d.group2Covering.length > 0;
-        let contextParts = [];
-        if (g1OnVac.length > 0) contextParts.push(`Vacaciones: ${g1OnVac.join(", ")}`);
-        if (g1OnIntensive.length > 0) contextParts.push(`Intensiva: ${g1OnIntensive.join(", ")}`);
-        if (g1OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g1OnTelework.join(", ")}`);
+        if (!isCovered) {
+          let contextParts = [];
+          if (g1OnVac.length > 0) contextParts.push(`Vacaciones: ${g1OnVac.join(", ")}`);
+          if (g1OnIntensive.length > 0) contextParts.push(`Intensiva: ${g1OnIntensive.join(", ")}`);
+          if (g1OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g1OnTelework.join(", ")}`);
 
-        reasons.push({
-          category: "grupo1",
-          severity: isCovered ? "info" : "critical",
-          title: isCovered ? "Grupo {Enrique/Luis/David} ausente (cubierto)" : "Grupo {Enrique/Luis/David} sin presencia",
-          detail: isCovered
-            ? `Ningún miembro del grupo está en oficina, pero el otro grupo cubre: ${d.group2Covering.join(", ")}.`
-            : `Ningún miembro del grupo está en oficina con turno completo.`,
-          context: contextParts.length > 0 ? contextParts.join(" · ") : null,
-          icon: isCovered ? "check" : "group"
-        });
+          reasons.push({
+            category: "grupo1",
+            severity: "critical",
+            title: "Grupo {Enrique/Luis/David} sin presencia",
+            detail: `Ningún miembro del grupo está en oficina con turno completo.`,
+            context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+            icon: "group"
+          });
+        }
       }
 
       if (need18h && !d.group2HasOffice) {
@@ -1566,21 +1566,21 @@ const App = () => {
         }).map(e => e.name);
 
         const isCovered = d.group1Covering && d.group1Covering.length > 0;
-        let contextParts = [];
-        if (g2OnVac.length > 0) contextParts.push(`Vacaciones: ${g2OnVac.join(", ")}`);
-        if (g2OnIntensive.length > 0) contextParts.push(`Intensiva: ${g2OnIntensive.join(", ")}`);
-        if (g2OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g2OnTelework.join(", ")}`);
+        if (!isCovered) {
+          let contextParts = [];
+          if (g2OnVac.length > 0) contextParts.push(`Vacaciones: ${g2OnVac.join(", ")}`);
+          if (g2OnIntensive.length > 0) contextParts.push(`Intensiva: ${g2OnIntensive.join(", ")}`);
+          if (g2OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g2OnTelework.join(", ")}`);
 
-        reasons.push({
-          category: "grupo2",
-          severity: isCovered ? "info" : "critical",
-          title: isCovered ? "Grupo {Jose/Ariel/Kike} ausente (cubierto)" : "Grupo {Jose/Ariel/Kike} sin presencia",
-          detail: isCovered
-            ? `Ningún miembro del grupo está en oficina, pero el otro grupo cubre: ${d.group1Covering.join(", ")}.`
-            : `Ningún miembro del grupo está en oficina con turno completo.`,
-          context: contextParts.length > 0 ? contextParts.join(" · ") : null,
-          icon: isCovered ? "check" : "group"
-        });
+          reasons.push({
+            category: "grupo2",
+            severity: "critical",
+            title: "Grupo {Jose/Ariel/Kike} sin presencia",
+            detail: `Ningún miembro del grupo está en oficina con turno completo.`,
+            context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+            icon: "group"
+          });
+        }
       }
 
       if (reasons.length > 0) {
