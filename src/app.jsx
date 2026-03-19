@@ -225,6 +225,38 @@ const generateSchedule = (year, vacationPlan) => {
     return valid;
   };
 
+  const MAX_FORCED_OFFICE_DAYS = 5;
+
+  const countForcedDays = (currentSchedule, allDays) => {
+    let count = 0;
+    allDays.forEach(day => {
+      let group1HasOffice = false, group2HasOffice = false;
+      let group1Covering = 0, group2Covering = 0;
+      let hasO40InOfficeOnFriday = false;
+      EMPLOYEES.forEach(e => {
+        const type = currentSchedule[e.id][day.id];
+        if (type === 'V') return;
+        const od = e.officeDays.split(',').map(d => d.trim());
+        const inOffice = od.includes(day.weekdayLetter);
+        if (day.weekdayLetter !== 'V') {
+          if (inOffice && (type === 'O40' || type === 'O42')) {
+            if (GROUP1.includes(e.name)) { group1HasOffice = true; group1Covering++; }
+            if (GROUP2.includes(e.name)) { group2HasOffice = true; group2Covering++; }
+          }
+        } else {
+          if (inOffice && type === 'O40') hasO40InOfficeOnFriday = true;
+        }
+      });
+      if (day.weekdayLetter !== 'V') {
+        if (!group1HasOffice && group2Covering === 0) count++;
+        if (!group2HasOffice && group1Covering === 0) count++;
+      } else {
+        if (!hasO40InOfficeOnFriday) count++;
+      }
+    });
+    return count;
+  };
+
   // Determinar asignación base de turnos (O40 vs O42) por semana
   // O42 (Tarde L-J) vs O40 (Tarde V)
   // Estrategia: Asignar O40 (requiere presencia V hasta 17:00) al grupo con más presencia física en Viernes.
@@ -367,7 +399,7 @@ const generateSchedule = (year, vacationPlan) => {
     const selected = [];
     for (const emp of eligibleIntensive) {
       if (intensiveWeeksByEmp[emp.id] >= 7) continue;
-      if (selected.length >= 3) continue;
+      if (selected.length >= 4) continue;
       
       if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
         selected.push(emp);
@@ -497,11 +529,11 @@ const generateSchedule = (year, vacationPlan) => {
         const currentIntensiveCount = EMPLOYEES.filter(
           (e) => schedule[e.id][day.id] === "O30"
         ).length;
-        if (currentIntensiveCount >= 3) continue;
+        if (currentIntensiveCount >= 4) continue;
 
         if (!isInOffice) {
           schedule[emp.id][day.id] = "O30";
-          if (!isValidCoverage([day], schedule)) {
+          if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
              schedule[emp.id][day.id] = "O40";
           } else {
              swapped = true;
@@ -521,7 +553,7 @@ const generateSchedule = (year, vacationPlan) => {
 
         if (otherGroupHasO40) {
           schedule[emp.id][day.id] = "O30";
-          if (!isValidCoverage([day], schedule)) {
+          if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
              schedule[emp.id][day.id] = "O40";
           } else {
              swapped = true;
@@ -607,7 +639,7 @@ const generateSchedule = (year, vacationPlan) => {
               schedule[sub.id][day.id] = "O42";
               schedule[emp.id][day.id] = "O40";
             });
-            if (!isValidCoverage(daysInWeek, schedule)) {
+            if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
                tempSwaps.forEach(({ sub, day }) => {
                  schedule[sub.id][day.id] = "O40";
                  schedule[emp.id][day.id] = "O42";
@@ -627,9 +659,16 @@ const generateSchedule = (year, vacationPlan) => {
           const o30Count = EMPLOYEES.filter(
             (e) => schedule[e.id][day.id] === "O30"
           ).length;
-          return o30Count < 3;
+          return o30Count < 4;
         });
-        if (!canFlip || !preservesOfficeCoverage(emp.id, daysInWeek, schedule)) return;
+        if (!canFlip) return;
+        if (!preservesOfficeCoverage(emp.id, daysInWeek, schedule)) {
+          // Allow if within forced office budget
+          daysInWeek.forEach(d => { if (schedule[emp.id][d.id] !== 'V') schedule[emp.id][d.id] = 'O30'; });
+          const forced = countForcedDays(schedule, days);
+          daysInWeek.forEach(d => { if (schedule[emp.id][d.id] === 'O30') schedule[emp.id][d.id] = 'O40'; });
+          if (forced > MAX_FORCED_OFFICE_DAYS) return;
+        }
         daysInWeek.forEach((day) => {
           schedule[emp.id][day.id] = "O30";
         });
@@ -702,7 +741,7 @@ const generateSchedule = (year, vacationPlan) => {
             const o30Count = EMPLOYEES.filter(
               (e) => schedule[e.id][day.id] === "O30"
             ).length;
-            if (o30Count >= 3) {
+            if (o30Count >= 4) {
               canFlip = false;
             }
           });
@@ -822,15 +861,24 @@ const generateSchedule = (year, vacationPlan) => {
              return dailyO30 < 3; // Maximum 3 intensive shifts per day
           });
 
-          if (canAssignStrict && preservesOfficeCoverage(emp.id, daysInWeek, schedule)) {
-            // Take free slot
-            daysInWeek.forEach((day) => {
-              if (schedule[emp.id][day.id] !== "V") {
-                schedule[emp.id][day.id] = "O30";
-              }
-            });
-            finalIntensiveWeeks[emp.id]++;
-            balancing = true;
+          if (canAssignStrict) {
+            const coverageOk = preservesOfficeCoverage(emp.id, daysInWeek, schedule);
+            let withinBudget = coverageOk;
+            if (!coverageOk) {
+              daysInWeek.forEach(d => { if (schedule[emp.id][d.id] !== 'V') schedule[emp.id][d.id] = 'O30'; });
+              withinBudget = countForcedDays(schedule, days) <= MAX_FORCED_OFFICE_DAYS;
+              daysInWeek.forEach(d => { if (schedule[emp.id][d.id] !== 'V') schedule[emp.id][d.id] = 'O40'; });
+            }
+            if (withinBudget) {
+              // Take free slot
+              daysInWeek.forEach((day) => {
+                if (schedule[emp.id][day.id] !== "V") {
+                  schedule[emp.id][day.id] = "O30";
+                }
+              });
+              finalIntensiveWeeks[emp.id]++;
+              balancing = true;
+            }
           } else {
             // Try to swap with a donor who has MORE than the target (or at least more than this emp + 1)
             const validDonors = occupants.filter(donor => 
@@ -847,19 +895,22 @@ const generateSchedule = (year, vacationPlan) => {
                   daysSrc.forEach((d) => {
                      if (schedule[donor.id][d.id] !== "V") schedule[donor.id][d.id] = "O40";
                   });
-                  if (preservesOfficeCoverage(emp.id, daysSrc, schedule)) {
-                     daysSrc.forEach((d) => {
-                        if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O30";
-                     });
+                  // Check coverage or forced budget
+                  daysSrc.forEach((d) => {
+                     if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O30";
+                  });
+                  const budgetOk = countForcedDays(schedule, days) <= MAX_FORCED_OFFICE_DAYS;
+                  if (budgetOk) {
                      finalIntensiveWeeks[donor.id]--;
                      finalIntensiveWeeks[emp.id]++;
                      moved = true;
                      balancing = true;
                      break;
                   } else {
-                     // Revert donor to O30
+                     // Revert
                      daysSrc.forEach((d) => {
                         if (schedule[donor.id][d.id] !== "V") schedule[donor.id][d.id] = "O30";
+                        if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O40";
                      });
                   }
               }
@@ -874,39 +925,42 @@ const generateSchedule = (year, vacationPlan) => {
                 const canMoveDonorStrict = daysDest.every(day => {
                    if (schedule[donor.id][day.id] === "V") return true;
                    const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
-                   return dailyO30 < 3;
+                   return dailyO30 < 4;
                 });
                 
-                if (!canMoveDonorStrict || !preservesOfficeCoverage(donor.id, daysDest, schedule)) continue;
+                if (!canMoveDonorStrict) continue;
 
                 // Move donor
                 const daysSrc = finalWeeksMap[wi];
                 const daysDest_ = finalWeeksMap[destWi];
 
-                // Simulate donor leaving src
+                // Simulate full move
                 daysSrc.forEach((d) => {
                    if (schedule[donor.id][d.id] !== "V")
                      schedule[donor.id][d.id] = "O40";
                 });
+                daysDest_.forEach((d) => {
+                   if (schedule[donor.id][d.id] !== "V")
+                     schedule[donor.id][d.id] = "O30";
+                });
+                daysSrc.forEach((d) => {
+                   if (schedule[emp.id][d.id] !== "V")
+                     schedule[emp.id][d.id] = "O30";
+                });
                 
-                if (preservesOfficeCoverage(emp.id, daysSrc, schedule)) {
-                   daysDest_.forEach((d) => {
-                     if (schedule[donor.id][d.id] !== "V")
-                       schedule[donor.id][d.id] = "O30";
-                   });
-                   daysSrc.forEach((d) => {
-                     if (schedule[emp.id][d.id] !== "V")
-                       schedule[emp.id][d.id] = "O30";
-                   });
+                if (countForcedDays(schedule, days) <= MAX_FORCED_OFFICE_DAYS) {
                    finalIntensiveWeeks[emp.id]++;
                    moved = true;
                    balancing = true;
                    break;
                 } else {
-                   // Revert donor simulation
+                   // Revert all
                    daysSrc.forEach((d) => {
-                     if (schedule[donor.id][d.id] !== "V")
-                       schedule[donor.id][d.id] = "O30";
+                     if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O40";
+                     if (schedule[donor.id][d.id] !== "V") schedule[donor.id][d.id] = "O30";
+                   });
+                   daysDest_.forEach((d) => {
+                     if (schedule[donor.id][d.id] !== "V") schedule[donor.id][d.id] = "O40";
                    });
                 }
               }
