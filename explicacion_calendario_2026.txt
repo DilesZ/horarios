@@ -42,10 +42,13 @@ Detalles técnicos del algoritmo
 
 Uso
 
-- Abrir calendario_2026.html en navegador.
+- Instalar dependencias con `npm install`.
+- Construir el proyecto con `npm run build`.
+- Abrir `dist/index.html` en el navegador o iniciar un servidor local (`npx serve dist`).
 - Filtro por integrante en el selector (arriba a la derecha).
 - Botón “Resetear Plan” para regenerar la planificación con la lógica actual.
 - Click en una celda para ver detalles del día y del integrante.
+- (Opcional) Abrir `calendario_2026.html` para acceder a la versión estática antigua.
 
 Teletrabajo fijo (actualizado)
 
