@@ -1997,9 +1997,9 @@ const App = () => {
                   const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
 
                   return (
-                    <div key={alert.dayId} className={`rounded-lg border ${borderColor} overflow-hidden`}>
+                    <details key={alert.dayId} id={`alert-${alert.dayId}`} className={`rounded-lg border ${borderColor} overflow-hidden group/alert [&>summary::-webkit-details-marker]:hidden`}>
                       {/* Day Header */}
-                      <div className={`${headerBg} px-4 py-2.5 flex items-center justify-between`}>
+                      <summary className={`${headerBg} px-4 py-2.5 flex items-center justify-between cursor-pointer list-none select-none hover:brightness-95 transition-all`}>
                         <div className="flex items-center gap-3">
                           <span className={`text-sm font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
                             {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
@@ -2008,14 +2008,17 @@ const App = () => {
                             {alert.present}/6 disponibles
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          {alert.reasons.map((r, i) => (
-                            <span key={i} className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-rose-500' : r.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'}`}></span>
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 mr-2">
+                            {alert.reasons.map((r, i) => (
+                              <span key={i} className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-rose-500' : r.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'}`}></span>
+                            ))}
+                          </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform duration-200 group-open/alert:rotate-180`}><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </div>
-                      </div>
+                      </summary>
                       {/* Reason Cards */}
-                      <div className="p-3 space-y-2 bg-white">
+                      <div className="p-3 space-y-2 bg-white border-t border-gray-100">
                         {alert.reasons.map((reason, idx) => {
                           const severityStyles = {
                             critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
@@ -2050,7 +2053,7 @@ const App = () => {
                           );
                         })}
                       </div>
-                    </div>
+                    </details>
                   );
                 })}
               </div>
@@ -2069,8 +2072,28 @@ const App = () => {
               </th>
               {days.map((day) => {
                 const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+                const hasAlert = stats.alerts.some(a => a.dayId === day.id);
                 return (
-                  <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50`}>
+                  <th key={day.id} className={`p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50 relative`}>
+                    {hasAlert && (
+                      <div 
+                        className="absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors"
+                        title="Día con alertas (Click para ver)"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAlertsExpanded(true);
+                          setTimeout(() => {
+                            const el = document.getElementById(`alert-${day.id}`);
+                            if (el) {
+                              el.open = true;
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                          }, 50);
+                        }}
+                      >
+                        !
+                      </div>
+                    )}
                     <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
                     <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
                     <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
