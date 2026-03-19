@@ -616,7 +616,7 @@ const generateSchedule = (year, vacationPlan) => {
   });
 
   EMPLOYEES.forEach((emp) => {
-    while (currentIntensiveWeeks[emp.id] < 7) {
+    while (currentIntensiveWeeks[emp.id] < 6) {
       let improved = false;
       Object.keys(weeksList).forEach((wiStr) => {
         if (improved) return;
@@ -735,7 +735,7 @@ const generateSchedule = (year, vacationPlan) => {
         }
       });
 
-      if (intensiveCount < 7) {
+      if (intensiveCount < 6) {
         const day19 = days.find((d) => d.id === "2026-06-19");
         const forbiddenWeek = day19 ? day19.weekIndex : null;
         const candidateWeeks = Object.keys(weeksList)
