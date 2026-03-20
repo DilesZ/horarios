@@ -1554,6 +1554,10 @@ const generateSchedule = (year, vacationPlan) => {
           const officeDays = emp.officeDays.split(",").map(d => d.trim());
           return officeDays.includes(day.weekdayLetter);
         }).sort((a, b) => {
+          const aNeedsIntensive = schedule[a.id][day.id] === "O30" && finalIntensiveWeeks[a.id] <= 6;
+          const bNeedsIntensive = schedule[b.id][day.id] === "O30" && finalIntensiveWeeks[b.id] <= 6;
+          if (aNeedsIntensive && !bNeedsIntensive) return 1;
+          if (!aNeedsIntensive && bNeedsIntensive) return -1;
           const aInLateGroup = a.group === lateGroup;
           const bInLateGroup = b.group === lateGroup;
           if (aInLateGroup && !bInLateGroup) return -1;
