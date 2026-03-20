@@ -118,3 +118,15 @@ Mejoras de comodidad visual (actualización)
 - La descarga real se ejecuta desde un botón dedicado dentro del panel de exportación (“Descargar archivo”).
 - El bloque de detalles de equidad también queda oculto por defecto y solo se muestra al pulsar “Ver equidad”.
 - Se añaden acciones rápidas de “Ocultar” en ambos paneles para cerrar sin desplazarse.
+
+Mejoras de comodidad visual (segunda iteración)
+
+- El gestor de vacaciones queda oculto por defecto y se abre desde un botón superior “Ver vacaciones”.
+- La barra de acciones superior pasa a modo sticky para mantener accesos rápidos visibles durante el scroll.
+- Se añade selector de densidad de tabla:
+  - Vista cómoda (espaciado amplio).
+  - Vista compacta (más filas visibles).
+- Se añade filtro rápido por nombre de integrante.
+- Se añade resaltado visual de fila y columna activa al mover el cursor por la matriz de turnos.
+- Se refuerza el contraste de colores de turnos (30h/40h/42h/Vacaciones) con paleta más oscura.
+- Se añade una leyenda rápida sticky encima de la tabla principal para referencia constante.

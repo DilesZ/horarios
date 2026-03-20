@@ -87,31 +87,31 @@ const buildDaysRange = year => {
 const TYPES = {
   O40: {
     label: "40h (hasta las 17:00)",
-    color: "bg-blue-600",
+    color: "bg-blue-700",
     text: "text-white",
     short: "40"
   },
   O42: {
     label: "42h (hasta las 18:00, Viernes 14:00)",
-    color: "bg-indigo-600",
+    color: "bg-violet-700",
     text: "text-white",
     short: "42"
   },
   O30: {
     label: "Intensiva 30h (hasta las 14:00)",
-    color: "bg-emerald-500",
+    color: "bg-emerald-700",
     text: "text-white",
     short: "30"
   },
   T30: {
     label: "Teletrabajo 30h",
-    color: "bg-teal-500",
+    color: "bg-cyan-700",
     text: "text-white",
     short: "T30"
   },
   V: {
     label: "Vacaciones",
-    color: "bg-rose-500",
+    color: "bg-rose-700",
     text: "text-white",
     short: "VAC"
   }
@@ -1728,6 +1728,10 @@ const App = () => {
   const [vacationPlan, setVacationPlan] = useState(DEFAULT_VACATION_PLAN_2026);
   const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
   const [selectedEmp, setSelectedEmp] = useState("all");
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [tableDensity, setTableDensity] = useState("comfortable");
+  const [hoveredEmpId, setHoveredEmpId] = useState(null);
+  const [hoveredDayId, setHoveredDayId] = useState(null);
   const [modalData, setModalData] = useState({
     isOpen: false,
     emp: null,
@@ -1762,6 +1766,7 @@ const App = () => {
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
   const [equitySectionOpen, setEquitySectionOpen] = useState(false);
+  const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
   const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
   const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
   useEffect(() => {
@@ -2882,7 +2887,25 @@ const App = () => {
       typeKey
     });
   };
-  const filteredEmployees = selectedEmp === "all" ? EMPLOYEES : EMPLOYEES.filter(e => e.id === parseInt(selectedEmp));
+  const quickFilteredEmployees = useMemo(() => {
+    const query = employeeSearch.trim().toLowerCase();
+    if (!query) return EMPLOYEES;
+    return EMPLOYEES.filter(emp => emp.name.toLowerCase().includes(query));
+  }, [employeeSearch]);
+  const filteredEmployees = selectedEmp === "all" ? quickFilteredEmployees : quickFilteredEmployees.filter(e => e.id === parseInt(selectedEmp, 10));
+  const tableSpacing = tableDensity === "compact" ? {
+    headerCell: "p-1.5",
+    firstColHeader: "p-2.5",
+    firstColCell: "p-2",
+    bodyCell: "p-0.5",
+    slotHeight: "h-8"
+  } : {
+    headerCell: "p-2",
+    firstColHeader: "p-4",
+    firstColCell: "p-3",
+    bodyCell: "p-1",
+    slotHeight: "h-10"
+  };
   if (!isLoggedIn) {
     return /*#__PURE__*/React.createElement(LoginForm, {
       onLogin: handleLogin
@@ -2899,7 +2922,7 @@ const App = () => {
     open: oListOpen,
     onClose: () => setOListOpen(false)
   }), /*#__PURE__*/React.createElement("header", {
-    className: "mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6"
+    className: "mb-6 flex flex-col gap-4 border-b border-gray-200 pb-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-6"
   }, /*#__PURE__*/React.createElement("img", {
@@ -2909,7 +2932,9 @@ const App = () => {
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-bold text-brand-blue tracking-tight"
   }, "Gestion Horaria Dept. Sistemas"))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-4"
+    className: "sticky top-0 z-40 bg-white/95 backdrop-blur border border-gray-200 rounded-xl p-3 shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
   }, /*#__PURE__*/React.createElement("select", {
     className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm",
     value: selectedEmp,
@@ -2919,13 +2944,39 @@ const App = () => {
   }, "Todos los integrantes"), EMPLOYEES.map(e => /*#__PURE__*/React.createElement("option", {
     key: e.id,
     value: e.id
-  }, e.name))), /*#__PURE__*/React.createElement("button", {
+  }, e.name))), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: employeeSearch,
+    onChange: e => setEmployeeSearch(e.target.value),
+    placeholder: "Filtrar por nombre",
+    className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm min-w-[12rem]"
+  }), /*#__PURE__*/React.createElement("select", {
+    className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm",
+    value: tableDensity,
+    onChange: e => setTableDensity(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "comfortable"
+  }, "Vista c\xF3moda"), /*#__PURE__*/React.createElement("option", {
+    value: "compact"
+  }, "Vista compacta")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOListOpen(true),
     className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
   }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
+      setVacationSectionOpen(prev => !prev);
+      if (!vacationSectionOpen) {
+        setExportPanelExpanded(false);
+        setEquitySectionOpen(false);
+      }
+    },
+    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${vacationSectionOpen ? "bg-teal-700" : "bg-teal-600 hover:bg-teal-700"}`
+  }, vacationSectionOpen ? "Cerrar vacaciones" : "Ver vacaciones"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
       setExportPanelExpanded(prev => !prev);
-      if (!exportPanelExpanded) setEquitySectionOpen(false);
+      if (!exportPanelExpanded) {
+        setEquitySectionOpen(false);
+        setVacationSectionOpen(false);
+      }
     },
     className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportPanelExpanded ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"}`
   }, /*#__PURE__*/React.createElement("svg", {
@@ -2957,7 +3008,10 @@ const App = () => {
   })), exportPanelExpanded ? "Cerrar exportación" : "Exportar"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEquitySectionOpen(prev => !prev);
-      if (!equitySectionOpen) setExportPanelExpanded(false);
+      if (!equitySectionOpen) {
+        setExportPanelExpanded(false);
+        setVacationSectionOpen(false);
+      }
     },
     className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${equitySectionOpen ? "bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`
   }, equitySectionOpen ? "Cerrar equidad" : "Ver equidad"), /*#__PURE__*/React.createElement("button", {
@@ -2966,7 +3020,7 @@ const App = () => {
   }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogout,
     className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
-  }, "Cerrar Sesi\xF3n"))), exportPanelExpanded && /*#__PURE__*/React.createElement("div", {
+  }, "Cerrar Sesi\xF3n")))), exportPanelExpanded && /*#__PURE__*/React.createElement("div", {
     className: "mb-6 bg-white border border-emerald-200 rounded-xl p-4 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-3"
@@ -3094,7 +3148,7 @@ const App = () => {
     type: "button",
     onClick: () => handleSelectDashboardYear(y),
     className: `px-2 py-0.5 rounded-full border text-[11px] ${activeDashboardYear === y ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-600 border-gray-300"}`
-  }, y)))))), mode === "config" && /*#__PURE__*/React.createElement("div", {
+  }, y)))))), mode === "config" && vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-3 gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
@@ -3102,9 +3156,15 @@ const App = () => {
     className: "flex items-center justify-between mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-gray-800"
-  }, "Gestor de vacaciones"), /*#__PURE__*/React.createElement("span", {
+  }, "Gestor de vacaciones"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] text-gray-400"
-  }, "A\xF1o ", year)), /*#__PURE__*/React.createElement("div", {
+  }, "A\xF1o ", year), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setVacationSectionOpen(false),
+    className: "px-2 py-1 rounded-md text-[11px] font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+  }, "Ocultar"))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-gray-500 mb-1"
@@ -3164,7 +3224,9 @@ const App = () => {
     }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] opacity-80"
     }, day.weekdayLetter));
-  })))))))), equitySectionOpen && /*#__PURE__*/React.createElement("div", {
+  }))))))), mode === "config" && !vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700"
+  }, "El gestor de vacaciones est\xE1 oculto. Pulsa \u201CVer vacaciones\u201D en la barra superior para abrirlo.")), equitySectionOpen && /*#__PURE__*/React.createElement("div", {
     className: "mb-6 bg-white border border-indigo-200 rounded-xl p-4 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
@@ -3472,25 +3534,25 @@ const App = () => {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-emerald-500"
+    className: "w-4 h-4 rounded bg-emerald-700"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "Intensiva 30h")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-blue-600"
+    className: "w-4 h-4 rounded bg-blue-700"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "40h (17:00)")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-indigo-600"
+    className: "w-4 h-4 rounded bg-violet-700"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "42h (18:00, V 14:00)")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-rose-500"
+    className: "w-4 h-4 rounded bg-rose-700"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "Vacaciones"))), /*#__PURE__*/React.createElement("div", {
@@ -3755,11 +3817,41 @@ const App = () => {
       points: "20 6 9 17 4 12"
     })), infoCount, " cubiertas")));
   })()), /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl"
+    className: "sticky top-[4.5rem] z-30 mb-3 rounded-lg border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-3 text-xs text-gray-700"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold text-gray-800"
+  }, "Leyenda r\xE1pida"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded bg-emerald-700"
+  }), "30h"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded bg-blue-700"
+  }), "40h"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded bg-violet-700"
+  }), "42h"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded bg-rose-700"
+  }), "Vacaciones"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded bg-gray-700"
+  }), "Icono casa/edificio: ubicaci\xF3n"))), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl",
+    onMouseLeave: () => {
+      setHoveredEmpId(null);
+      setHoveredDayId(null);
+    }
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full text-left border-collapse"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "sticky left-0 z-20 bg-gray-50 p-4 border-b border-r border-gray-200 w-48 min-w-[12rem]"
+    className: `sticky left-0 z-20 bg-gray-50 ${tableSpacing.firstColHeader} border-b border-r border-gray-200 w-48 min-w-[12rem]`
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold text-brand-blue"
   }, "Integrante")), days.map(day => {
@@ -3767,7 +3859,8 @@ const App = () => {
     const hasAlert = stats.alerts.some(a => a.dayId === day.id);
     return /*#__PURE__*/React.createElement("th", {
       key: day.id,
-      className: `p-2 border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 bg-gray-50 relative`
+      onMouseEnter: () => setHoveredDayId(day.id),
+      className: `${tableSpacing.headerCell} border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 relative ${hoveredDayId === day.id ? "bg-blue-50" : "bg-gray-50"}`
     }, hasAlert && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors",
       title: "D\xEDa con alertas (Click para ver)",
@@ -3793,9 +3886,10 @@ const App = () => {
     })));
   }))), /*#__PURE__*/React.createElement("tbody", null, filteredEmployees.map(emp => /*#__PURE__*/React.createElement("tr", {
     key: emp.id,
-    className: "group hover:bg-gray-50 transition-colors"
+    onMouseEnter: () => setHoveredEmpId(emp.id),
+    className: `group transition-colors ${hoveredEmpId === emp.id ? "bg-blue-50/40" : "hover:bg-gray-50"}`
   }, /*#__PURE__*/React.createElement("td", {
-    className: "sticky left-0 z-10 bg-white p-3 border-r border-b border-gray-200 group-hover:bg-gray-50"
+    className: `sticky left-0 z-10 ${tableSpacing.firstColCell} border-r border-b border-gray-200 ${hoveredEmpId === emp.id ? "bg-blue-50" : "bg-white group-hover:bg-gray-50"}`
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-medium text-gray-900"
   }, emp.name), /*#__PURE__*/React.createElement("div", {
@@ -3811,12 +3905,17 @@ const App = () => {
     const daysOffice = emp.officeDays.split(",").map(d => d.trim());
     const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
     const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
+    const isHighlighted = hoveredEmpId === emp.id || hoveredDayId === day.id;
     return /*#__PURE__*/React.createElement("td", {
       key: day.id,
-      className: `p-1 border-b border-gray-200 relative cursor-pointer border-l border-gray-100`,
+      onMouseEnter: () => {
+        setHoveredEmpId(emp.id);
+        setHoveredDayId(day.id);
+      },
+      className: `${tableSpacing.bodyCell} border-b border-gray-200 relative cursor-pointer border-l border-gray-100 ${isHighlighted ? "bg-blue-50/50" : ""}`,
       onClick: () => handleCellClick(emp, day)
     }, /*#__PURE__*/React.createElement("div", {
-      className: `w-full h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} hover:brightness-110 hover:scale-105 transform`
+      className: `w-full ${tableSpacing.slotHeight} rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} ring-1 ring-black/10 ${isHighlighted ? "brightness-110 scale-[1.02]" : "hover:brightness-110 hover:scale-105"} transform`
     }, /*#__PURE__*/React.createElement("span", null, style.short), typeKey === "O42" && /*#__PURE__*/React.createElement("div", {
       className: "absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"
     }), isWFH && /*#__PURE__*/React.createElement("div", {
@@ -3892,7 +3991,10 @@ const App = () => {
       x2: "15",
       y2: "18"
     })))));
-  })))))), /*#__PURE__*/React.createElement("footer", {
+  }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: days.length + 1,
+    className: "p-6 text-center text-sm text-gray-500"
+  }, "No hay integrantes que coincidan con el filtro actual."))))), /*#__PURE__*/React.createElement("footer", {
     className: "mt-8 text-center text-gray-500 text-sm"
   }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
     isOpen: !!selectedAlertDayId,
