@@ -152,6 +152,190 @@ const SHIFT_BASE_A_18H = true;
 const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
 const EQUITY_MIN_INTENSIVE_WEEKS = 6;
 const EQUITY_IDEAL_INTENSIVE_WEEKS = 7;
+const STRICT_WEEKLY_RULES = {
+  INTENSIVE_FULL_WEEK_ONLY: "INTENSIVE_FULL_WEEK_ONLY",
+  MIXED_40_42_IN_WEEK: "MIXED_40_42_IN_WEEK",
+  MIXED_SHIFT_TYPES_IN_WEEK: "MIXED_SHIFT_TYPES_IN_WEEK",
+};
+const STRICT_WEEKLY_RULE_MESSAGES = {
+  [STRICT_WEEKLY_RULES.INTENSIVE_FULL_WEEK_ONLY]:
+    "No se permite jornada intensiva en días sueltos. Debe asignarse la semana operativa completa.",
+  [STRICT_WEEKLY_RULES.MIXED_40_42_IN_WEEK]:
+    "No se permite mezclar turnos de 40h y 42h dentro de la misma semana.",
+  [STRICT_WEEKLY_RULES.MIXED_SHIFT_TYPES_IN_WEEK]:
+    "La semana contiene combinación de tipos de jornada no permitida.",
+};
+
+const buildWeeksMap = (days) => {
+  const weeksMap = {};
+  days.forEach((day) => {
+    weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+    weeksMap[day.weekIndex].push(day);
+  });
+  return weeksMap;
+};
+
+const buildWeeklyViolation = ({ rule, employee, weekIndex, weekDays, types, detail }) => ({
+  rule,
+  message: STRICT_WEEKLY_RULE_MESSAGES[rule],
+  employeeId: employee.id,
+  employeeName: employee.name,
+  weekIndex,
+  weekLabel: `Semana ${weekIndex + 1}`,
+  dayIds: weekDays.map((day) => day.id),
+  types,
+  detail,
+});
+
+const detectStrictWeeklyViolations = ({ employees, days, schedule }) => {
+  const weeksMap = buildWeeksMap(days);
+  const violations = [];
+  Object.keys(weeksMap).forEach((weekIndexRaw) => {
+    const weekIndex = parseInt(weekIndexRaw, 10);
+    const weekDays = weeksMap[weekIndex];
+    employees.forEach((employee) => {
+      const types = weekDays.map((day) => schedule[employee.id][day.id]).filter(Boolean);
+      const nonVacationTypes = types.filter((type) => type !== "V");
+      if (nonVacationTypes.length === 0) return;
+      const uniqueNonVacationTypes = [...new Set(nonVacationTypes)];
+      const hasAnyO30 = nonVacationTypes.includes("O30");
+      const hasAnyO40 = nonVacationTypes.includes("O40");
+      const hasAnyO42 = nonVacationTypes.includes("O42");
+      const hasVacation = types.some((type) => type === "V");
+      const allWeekIsO30 = nonVacationTypes.length === weekDays.length && uniqueNonVacationTypes.length === 1 && uniqueNonVacationTypes[0] === "O30";
+      if (hasAnyO30 && (!allWeekIsO30 || hasVacation)) {
+        violations.push(
+          buildWeeklyViolation({
+            rule: STRICT_WEEKLY_RULES.INTENSIVE_FULL_WEEK_ONLY,
+            employee,
+            weekIndex,
+            weekDays,
+            types,
+            detail: "Se detectó O30 parcial o combinado con otros estados semanales.",
+          })
+        );
+      }
+      if (hasAnyO40 && hasAnyO42) {
+        violations.push(
+          buildWeeklyViolation({
+            rule: STRICT_WEEKLY_RULES.MIXED_40_42_IN_WEEK,
+            employee,
+            weekIndex,
+            weekDays,
+            types,
+            detail: "La misma semana contiene O40 y O42.",
+          })
+        );
+      }
+      if (uniqueNonVacationTypes.length > 1) {
+        violations.push(
+          buildWeeklyViolation({
+            rule: STRICT_WEEKLY_RULES.MIXED_SHIFT_TYPES_IN_WEEK,
+            employee,
+            weekIndex,
+            weekDays,
+            types,
+            detail: "Se detectó mezcla de tipos de jornada en la semana.",
+          })
+        );
+      }
+    });
+  });
+  return violations;
+};
+
+const buildStrictWeeklySummary = (violations) => {
+  const byRule = {};
+  Object.values(STRICT_WEEKLY_RULES).forEach((rule) => {
+    byRule[rule] = 0;
+  });
+  violations.forEach((item) => {
+    byRule[item.rule] = (byRule[item.rule] || 0) + 1;
+  });
+  return {
+    total: violations.length,
+    byRule,
+    isCompliant: violations.length === 0,
+  };
+};
+
+const validateStrictWeeklyRules = ({ employees, days, schedule }) => {
+  const violations = detectStrictWeeklyViolations({ employees, days, schedule });
+  return {
+    ok: violations.length === 0,
+    violations,
+    summary: buildStrictWeeklySummary(violations),
+  };
+};
+
+const pickRegularWeekType = ({ employee, weekIndex, weekDays, schedule, getLateGroupForWeek }) => {
+  const counts = { O40: 0, O42: 0, O30: 0 };
+  weekDays.forEach((day) => {
+    const type = schedule[employee.id][day.id];
+    if (counts[type] !== undefined) counts[type] += 1;
+  });
+  if (counts.O40 > counts.O42) return "O40";
+  if (counts.O42 > counts.O40) return "O42";
+  const lateGroup = getLateGroupForWeek(weekIndex);
+  return employee.group === lateGroup ? "O42" : "O40";
+};
+
+const enforceStrictWeeklyRules = ({ employees, days, schedule, getLateGroupForWeek }) => {
+  const weeksMap = buildWeeksMap(days);
+  const correctionLog = [];
+  Object.keys(weeksMap).forEach((weekIndexRaw) => {
+    const weekIndex = parseInt(weekIndexRaw, 10);
+    const weekDays = weeksMap[weekIndex];
+    employees.forEach((employee) => {
+      const weekTypes = weekDays.map((day) => schedule[employee.id][day.id]).filter(Boolean);
+      const nonVacation = weekTypes.filter((type) => type !== "V");
+      if (nonVacation.length === 0) return;
+      const uniqueNonVacation = [...new Set(nonVacation)];
+      const hasVacation = weekTypes.some((type) => type === "V");
+      const allFullWeekO30 =
+        uniqueNonVacation.length === 1 && uniqueNonVacation[0] === "O30" && nonVacation.length === weekDays.length;
+      const mustNormalize = uniqueNonVacation.length > 1 || (uniqueNonVacation[0] === "O30" && (!allFullWeekO30 || hasVacation));
+      if (!mustNormalize) return;
+      const targetType = pickRegularWeekType({
+        employee,
+        weekIndex,
+        weekDays,
+        schedule,
+        getLateGroupForWeek,
+      });
+      const before = {};
+      let changed = false;
+      weekDays.forEach((day) => {
+        before[day.id] = schedule[employee.id][day.id];
+        if (schedule[employee.id][day.id] === "V") return;
+        if (schedule[employee.id][day.id] !== targetType) {
+          schedule[employee.id][day.id] = targetType;
+          changed = true;
+        }
+      });
+      if (changed) {
+        correctionLog.push({
+          employeeId: employee.id,
+          employeeName: employee.name,
+          weekIndex,
+          weekLabel: `Semana ${weekIndex + 1}`,
+          targetType,
+          before,
+          message:
+            "Se normalizó la semana para cumplir integridad estricta (sin mezcla de jornadas y sin intensiva parcial).",
+        });
+      }
+    });
+  });
+  const validation = validateStrictWeeklyRules({ employees, days, schedule });
+  return {
+    schedule,
+    corrections: correctionLog,
+    violations: validation.violations,
+    summary: validation.summary,
+    isCompliant: validation.ok,
+  };
+};
 
 const buildEquityAudit = ({ employees, days, schedule, forcedOfficeDetails }) => {
   const weeksMap = {};
@@ -1523,7 +1707,22 @@ const generateSchedule = (year, vacationPlan) => {
     recalcIntensiveWeeks();
   }
 
-  return { schedule, days };
+  const strictAudit = enforceStrictWeeklyRules({
+    employees: EMPLOYEES,
+    days,
+    schedule,
+    getLateGroupForWeek,
+  });
+
+  return {
+    schedule: strictAudit.schedule,
+    days,
+    strictAudit: {
+      violations: strictAudit.violations,
+      corrections: strictAudit.corrections,
+      summary: strictAudit.summary,
+    },
+  };
 };
 
 const LoginForm = ({ onLogin }) => {
@@ -1670,6 +1869,7 @@ const App = () => {
 
   const schedule = currentDashboard ? currentDashboard.schedule : planning.schedule;
   const days = currentDashboard ? currentDashboard.days : planning.days;
+  const strictAudit = currentDashboard ? currentDashboard.strictAudit : planning.strictAudit;
   const currentYear = currentDashboard ? activeDashboardYear : year;
 
   const daysByMonth = useMemo(() => {
@@ -1731,6 +1931,7 @@ const App = () => {
       year,
       schedule: generated.schedule,
       days: generated.days,
+      strictAudit: generated.strictAudit,
       vacationPlan: snapshotVacationPlan,
     };
     setAcceptedDashboards((prev) => {
@@ -2241,8 +2442,23 @@ const App = () => {
       schedule,
       forcedOfficeDetails,
     });
-    return { dailyCoverage, alerts, forcedOfficeSet, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp, equityAudit };
-  }, [schedule, days]);
+    const strictValidation = validateStrictWeeklyRules({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+    });
+    return {
+      dailyCoverage,
+      alerts,
+      forcedOfficeSet,
+      forcedOfficeDetails,
+      intensiveWeeksByEmp,
+      totalHoursByEmp,
+      equityAudit,
+      strictValidation,
+      strictCorrections: strictAudit?.corrections || [],
+    };
+  }, [schedule, days, strictAudit]);
 
   const exportToExcel = async () => {
     const appendExportLog = (message, level = "info") => {
@@ -2275,6 +2491,21 @@ const App = () => {
       const validation = validateExportPayload({ employees: EMPLOYEES, days, schedule });
       if (!validation.ok) {
         throw new Error(`Validación fallida: ${validation.errors.join(" | ")}`);
+      }
+      const strictValidation = validateStrictWeeklyRules({
+        employees: EMPLOYEES,
+        days,
+        schedule,
+      });
+      if (!strictValidation.ok) {
+        const grouped = Object.values(STRICT_WEEKLY_RULES)
+          .map((rule) => {
+            const count = strictValidation.summary.byRule[rule] || 0;
+            if (count === 0) return null;
+            return `${STRICT_WEEKLY_RULE_MESSAGES[rule]} (${count})`;
+          })
+          .filter(Boolean);
+        throw new Error(`Integridad semanal inválida: ${grouped.join(" | ")}`);
       }
       appendExportLog(`Validación completada. Filas: ${validation.rowCount}, columnas: ${validation.columnCount}.`);
       setExportProgress(12);
@@ -2766,6 +2997,103 @@ const App = () => {
             </div>
           </div>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+          <div className="rounded-lg border border-gray-200 p-3">
+            <div className="text-[11px] text-gray-500">Estado integridad semanal</div>
+            <div className={`text-sm font-bold ${stats.strictValidation.ok ? "text-emerald-600" : "text-rose-600"}`}>
+              {stats.strictValidation.ok ? "Válido" : "Con incidencias"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 p-3">
+            <div className="text-[11px] text-gray-500">Incidencias detectadas</div>
+            <div className={`text-lg font-bold ${stats.strictValidation.summary.total === 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {stats.strictValidation.summary.total}
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 p-3">
+            <div className="text-[11px] text-gray-500">Correcciones automáticas</div>
+            <div className={`text-lg font-bold ${stats.strictCorrections.length === 0 ? "text-gray-700" : "text-blue-700"}`}>
+              {stats.strictCorrections.length}
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 p-3">
+            <div className="text-[11px] text-gray-500">Regla más frecuente</div>
+            <div className="text-xs font-semibold text-gray-700">
+              {Object.values(STRICT_WEEKLY_RULES)
+                .map((rule) => ({
+                  rule,
+                  count: stats.strictValidation.summary.byRule[rule] || 0,
+                }))
+                .sort((a, b) => b.count - a.count)[0]?.count > 0
+                ? Object.values(STRICT_WEEKLY_RULES)
+                    .map((rule) => ({
+                      rule,
+                      count: stats.strictValidation.summary.byRule[rule] || 0,
+                    }))
+                    .sort((a, b) => b.count - a.count)[0].rule
+                : "Sin incidencias"}
+            </div>
+          </div>
+        </div>
+        {equityPanelExpanded && stats.strictValidation.summary.total > 0 && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 mb-4 space-y-2">
+            {Object.values(STRICT_WEEKLY_RULES).map((rule) => {
+              const count = stats.strictValidation.summary.byRule[rule] || 0;
+              if (count === 0) return null;
+              return (
+                <div key={rule} className="text-xs text-rose-700">
+                  {STRICT_WEEKLY_RULE_MESSAGES[rule]} · {count} casos.
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {equityPanelExpanded && stats.strictValidation.violations.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Integrante</th>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Semana</th>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Regla</th>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Mensaje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.strictValidation.violations.slice(0, 40).map((item, index) => (
+                  <tr key={`${item.employeeId}-${item.weekIndex}-${item.rule}-${index}`} className="hover:bg-gray-50">
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{item.employeeName}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.weekLabel}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.rule}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {equityPanelExpanded && stats.strictCorrections.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Integrante</th>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Semana</th>
+                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Normalización</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.strictCorrections.slice(0, 40).map((item, index) => (
+                  <tr key={`${item.employeeId}-${item.weekIndex}-${index}`} className="hover:bg-gray-50">
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{item.employeeName}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.weekLabel}</td>
+                    <td className="p-2 border-b border-gray-200 text-blue-700 font-semibold">{item.targetType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         {equityPanelExpanded && stats.equityAudit.equityAlerts.length > 0 && (
           <div className="space-y-2 mb-4">
             {stats.equityAudit.equityAlerts.map((alert, index) => (

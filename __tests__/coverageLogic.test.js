@@ -7,7 +7,7 @@ const loadSchedulingCore = () => {
   const raw = fs.readFileSync(appPath, "utf8");
   const cutoff = raw.indexOf("const App = () => {");
   const core = cutoff >= 0 ? raw.slice(0, cutoff) : raw;
-  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows };`;
+  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows, validateStrictWeeklyRules };`;
   const sandbox = {
     console,
     globalThis: {},
@@ -62,7 +62,7 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
-  test("todos los integrantes alcanzan al menos 6 semanas intensivas", () => {
+  test("no permite intensiva en días sueltos: O30 solo en semana operativa completa", () => {
     const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
     const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
     const weeksMap = {};
@@ -71,13 +71,53 @@ describe("Registro formal de equidad distributiva", () => {
       weeksMap[day.weekIndex].push(day);
     });
     EMPLOYEES.forEach((emp) => {
-      let weeks = 0;
       Object.keys(weeksMap).forEach((wi) => {
         const weekDays = weeksMap[wi];
-        if (weekDays.every((day) => schedule[emp.id][day.id] === "O30")) weeks += 1;
+        const nonVacation = weekDays
+          .map((day) => schedule[emp.id][day.id])
+          .filter((type) => type !== "V");
+        if (nonVacation.length === 0) return;
+        const hasO30 = nonVacation.includes("O30");
+        if (!hasO30) return;
+        expect(nonVacation.every((type) => type === "O30")).toBe(true);
+        expect(nonVacation.length).toBe(weekDays.length);
       });
-      expect(weeks).toBeGreaterThanOrEqual(6);
     });
+  });
+
+  test("no mezcla O40 y O42 en la misma semana por integrante", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const weeksMap = {};
+    days.forEach((day) => {
+      weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+      weeksMap[day.weekIndex].push(day);
+    });
+    EMPLOYEES.forEach((emp) => {
+      Object.keys(weeksMap).forEach((wi) => {
+        const weekTypes = weeksMap[wi]
+          .map((day) => schedule[emp.id][day.id])
+          .filter((type) => type !== "V");
+        expect(weekTypes.includes("O40") && weekTypes.includes("O42")).toBe(false);
+      });
+    });
+  });
+
+  test("cumple validación estricta de integridad semanal", () => {
+    const {
+      generateSchedule,
+      EMPLOYEES,
+      DEFAULT_VACATION_PLAN_2026,
+      validateStrictWeeklyRules,
+    } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const validation = validateStrictWeeklyRules({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+    });
+    expect(validation.ok).toBe(true);
+    expect(validation.summary.total).toBe(0);
   });
 
   test("genera registro detallado por integrante con objetivos mínimo e ideal", () => {

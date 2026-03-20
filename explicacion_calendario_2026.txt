@@ -96,3 +96,17 @@ Cobertura específica de los viernes
 - Los viernes, el turno de 42h finaliza a las 14:00. Para asegurar presencia en oficina más allá de esa hora, se garantiza que al menos un integrante esté en 40h (O40) y en oficina ese día.
 - Si no hay ningún O40 en oficina por configuración de días fijos, se fuerza presencia en oficina (“O”) asignando O40 a un integrante que no tiene viernes como día de oficina (prioridad: Luis si disponible).
 - Caso ejemplar: el viernes 26/06/2026 se fuerza “O” para Luis para cubrir la tarde.
+
+Validaciones estrictas de integridad semanal (actualización)
+
+- Se incorpora una capa de reglas estrictas que invalida cualquier planificación no íntegra por semana operativa.
+- Regla 1: la jornada intensiva (O30) solo es válida cuando ocupa la semana operativa completa del integrante. No se permiten días sueltos de O30.
+- Regla 2: no se permite mezclar jornadas de 40h (O40) y 42h (O42) en la misma semana para un mismo integrante.
+- Regla 3: no se permiten combinaciones de múltiples tipos de jornada en una misma semana para un mismo integrante.
+- Se añaden mensajes de error específicos por regla para bloquear exportación y aceptar únicamente estados válidos.
+- Se añade normalización automática de semanas no conformes en la generación del plan para llevar la semana a un único tipo válido.
+- Se añade auditoría estricta con:
+  - Resumen por regla (conteo de incidencias).
+  - Listado de incidencias detectadas.
+  - Listado de correcciones automáticas aplicadas.
+- El dashboard persistido por año guarda también el resultado de auditoría estricta.
