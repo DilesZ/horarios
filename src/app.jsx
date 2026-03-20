@@ -2928,6 +2928,7 @@ const App = () => {
               pickLowestForcedCandidate(o40NotOffice);
             if (candidate) {
               // Ensure the candidate is actually assigned O40 for Friday afternoon coverage
+              console.log(`Friday fix: Assigning ${candidate.name} to O40 on ${day.id} for 17:00 coverage`);
               schedule[candidate.id][day.id] = "O40";
               
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
