@@ -920,27 +920,12 @@ const LoginForm = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-center mb-8"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "inline-flex items-center justify-center w-16 h-16 bg-brand-blue/10 rounded-full mb-4"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "32",
-    height: "32",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "#050D9E",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "3",
-    y: "11",
-    width: "18",
-    height: "11",
-    rx: "2",
-    ry: "2"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M7 11V7a5 5 0 0 1 10 0v4"
-  }))), /*#__PURE__*/React.createElement("h2", {
+    className: "mb-4"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "logo.png",
+    alt: "Logo",
+    className: "w-48 mx-auto object-contain"
+  })), /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-bold text-gray-900"
   }, "Acceso Restringido"), /*#__PURE__*/React.createElement("p", {
     className: "text-gray-500 mt-2"
@@ -952,7 +937,7 @@ const LoginForm = ({
   }, "Usuario"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     required: true,
-    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all",
+    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
     placeholder: "Nombre de usuario",
     value: username,
     onChange: e => setUsername(e.target.value)
@@ -961,7 +946,7 @@ const LoginForm = ({
   }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
     type: "password",
     required: true,
-    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all",
+    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
     placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
     value: password,
     onChange: e => setPassword(e.target.value)

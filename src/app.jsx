@@ -1046,8 +1046,8 @@ const LoginForm = ({ onLogin }) => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-blue/10 rounded-full mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#050D9E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <div className="mb-4">
+            <img src="logo.png" alt="Logo" className="w-48 mx-auto object-contain" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Acceso Restringido</h2>
           <p className="text-gray-500 mt-2">Introduce tus credenciales para continuar</p>
@@ -1059,7 +1059,7 @@ const LoginForm = ({ onLogin }) => {
             <input
               type="text"
               required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold"
               placeholder="Nombre de usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -1070,7 +1070,7 @@ const LoginForm = ({ onLogin }) => {
             <input
               type="password"
               required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
