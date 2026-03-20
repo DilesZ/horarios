@@ -2066,6 +2066,26 @@ const buildDatosGraficosSheet = ({
   aoa.push(["TABLA 4 → Seleccionar Fecha + Disponibles → Insertar → Gráfico de Líneas"]);
   return aoa;
 };
+const IconHome = ({
+  className = ""
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  viewBox: "0 0 24 24",
+  fill: "currentColor",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
+}));
+const IconOffice = ({
+  className = ""
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  viewBox: "0 0 24 24",
+  fill: "currentColor",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"
+}));
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return window.localStorage.getItem("horarios_auth_v2026") === "true";
@@ -4131,138 +4151,26 @@ const App = () => {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "10",
-    height: "10",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "white",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-  }), /*#__PURE__*/React.createElement("polyline", {
-    points: "9 22 9 12 15 12 15 22"
-  }))), /*#__PURE__*/React.createElement("span", {
+    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
+  }, /*#__PURE__*/React.createElement(IconHome, {
+    className: "w-[10px] h-[10px]"
+  })), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "Teletrabajo")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "10",
-    height: "10",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "white",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "4",
-    y: "2",
-    width: "16",
-    height: "20",
-    rx: "2",
-    ry: "2"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "6",
-    x2: "9",
-    y2: "6.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "6",
-    x2: "15",
-    y2: "6.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "10",
-    x2: "9",
-    y2: "10.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "10",
-    x2: "15",
-    y2: "10.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "14",
-    x2: "9",
-    y2: "14.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "14",
-    x2: "15",
-    y2: "14.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "18",
-    x2: "15",
-    y2: "18"
-  }))), /*#__PURE__*/React.createElement("span", {
+    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
+  }, /*#__PURE__*/React.createElement(IconOffice, {
+    className: "w-[10px] h-[10px]"
+  })), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "En oficina")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center space-x-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-amber-500 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "10",
-    height: "10",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "white",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "4",
-    y: "2",
-    width: "16",
-    height: "20",
-    rx: "2",
-    ry: "2"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "6",
-    x2: "9",
-    y2: "6.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "6",
-    x2: "15",
-    y2: "6.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "10",
-    x2: "9",
-    y2: "10.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "10",
-    x2: "15",
-    y2: "10.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "14",
-    x2: "9",
-    y2: "14.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "15",
-    y1: "14",
-    x2: "15",
-    y2: "14.01"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "18",
-    x2: "15",
-    y2: "18"
-  }))), /*#__PURE__*/React.createElement("span", {
+    className: "w-4 h-4 rounded bg-amber-500 flex items-center justify-center text-white"
+  }, /*#__PURE__*/React.createElement(IconOffice, {
+    className: "w-[10px] h-[10px]"
+  })), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-gray-600"
   }, "Forzado oficina"))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-400 mt-2"
@@ -4490,78 +4398,16 @@ const App = () => {
     }, /*#__PURE__*/React.createElement("span", null, style.short), typeKey === "O42" && /*#__PURE__*/React.createElement("div", {
       className: "absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"
     }), isWFH && /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5",
+      className: "absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5 text-white",
       title: "Teletrabajo"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "10",
-      height: "10",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("path", {
-      d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-    }), /*#__PURE__*/React.createElement("polyline", {
-      points: "9 22 9 12 15 12 15 22"
-    }))), (isInOffice || isForcedOffice) && typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
-      className: `absolute top-0.5 right-0.5 rounded p-0.5 ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`,
+    }, /*#__PURE__*/React.createElement(IconHome, {
+      className: "w-[10px] h-[10px]"
+    })), (isInOffice || isForcedOffice) && typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
+      className: `absolute top-0.5 right-0.5 rounded p-0.5 text-white ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`,
       title: isForcedOffice ? "Forzado oficina" : "En oficina"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "10",
-      height: "10",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("rect", {
-      x: "4",
-      y: "2",
-      width: "16",
-      height: "20",
-      rx: "2",
-      ry: "2"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "9",
-      y1: "6",
-      x2: "9",
-      y2: "6.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "15",
-      y1: "6",
-      x2: "15",
-      y2: "6.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "9",
-      y1: "10",
-      x2: "9",
-      y2: "10.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "15",
-      y1: "10",
-      x2: "15",
-      y2: "10.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "9",
-      y1: "14",
-      x2: "9",
-      y2: "14.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "15",
-      y1: "14",
-      x2: "15",
-      y2: "14.01"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "9",
-      y1: "18",
-      x2: "15",
-      y2: "18"
-    })))));
+    }, /*#__PURE__*/React.createElement(IconOffice, {
+      className: "w-[10px] h-[10px]"
+    }))));
   }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: days.length + 1,
     className: "p-6 text-center text-sm text-gray-500"
@@ -4609,15 +4455,26 @@ const App = () => {
       const typeKey = schedule[emp.id][day.id];
       const style = TYPES[typeKey] || TYPES.O30;
       const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+      const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+      const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
       const initials = emp.name.split(" ").map(part => part[0]).join("").toUpperCase().slice(0, 2);
       return /*#__PURE__*/React.createElement("button", {
         key: `${day.id}-${emp.id}`,
         type: "button",
         onClick: () => handleCellClick(emp, day),
-        className: `w-full text-left text-[10px] px-1.5 py-1 rounded ${style.color} ${style.text} hover:brightness-110 transition-colors`
+        className: `w-full text-left text-[10px] px-1.5 py-1 rounded flex items-center justify-between gap-1 overflow-hidden ${style.color} ${style.text} hover:brightness-110 transition-colors`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 truncate"
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-semibold"
-      }, initials), " ", style.short, isForcedOffice ? " · OF" : "");
+      }, initials), " ", /*#__PURE__*/React.createElement("span", null, style.short)), typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
+        className: `shrink-0 flex items-center justify-center ${isForcedOffice ? 'text-amber-700 bg-white/60 rounded-[2px] p-[1px]' : 'opacity-80'}`,
+        title: isForcedOffice ? "Forzado oficina" : isWFH ? "Teletrabajo" : "En oficina"
+      }, isWFH ? /*#__PURE__*/React.createElement(IconHome, {
+        className: "w-3 h-3"
+      }) : /*#__PURE__*/React.createElement(IconOffice, {
+        className: `w-3 h-3 ${isForcedOffice ? 'text-amber-700' : ''}`
+      })));
     })));
   }))))))), /*#__PURE__*/React.createElement("footer", {
     className: "mt-8 text-center text-gray-500 text-sm"
