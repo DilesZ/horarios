@@ -1298,6 +1298,91 @@ const generateSchedule = (year, vacationPlan) => {
       }
     }
 
+    const recalcIntensiveWeeks = () => {
+      EMPLOYEES.forEach((emp) => {
+        let count = 0;
+        Object.keys(finalWeeksMap).forEach((wiStr) => {
+          const daysInWeek = finalWeeksMap[wiStr];
+          if (daysInWeek.every((day) => schedule[emp.id][day.id] === "O30")) count += 1;
+        });
+        finalIntensiveWeeks[emp.id] = count;
+      });
+    };
+
+    const guaranteeMinimumIntensiveWeeks = (minimumTarget) => {
+      const canTakeO30ForGuarantee = (emp, wi) => {
+        if (vacWeeksByEmp[emp.id].has(wi)) return false;
+        if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
+        if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+        if (emp.name === "Kike") {
+          const daysInWeekCheck = finalWeeksMap[wi];
+          if (daysInWeekCheck.some((day) => criticalKikeSet.has(day.id))) return false;
+        }
+        const daysInWeek = finalWeeksMap[wi];
+        for (const day of daysInWeek) {
+          if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
+          if (emp.name === "Luis" && day.id === "2026-07-24") return false;
+          if (schedule[emp.id][day.id] === "V") return false;
+        }
+        return true;
+      };
+
+      let changed = true;
+      let safety = 0;
+      while (changed && safety < 200) {
+        changed = false;
+        safety += 1;
+        const underTarget = [...EMPLOYEES]
+          .filter((emp) => finalIntensiveWeeks[emp.id] < minimumTarget)
+          .sort((a, b) => finalIntensiveWeeks[a.id] - finalIntensiveWeeks[b.id]);
+        if (underTarget.length === 0) break;
+
+        for (const emp of underTarget) {
+          const weeksIndices = Object.keys(finalWeeksMap)
+            .map((k) => parseInt(k, 10))
+            .sort((a, b) => a - b);
+          let assigned = false;
+
+          for (const wi of weeksIndices) {
+            if (assigned || finalIntensiveWeeks[emp.id] >= minimumTarget) break;
+            if (!canTakeO30ForGuarantee(emp, wi)) continue;
+            const daysInWeek = finalWeeksMap[wi];
+            const alreadyIntensive = daysInWeek.every((day) => schedule[emp.id][day.id] === "O30");
+            if (alreadyIntensive) continue;
+
+            const occupants = getOccupants(wi);
+            const donors = occupants
+              .filter((donor) => donor.id !== emp.id && finalIntensiveWeeks[donor.id] > minimumTarget)
+              .sort((a, b) => finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id]);
+
+            if (donors.length > 0) {
+              const donor = donors[0];
+              daysInWeek.forEach((day) => {
+                if (schedule[donor.id][day.id] !== "V") schedule[donor.id][day.id] = "O40";
+                if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
+              });
+              finalIntensiveWeeks[donor.id] = Math.max(0, finalIntensiveWeeks[donor.id] - 1);
+              finalIntensiveWeeks[emp.id] += 1;
+              changed = true;
+              assigned = true;
+              break;
+            }
+
+            daysInWeek.forEach((day) => {
+              if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
+            });
+            finalIntensiveWeeks[emp.id] += 1;
+            changed = true;
+            assigned = true;
+            break;
+          }
+        }
+      }
+      recalcIntensiveWeeks();
+    };
+
+    guaranteeMinimumIntensiveWeeks(6);
+
     // Final check to ensure we didn't break O42 coverage during swapping
     days.forEach((day) => {
       if (day.weekdayLetter === "V") return; // Friday doesn't need O42
@@ -1310,16 +1395,23 @@ const generateSchedule = (year, vacationPlan) => {
           const candidates = EMPLOYEES.filter(
               (emp) => emp.group === lateGroup && schedule[emp.id][day.id] !== "V"
           ).sort((a, b) => {
-              // Prefer O40s to become O42s to avoid breaking intensives
               const typeA = schedule[a.id][day.id];
               const typeB = schedule[b.id][day.id];
               if (typeA === "O40" && typeB !== "O40") return -1;
               if (typeB === "O40" && typeA !== "O40") return 1;
-              // Then prefer those with more intensive weeks
+              const aAboveTarget = finalIntensiveWeeks[a.id] > targetIntensiveWeeks;
+              const bAboveTarget = finalIntensiveWeeks[b.id] > targetIntensiveWeeks;
+              if (aAboveTarget && !bAboveTarget) return -1;
+              if (!aAboveTarget && bAboveTarget) return 1;
               return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
           });
           
-          const pick = candidates[0] || EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
+          let pick = candidates[0] || EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
+          if (pick && schedule[pick.id][day.id] === "O30" && finalIntensiveWeeks[pick.id] <= targetIntensiveWeeks) {
+            const fallback = EMPLOYEES.filter((emp) => schedule[emp.id][day.id] === "O40" && schedule[emp.id][day.id] !== "V")
+              .sort((a, b) => finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id])[0];
+            if (fallback) pick = fallback;
+          }
           if (pick) {
               if (schedule[pick.id][day.id] === "O30") finalIntensiveWeeks[pick.id]--;
               schedule[pick.id][day.id] = "O42";
@@ -1347,15 +1439,49 @@ const generateSchedule = (year, vacationPlan) => {
           const typeB = schedule[b.id][day.id];
           if (typeA === "O40" && typeB !== "O40") return -1;
           if (typeB === "O40" && typeA !== "O40") return 1;
+          const aAboveTarget = finalIntensiveWeeks[a.id] > targetIntensiveWeeks;
+          const bAboveTarget = finalIntensiveWeeks[b.id] > targetIntensiveWeeks;
+          if (aAboveTarget && !bAboveTarget) return -1;
+          if (!aAboveTarget && bAboveTarget) return 1;
           return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
         });
-        const pick = candidates[0];
+        let pick = candidates[0];
+        if (pick && schedule[pick.id][day.id] === "O30" && finalIntensiveWeeks[pick.id] <= targetIntensiveWeeks) {
+          const fallback = candidates.find((emp) => schedule[emp.id][day.id] === "O40");
+          if (fallback) pick = fallback;
+        }
         if (pick) {
           if (schedule[pick.id][day.id] === "O30") {
             finalIntensiveWeeks[pick.id] = Math.max(0, (finalIntensiveWeeks[pick.id] || 0) - 1);
           }
           schedule[pick.id][day.id] = "O42";
         }
+      }
+    });
+
+    recalcIntensiveWeeks();
+    const minimumIntensiveTarget = 6;
+    const weekIndexes = Object.keys(finalWeeksMap).map((k) => parseInt(k, 10)).sort((a, b) => a - b);
+    EMPLOYEES.forEach((emp) => {
+      while (finalIntensiveWeeks[emp.id] < minimumIntensiveTarget) {
+        let improved = false;
+        for (const wi of weekIndexes) {
+          if (finalIntensiveWeeks[emp.id] >= minimumIntensiveTarget) break;
+          const daysInWeek = finalWeeksMap[wi];
+          if (daysInWeek.some((day) => schedule[emp.id][day.id] === "V")) continue;
+          if (daysInWeek.every((day) => schedule[emp.id][day.id] === "O30")) continue;
+          if (daysInWeek.some((day) => schedule[emp.id][day.id] === "O42")) continue;
+          if (emp.name === "Enrique" && daysInWeek.some((day) => day.id === "2026-06-19")) continue;
+          if (emp.name === "Luis" && daysInWeek.some((day) => day.id === "2026-07-24")) continue;
+          if (emp.name === "Kike" && daysInWeek.some((day) => criticalKikeSet.has(day.id))) continue;
+          daysInWeek.forEach((day) => {
+            schedule[emp.id][day.id] = "O30";
+          });
+          recalcIntensiveWeeks();
+          improved = true;
+          break;
+        }
+        if (!improved) break;
       }
     });
   }
@@ -1479,6 +1605,8 @@ const App = () => {
   const [exportStatus, setExportStatus] = useState("");
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
+  const [exportPanelExpanded, setExportPanelExpanded] = useState(true);
+  const [equityPanelExpanded, setEquityPanelExpanded] = useState(true);
 
    useEffect(() => {
      try {
@@ -2344,6 +2472,19 @@ const App = () => {
       </header>
 
       <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+        <button
+          type="button"
+          onClick={() => setExportPanelExpanded((prev) => !prev)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div>
+            <h3 className="text-sm font-bold text-gray-800">Exportación Excel y validaciones</h3>
+            <p className="text-xs text-gray-500">{exportPanelExpanded ? "Ocultar detalles" : "Mostrar detalles"}</p>
+          </div>
+          <span className="text-xs font-semibold text-brand-blue">{exportPanelExpanded ? "Contraer" : "Expandir"}</span>
+        </button>
+        {exportPanelExpanded && (
+          <>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Formato</label>
@@ -2402,6 +2543,8 @@ const App = () => {
               </div>
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
       <div className="mb-6 space-y-4">
@@ -2531,7 +2674,14 @@ const App = () => {
 
       <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-          <h3 className="text-sm font-bold text-gray-800">Registro formal de equidad distributiva</h3>
+          <button
+            type="button"
+            onClick={() => setEquityPanelExpanded((prev) => !prev)}
+            className="text-left"
+          >
+            <h3 className="text-sm font-bold text-gray-800">Detalles de equidad y validaciones</h3>
+            <div className="text-xs text-gray-500">{equityPanelExpanded ? "Contraer detalles" : "Expandir detalles"}</div>
+          </button>
           <div className="text-xs text-gray-500">
             Objetivo mínimo: {stats.equityAudit.summary.minTarget} · Ideal: {stats.equityAudit.summary.idealTarget}
           </div>
@@ -2562,7 +2712,7 @@ const App = () => {
             </div>
           </div>
         </div>
-        {stats.equityAudit.equityAlerts.length > 0 && (
+        {equityPanelExpanded && stats.equityAudit.equityAlerts.length > 0 && (
           <div className="space-y-2 mb-4">
             {stats.equityAudit.equityAlerts.map((alert, index) => (
               <div
@@ -2576,6 +2726,7 @@ const App = () => {
             ))}
           </div>
         )}
+        {equityPanelExpanded && (
         <div className="overflow-x-auto mb-4">
           <table className="w-full border-collapse text-xs">
             <thead>
@@ -2604,6 +2755,8 @@ const App = () => {
             </tbody>
           </table>
         </div>
+        )}
+        {equityPanelExpanded && (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead>
@@ -2630,6 +2783,7 @@ const App = () => {
             </tbody>
           </table>
         </div>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
