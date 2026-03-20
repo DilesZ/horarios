@@ -1102,15 +1102,15 @@ const LoginForm = ({ onLogin }) => {
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return window.localStorage.getItem("horarios_auth") === "true";
+    return window.localStorage.getItem("horarios_auth_v2026") === "true";
   });
   const handleLogin = () => {
     setIsLoggedIn(true);
-    window.localStorage.setItem("horarios_auth", "true");
+    window.localStorage.setItem("horarios_auth_v2026", "true");
   };
   const handleLogout = () => {
     setIsLoggedIn(false);
-    window.localStorage.removeItem("horarios_auth");
+    window.localStorage.removeItem("horarios_auth_v2026");
   };
 
   const [year, setYear] = useState(2026);
