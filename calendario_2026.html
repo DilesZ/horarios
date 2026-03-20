@@ -259,7 +259,7 @@
                     });
                 });
 
-                const selected = safeForIntensive.filter(emp => intensiveWeeksByEmp[emp.id] < 7).slice(0, 3);
+                const selected = safeForIntensive.filter(emp => intensiveWeeksByEmp[emp.id] < 6).slice(0, 3);
 
                 selected.forEach(emp => {
                     weekDays.forEach(day => {
@@ -379,7 +379,7 @@
 
             // El bloque "problematicFridays" ha sido eliminado para confiar en la lógica de cobertura global.
             // Compensación: Recuperar semanas intensivas perdidas por forzado de viernes
-            // Para cada empleado del grupo 2, verificar si tiene menos de 7 semanas y compensar
+            // Para cada empleado del grupo 2, verificar si tiene menos de 6 semanas y compensar
             const weeksBeforeCompensation = {};
             DAYS.forEach(d => {
                 weeksBeforeCompensation[d.weekIndex] = weeksBeforeCompensation[d.weekIndex] || [];
@@ -398,8 +398,8 @@
                     if (allO30) intensiveWeeks++;
                 });
 
-                // Si tiene menos de 7, intentar compensar
-                while (intensiveWeeks < 7) {
+                // Si tiene menos de 6, intentar compensar
+                while (intensiveWeeks < 6) {
                     // Buscar un día O40 que podamos cambiar a O30 sin romper cobertura
                     let swapped = false;
 
@@ -468,7 +468,7 @@
                 currentIntensiveWeeks[emp.id] = count;
             });
             EMPLOYEES.forEach(emp => {
-                while (currentIntensiveWeeks[emp.id] < 7) {
+                while (currentIntensiveWeeks[emp.id] < 6) {
                     let improved = false;
                     Object.keys(weeksList).forEach(wiStr => {
                         if (improved) return;
@@ -761,12 +761,14 @@
                 const alerts = dailyCoverage.filter(d => {
                     const day = DAYS.find(x => x.id === d.dayId);
                     const need18h = day.weekdayLetter !== 'V';
+                    const g1Conflict = !d.group1HasOffice && !(d.group2Covering && d.group2Covering.length > 0);
+                    const g2Conflict = !d.group2HasOffice && !(d.group1Covering && d.group1Covering.length > 0);
                     return (
                         d.present < 3 ||
                         (need18h && d.shift18hCount < 1) ||
                         d.intensiveCount > 3 ||
-                        !d.group1HasOffice ||
-                        !d.group2HasOffice
+                        g1Conflict ||
+                        g2Conflict
                     );
                 });
 

@@ -35,6 +35,10 @@ const GROUP1 = ["Enrique", "Luis", "David"];
 const GROUP2 = ["Jose", "Ariel", "Kike"];
 const SHIFT_BASE_A_18H = true;
 
+const WEEKDAY_FULL = {
+  L: "Lunes", M: "Martes", X: "Miércoles", J: "Jueves", V: "Viernes",
+};
+
 const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
 
 const generateSchedule = (year, vacationPlan) => {
@@ -925,28 +929,13 @@ const DEFAULT_VACATION_PLAN_2026 = {
   Ariel: ["2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21"]
 };
 
-const WEEKDAY_FULL = {
-  L: "Lunes", M: "Martes", X: "Miércoles", J: "Jueves", V: "Viernes",
-};
-
 const result = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
 const { schedule, days } = result;
 
-const currentIntensiveWeeks = {};
-EMPLOYEES.forEach((emp) => {
-  let count = 0;
-  const daysInWeek = {};
-  days.forEach(d => {
-    daysInWeek[d.weekIndex] = daysInWeek[d.weekIndex] || [];
-    daysInWeek[d.weekIndex].push(d);
-  });
-  Object.values(daysInWeek).forEach(week => {
-    if (week.every(day => schedule[emp.id][day.id] === "O30")) count++;
-  });
-  currentIntensiveWeeks[emp.name] = count;
+const stats = calculateStats(schedule, days);
+console.log("Intensive per person:", stats.intensiveWeeksByEmp);
+console.log("Alert count:", stats.alerts.length);
+stats.alerts.forEach(a => {
+  console.log("Day:", a.dayId, "Reasons:", a.reasons.map(r => r.severity + ": " + r.title).join(", "));
 });
-
-// Calculate stats using the same logic we extracted but wait, calculateStats requires React so it's not extracted!
-// I'll just see currentIntensiveWeeks.
-console.dir(currentIntensiveWeeks);
-
+console.log("Total forced office days:", stats.forcedOfficeDetails.length);
