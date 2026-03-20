@@ -2766,14 +2766,7 @@ const App = () => {
             placeholder="Filtrar por nombre"
             className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm min-w-[12rem]"
           />
-          <select
-            className="bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm"
-            value={tableDensity}
-            onChange={(e) => setTableDensity(e.target.value)}
-          >
-            <option value="comfortable">Vista cómoda</option>
-            <option value="compact">Vista compacta</option>
-          </select>
+
           <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
             Ver O forzadas
           </button>
@@ -3014,18 +3007,8 @@ const App = () => {
             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-gray-800">Calendario de vacaciones</h4>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500">Click en un día para alternar vacaciones</span>
-                  <button
-                    type="button"
-                    onClick={() => setVacationCalendarExpanded((prev) => !prev)}
-                    className="px-3 py-1 rounded-md text-xs font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors"
-                  >
-                    {vacationCalendarExpanded ? "Contraer" : "Expandir"}
-                  </button>
-                </div>
+                <span className="text-[11px] text-gray-500">Click en un día para alternar vacaciones</span>
               </div>
-              {vacationCalendarExpanded && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {daysByMonth.map(([monthName, monthDays]) => (
                   <div key={monthName}>
@@ -3053,7 +3036,6 @@ const App = () => {
                   </div>
                 ))}
               </div>
-              )}
             </div>
           </div>
         )}

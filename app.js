@@ -2964,15 +2964,7 @@ const App = () => {
     onChange: e => setEmployeeSearch(e.target.value),
     placeholder: "Filtrar por nombre",
     className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm min-w-[12rem]"
-  }), /*#__PURE__*/React.createElement("select", {
-    className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm",
-    value: tableDensity,
-    onChange: e => setTableDensity(e.target.value)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "comfortable"
-  }, "Vista c\xF3moda"), /*#__PURE__*/React.createElement("option", {
-    value: "compact"
-  }, "Vista compacta")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOListOpen(true),
     className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
   }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
@@ -3202,15 +3194,9 @@ const App = () => {
     className: "flex items-center justify-between mb-3"
   }, /*#__PURE__*/React.createElement("h4", {
     className: "text-sm font-semibold text-gray-800"
-  }, "Calendario de vacaciones"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
+  }, "Calendario de vacaciones"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] text-gray-500"
-  }, "Click en un d\xEDa para alternar vacaciones"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setVacationCalendarExpanded(prev => !prev),
-    className: "px-3 py-1 rounded-md text-xs font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors"
-  }, vacationCalendarExpanded ? "Contraer" : "Expandir"))), vacationCalendarExpanded && /*#__PURE__*/React.createElement("div", {
+  }, "Click en un d\xEDa para alternar vacaciones")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-2 gap-4"
   }, daysByMonth.map(([monthName, monthDays]) => /*#__PURE__*/React.createElement("div", {
     key: monthName
