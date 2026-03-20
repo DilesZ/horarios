@@ -1761,6 +1761,7 @@ const App = () => {
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
+  const [equitySectionOpen, setEquitySectionOpen] = useState(false);
   const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
   const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
   useEffect(() => {
@@ -2922,9 +2923,11 @@ const App = () => {
     onClick: () => setOListOpen(true),
     className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
   }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
-    onClick: exportToExcel,
-    disabled: exportInProgress,
-    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
+    onClick: () => {
+      setExportPanelExpanded(prev => !prev);
+      if (!exportPanelExpanded) setEquitySectionOpen(false);
+    },
+    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportPanelExpanded ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"}`
   }, /*#__PURE__*/React.createElement("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: "16",
@@ -2951,25 +2954,31 @@ const App = () => {
     y2: "17"
   }), /*#__PURE__*/React.createElement("polyline", {
     points: "10 9 9 9 8 9"
-  })), exportInProgress ? "Exportando..." : "Exportar"), /*#__PURE__*/React.createElement("button", {
+  })), exportPanelExpanded ? "Cerrar exportación" : "Exportar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setEquitySectionOpen(prev => !prev);
+      if (!equitySectionOpen) setExportPanelExpanded(false);
+    },
+    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${equitySectionOpen ? "bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`
+  }, equitySectionOpen ? "Cerrar equidad" : "Ver equidad"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPlanning(generateSchedule(year, vacationPlan)),
     className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
   }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogout,
     className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
-  }, "Cerrar Sesi\xF3n"))), /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
+  }, "Cerrar Sesi\xF3n"))), exportPanelExpanded && /*#__PURE__*/React.createElement("div", {
+    className: "mb-6 bg-white border border-emerald-200 rounded-xl p-4 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-gray-800"
   }, "Exportaci\xF3n Excel y validaciones"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-gray-500"
-  }, exportPanelExpanded ? "Detalles visibles" : "Panel contraído")), /*#__PURE__*/React.createElement("button", {
+  }, "Configura la exportaci\xF3n y lanza la descarga.")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setExportPanelExpanded(prev => !prev),
-    className: "shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
-  }, exportPanelExpanded ? "Contraer" : "Expandir")), exportPanelExpanded && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    onClick: () => setExportPanelExpanded(false),
+    className: "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+  }, "Ocultar")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-6 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-gray-500 mb-1"
@@ -3027,6 +3036,13 @@ const App = () => {
     disabled: !exportProtectSheet,
     placeholder: "Opcional"
   }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-end"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: exportToExcel,
+    disabled: exportInProgress,
+    className: `px-4 py-2 rounded text-sm font-semibold text-white transition-colors ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
+  }, exportInProgress ? "Exportando..." : "Descargar archivo")), /*#__PURE__*/React.createElement("div", {
     className: "space-y-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-2 bg-gray-100 rounded overflow-hidden"
@@ -3046,7 +3062,7 @@ const App = () => {
   }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
     key: `${entry.ts}-${idx}`,
     className: `text-[11px] ${entry.level === "error" ? "text-rose-700" : entry.level === "warning" ? "text-amber-700" : "text-slate-600"}`
-  }, entry.ts.slice(11, 19), " \xB7 ", entry.message))))), /*#__PURE__*/React.createElement("div", {
+  }, entry.ts.slice(11, 19), " \xB7 ", entry.message)))), /*#__PURE__*/React.createElement("div", {
     className: "mb-6 space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-3"
@@ -3148,8 +3164,8 @@ const App = () => {
     }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] opacity-80"
     }, day.weekdayLetter));
-  })))))))), /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+  })))))))), equitySectionOpen && /*#__PURE__*/React.createElement("div", {
+    className: "mb-6 bg-white border border-indigo-200 rounded-xl p-4 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
@@ -3160,7 +3176,11 @@ const App = () => {
     type: "button",
     onClick: () => setEquityPanelExpanded(prev => !prev),
     className: "shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
-  }, equityPanelExpanded ? "Contraer" : "Expandir"), /*#__PURE__*/React.createElement("div", {
+  }, equityPanelExpanded ? "Contraer" : "Expandir"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setEquitySectionOpen(false),
+    className: "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+  }, "Ocultar"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-500"
   }, "Objetivo m\xEDnimo: ", stats.equityAudit.summary.minTarget, " \xB7 Ideal: ", stats.equityAudit.summary.idealTarget)), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"

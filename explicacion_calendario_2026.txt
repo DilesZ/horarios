@@ -110,3 +110,11 @@ Validaciones estrictas de integridad semanal (actualización)
   - Listado de incidencias detectadas.
   - Listado de correcciones automáticas aplicadas.
 - El dashboard persistido por año guarda también el resultado de auditoría estricta.
+
+Mejoras de comodidad visual (actualización)
+
+- El menú de exportación queda oculto por defecto y solo aparece al pulsar el botón “Exportar” del encabezado.
+- El botón de exportación del encabezado actúa como selector de panel (abrir/cerrar), evitando ruido visual constante.
+- La descarga real se ejecuta desde un botón dedicado dentro del panel de exportación (“Descargar archivo”).
+- El bloque de detalles de equidad también queda oculto por defecto y solo se muestra al pulsar “Ver equidad”.
+- Se añaden acciones rápidas de “Ocultar” en ambos paneles para cerrar sin desplazarse.

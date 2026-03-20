@@ -1842,6 +1842,7 @@ const App = () => {
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
+  const [equitySectionOpen, setEquitySectionOpen] = useState(false);
   const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
   const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
 
@@ -2715,7 +2716,13 @@ const App = () => {
           <button onClick={() => setOListOpen(true)} className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm">
             Ver O forzadas
           </button>
-          <button onClick={exportToExcel} disabled={exportInProgress} className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+          <button
+            onClick={() => {
+              setExportPanelExpanded((prev) => !prev);
+              if (!exportPanelExpanded) setEquitySectionOpen(false);
+            }}
+            className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportPanelExpanded ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -2723,7 +2730,16 @@ const App = () => {
               <line x1="16" y1="17" x2="8" y2="17"></line>
               <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
-            {exportInProgress ? "Exportando..." : "Exportar"}
+            {exportPanelExpanded ? "Cerrar exportación" : "Exportar"}
+          </button>
+          <button
+            onClick={() => {
+              setEquitySectionOpen((prev) => !prev);
+              if (!equitySectionOpen) setExportPanelExpanded(false);
+            }}
+            className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${equitySectionOpen ? "bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
+          >
+            {equitySectionOpen ? "Cerrar equidad" : "Ver equidad"}
           </button>
           <button
             onClick={() => setPlanning(generateSchedule(year, vacationPlan))}
@@ -2740,22 +2756,21 @@ const App = () => {
         </div>
       </header>
 
-      <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+      {exportPanelExpanded && (
+      <div className="mb-6 bg-white border border-emerald-200 rounded-xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-gray-800">Exportación Excel y validaciones</h3>
-            <p className="text-xs text-gray-500">{exportPanelExpanded ? "Detalles visibles" : "Panel contraído"}</p>
+            <p className="text-xs text-gray-500">Configura la exportación y lanza la descarga.</p>
           </div>
           <button
             type="button"
-            onClick={() => setExportPanelExpanded((prev) => !prev)}
-            className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
+            onClick={() => setExportPanelExpanded(false)}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
           >
-            {exportPanelExpanded ? "Contraer" : "Expandir"}
+            Ocultar
           </button>
         </div>
-        {exportPanelExpanded && (
-          <>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Formato</label>
@@ -2795,6 +2810,16 @@ const App = () => {
             <input type="password" className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} disabled={!exportProtectSheet} placeholder="Opcional" />
           </div>
         </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={exportInProgress}
+            className={`px-4 py-2 rounded text-sm font-semibold text-white transition-colors ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
+          >
+            {exportInProgress ? "Exportando..." : "Descargar archivo"}
+          </button>
+        </div>
 
         <div className="space-y-1">
           <div className="h-2 bg-gray-100 rounded overflow-hidden">
@@ -2815,9 +2840,8 @@ const App = () => {
             ))}
           </div>
         )}
-          </>
-        )}
       </div>
+      )}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -2954,7 +2978,8 @@ const App = () => {
         )}
       </div>
 
-      <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      {equitySectionOpen && (
+      <div className="mb-6 bg-white border border-indigo-200 rounded-xl p-4 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
           <div>
             <h3 className="text-sm font-bold text-gray-800">Detalles de equidad y validaciones</h3>
@@ -2966,6 +2991,13 @@ const App = () => {
             className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
           >
             {equityPanelExpanded ? "Contraer" : "Expandir"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEquitySectionOpen(false)}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+          >
+            Ocultar
           </button>
           <div className="text-xs text-gray-500">
             Objetivo mínimo: {stats.equityAudit.summary.minTarget} · Ideal: {stats.equityAudit.summary.idealTarget}
@@ -3167,6 +3199,7 @@ const App = () => {
         </div>
         )}
       </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
           <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
