@@ -854,6 +854,10 @@ const generateSchedule = (year, vacationPlan) => {
     const lateAvailable = EMPLOYEES.filter(
       (emp) => emp.group === lateGroup && !vacWeeksByEmp[emp.id].has(wi)
     ).sort((a, b) => {
+      // Priorizar a Luis para que NO sea ancla O42 y consiga intensivas si le faltan
+      if (a.name === "Luis" && b.name !== "Luis") return 1;
+      if (b.name === "Luis" && a.name !== "Luis") return -1;
+      
       const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
       return diff !== 0 ? diff : a.id - b.id;
     });
@@ -862,6 +866,10 @@ const generateSchedule = (year, vacationPlan) => {
     const allEligible = EMPLOYEES.filter(
       (emp) => !vacWeeksByEmp[emp.id].has(wi) && (!anchor || emp.id !== anchor.id)
     ).sort((a, b) => {
+      // Priorizar a Luis en la eleccion de intensiva
+      if (a.name === "Luis" && b.name !== "Luis") return -1;
+      if (b.name === "Luis" && a.name !== "Luis") return 1;
+
       const diff = intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id];
       return diff !== 0 ? diff : a.id - b.id;
     });
