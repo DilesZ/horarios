@@ -1797,6 +1797,263 @@ const LoginForm = ({ onLogin }) => {
   );
 };
 
+// ═══════════════════════════════════════════════════════════
+// FUNCIONES AUXILIARES PARA HOJAS EXCEL
+// ═══════════════════════════════════════════════════════════
+
+const buildResumenMensualSheet = ({ employees, days, schedule }) => {
+  const months = [];
+  const monthSet = new Set();
+  days.forEach(d => { if (!monthSet.has(d.month)) { monthSet.add(d.month); months.push(d.month); } });
+  const types = ["O30", "O40", "O42", "V"];
+  const typeLabels = { O30: "30h", O40: "40h", O42: "42h", V: "VAC" };
+  const hoursPerType = { O30: 6, O40: 8, O42: 9, V: 0 };
+
+  const row0 = ["Integrante", "Rol", "Grupo"];
+  const row1 = ["", "", ""];
+  months.forEach(m => {
+    types.forEach(t => { row0.push(m.substring(0, 3)); row1.push(typeLabels[t]); });
+    row0.push(m.substring(0, 3)); row1.push("Horas");
+  });
+  row0.push("TOTAL"); row1.push("Horas");
+  row0.push("Días O30"); row1.push("");
+  row0.push("Sem. Intens."); row1.push("");
+
+  const aoa = [row0, row1];
+  employees.forEach(emp => {
+    const row = [emp.name, emp.role, `Grupo ${emp.group}`];
+    let totalHours = 0;
+    let totalO30 = 0;
+    months.forEach(m => {
+      const mDays = days.filter(d => d.month === m);
+      const cnt = { O30: 0, O40: 0, O42: 0, V: 0 };
+      mDays.forEach(day => { const t = schedule[emp.id][day.id]; if (cnt[t] !== undefined) cnt[t]++; });
+      types.forEach(t => row.push(cnt[t]));
+      const mHours = types.reduce((s, t) => s + cnt[t] * hoursPerType[t], 0);
+      row.push(mHours);
+      totalHours += mHours;
+      totalO30 += cnt.O30;
+    });
+    row.push(totalHours);
+    row.push(totalO30);
+    // Intensive weeks count
+    const weeksMap = {};
+    days.forEach(d => { weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || []; weeksMap[d.weekIndex].push(d); });
+    let intensiveWeeks = 0;
+    Object.values(weeksMap).forEach(wDays => {
+      if (wDays.every(d => schedule[emp.id][d.id] === "O30")) intensiveWeeks++;
+    });
+    row.push(intensiveWeeks);
+    aoa.push(row);
+  });
+  return aoa;
+};
+
+const buildVistaSemanasSheet = ({ employees, days, schedule }) => {
+  const weeksMap = {};
+  days.forEach(d => { weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || []; weeksMap[d.weekIndex].push(d); });
+  const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+  const headers = ["Semana", "Período", "Mes", "Integrante", "Rol", "Grupo", "Tipo semana", "Días O30", "Días O40", "Días O42", "Días VAC", "Horas semana"];
+  const aoa = [headers];
+  weekIdxs.forEach(wi => {
+    const wDays = weeksMap[wi];
+    const start = wDays[0]; const end = wDays[wDays.length - 1];
+    const period = `${start.label} – ${end.label}`;
+    const month = wDays[Math.floor(wDays.length / 2)].month;
+    employees.forEach(emp => {
+      const cnt = { O30: 0, O40: 0, O42: 0, V: 0 };
+      wDays.forEach(day => { const t = schedule[emp.id][day.id]; if (cnt[t] !== undefined) cnt[t]++; });
+      const nonVac = { O30: cnt.O30, O40: cnt.O40, O42: cnt.O42 };
+      const dominant = Object.entries(nonVac).sort((a, b) => b[1] - a[1])[0][0];
+      const hours = cnt.O30 * 6 + cnt.O40 * 8 + cnt.O42 * 9;
+      aoa.push([`Semana ${wi + 1}`, period, month, emp.name, emp.role, `Grupo ${emp.group}`, dominant, cnt.O30, cnt.O40, cnt.O42, cnt.V, hours]);
+    });
+    aoa.push([]);
+  });
+  return aoa;
+};
+
+const buildEstadisticasSheet = ({ employees, days, schedule, forcedOfficeDetails, intensiveWeeksByEmp, totalHoursByEmp }) => {
+  const forcedByEmp = {};
+  employees.forEach(e => { forcedByEmp[e.id] = 0; });
+  forcedOfficeDetails.forEach(item => { forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1; });
+  const weeksMap = {};
+  days.forEach(d => { weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || []; weeksMap[d.weekIndex].push(d); });
+  const headers = ["Integrante", "Rol", "Grupo", "Días en periodo", "Días O30", "Días O40", "Días O42", "Días VAC", "Sem. Intensivas", "Obj. mín. (6 sem)", "Horas Totales", "Media H/Día lab.", "Días Forzados Oficina"];
+  const aoa = [headers];
+  employees.forEach(emp => {
+    const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
+    const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
+    const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
+    const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
+    const tot = totalHoursByEmp[emp.id] || 0;
+    const workDays = o30 + o40 + o42;
+    const avg = workDays > 0 ? Math.round((tot / workDays) * 10) / 10 : 0;
+    const intensSem = intensiveWeeksByEmp[emp.id] || 0;
+    const meetsMin = intensSem >= 6 ? "SÍ ✓" : `NO (faltan ${6 - intensSem})`;
+    aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, days.length, o30, o40, o42, vac, intensSem, meetsMin, tot, avg, forcedByEmp[emp.id]]);
+  });
+  // Summary row
+  aoa.push([]);
+  aoa.push(["TOTALES", "", "", "",
+    employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O30").length, 0),
+    employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O40").length, 0),
+    employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O42").length, 0),
+    employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "V").length, 0),
+    "", "",
+    employees.reduce((s, e) => s + (totalHoursByEmp[e.id] || 0), 0),
+    "",
+    forcedOfficeDetails.length,
+  ]);
+  return aoa;
+};
+
+const buildVacacionesSheet = ({ employees, days, schedule }) => {
+  const headers = ["Integrante", "Rol", "Fecha", "Día semana", "Mes", "Num. semana"];
+  const aoa = [headers];
+  const vacList = [];
+  employees.forEach(emp => {
+    days.forEach(day => { if (schedule[emp.id][day.id] === "V") vacList.push({ emp, day }); });
+  });
+  vacList.sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+  vacList.forEach(({ emp, day }) => {
+    aoa.push([emp.name, emp.role, day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`]);
+  });
+  aoa.push([]);
+  aoa.push([`Total días de vacaciones: ${vacList.length}`]);
+  // Summary per employee
+  aoa.push([]);
+  aoa.push(["Resumen por integrante"]);
+  aoa.push(["Integrante", "Total días VAC"]);
+  employees.forEach(emp => {
+    const cnt = days.filter(d => schedule[emp.id][d.id] === "V").length;
+    aoa.push([emp.name, cnt]);
+  });
+  return aoa;
+};
+
+const buildAlertasSheet = ({ alerts, days, employees, schedule }) => {
+  const headers = ["Fecha", "Día semana", "Mes", "Semana", "Severidad", "Categoría", "Título alerta", "Detalle", "Contexto adicional", "Disponibles"];
+  const aoa = [headers];
+  if (alerts.length === 0) {
+    aoa.push(["Sin alertas", "", "", "", "", "", "La planificación no presenta conflictos."]);
+    return aoa;
+  }
+  alerts.forEach(alert => {
+    const day = days.find(d => d.id === alert.dayId);
+    if (!day) return;
+    alert.reasons.forEach(reason => {
+      const sev = reason.severity === "critical" ? "CRÍTICO" : reason.severity === "warning" ? "AVISO" : "INFO";
+      aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`, sev, reason.category || "", reason.title, reason.detail, reason.context || "", alert.present]);
+    });
+  });
+  aoa.push([]);
+  aoa.push([`Total alertas: ${alerts.reduce((s, a) => s + a.reasons.length, 0)}`]);
+  return aoa;
+};
+
+const buildDatosGraficosSheet = ({ employees, days, schedule, intensiveWeeksByEmp, forcedOfficeDetails, dailyCoverage }) => {
+  const months = [];
+  const monthSet = new Set();
+  days.forEach(d => { if (!monthSet.has(d.month)) { monthSet.add(d.month); months.push(d.month); } });
+  const weeksMap = {};
+  days.forEach(d => { weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || []; weeksMap[d.weekIndex].push(d); });
+  const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+  const weekToMonth = {};
+  Object.keys(weeksMap).forEach(wi => {
+    const cnt = {};
+    weeksMap[wi].forEach(d => { cnt[d.month] = (cnt[d.month] || 0) + 1; });
+    weekToMonth[wi] = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
+  });
+  const forcedByEmp = {};
+  employees.forEach(e => { forcedByEmp[e.id] = 0; });
+  forcedOfficeDetails.forEach(item => { forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1; });
+
+  const aoa = [];
+
+  // ── Tabla 1: Semanas intensivas por mes e integrante ──────────────
+  aoa.push(["TABLA 1 — Semanas con jornada intensiva (O30 completa) por integrante y mes"]);
+  aoa.push(["Gráfico sugerido: Barras agrupadas — columnas=meses, series=integrante"]);
+  aoa.push([]);
+  aoa.push(["Integrante", "Rol", ...months.map(m => m.substring(0, 3)), "Total", "Días forzados oficina"]);
+  employees.forEach(emp => {
+    const byMonth = {};
+    months.forEach(m => { byMonth[m] = 0; });
+    weekIdxs.forEach(wi => {
+      const wDays = weeksMap[wi];
+      if (wDays.every(d => schedule[emp.id][d.id] === "O30")) {
+        const m = weekToMonth[wi];
+        if (byMonth[m] !== undefined) byMonth[m]++;
+      }
+    });
+    const total = months.reduce((s, m) => s + byMonth[m], 0);
+    aoa.push([emp.name, emp.role, ...months.map(m => byMonth[m]), total, forcedByEmp[emp.id]]);
+  });
+
+  aoa.push([]); aoa.push([]);
+
+  // ── Tabla 2: Horas totales y distribución por tipo ───────────────
+  aoa.push(["TABLA 2 — Horas totales trabajadas por integrante en el periodo"]);
+  aoa.push(["Gráfico sugerido: Barras horizontales apiladas por tipo de jornada"]);
+  aoa.push([]);
+  aoa.push(["Integrante", "Rol", "Grupo", "H. O30", "H. O40", "H. O42", "Horas Totales", "Días O30", "Días O40", "Días O42", "Días VAC"]);
+  employees.forEach(emp => {
+    const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
+    const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
+    const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
+    const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
+    aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, o30 * 6, o40 * 8, o42 * 9, o30 * 6 + o40 * 8 + o42 * 9, o30, o40, o42, vac]);
+  });
+
+  aoa.push([]); aoa.push([]);
+
+  // ── Tabla 3: Distribución de tipos por semana ────────────────────
+  aoa.push(["TABLA 3 — Distribución de tipos de jornada por semana (total días-persona)"]);
+  aoa.push(["Gráfico sugerido: Barras apiladas al 100% — eje X= semanas"]);
+  aoa.push([]);
+  aoa.push(["Semana", "Período", "Mes", "Días O30", "Días O40", "Días O42", "Días VAC", "% Intensiva", "% 40h", "% 42h", "% VAC"]);
+  weekIdxs.forEach(wi => {
+    const wDays = weeksMap[wi];
+    const start = wDays[0]; const end = wDays[wDays.length - 1];
+    let o30 = 0, o40 = 0, o42 = 0, vac = 0;
+    employees.forEach(emp => {
+      wDays.forEach(day => {
+        const t = schedule[emp.id][day.id];
+        if (t === "O30") o30++; else if (t === "O40") o40++; else if (t === "O42") o42++; else if (t === "V") vac++;
+      });
+    });
+    const total = o30 + o40 + o42 + vac;
+    const pct = v => total > 0 ? Math.round(v / total * 100) : 0;
+    aoa.push([`Sem. ${wi + 1}`, `${start.label} – ${end.label}`, weekToMonth[wi], o30, o40, o42, vac, pct(o30), pct(o40), pct(o42), pct(vac)]);
+  });
+
+  aoa.push([]); aoa.push([]);
+
+  // ── Tabla 4: Presencia diaria ────────────────────────────────────
+  aoa.push(["TABLA 4 — Presencia diaria de integrantes"]);
+  aoa.push(["Gráfico sugerido: Gráfico de líneas — eje X=fechas, eje Y=personas disponibles"]);
+  aoa.push([]);
+  aoa.push(["Fecha", "Día", "Mes", "Semana", "Disponibles (no VAC)", "De vacaciones", "Con O30", "Con O40", "Con O42"]);
+  dailyCoverage.forEach(cov => {
+    const day = days.find(d => d.id === cov.dayId);
+    if (!day) return;
+    const o30c = employees.filter(e => schedule[e.id][cov.dayId] === "O30").length;
+    const o40c = employees.filter(e => schedule[e.id][cov.dayId] === "O40").length;
+    const o42c = employees.filter(e => schedule[e.id][cov.dayId] === "O42").length;
+    aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter], day.month, `Sem. ${day.weekIndex + 1}`, cov.present, employees.length - cov.present, o30c, o40c, o42c]);
+  });
+
+  aoa.push([]); aoa.push([]);
+  aoa.push(["─── INSTRUCCIONES PARA CREAR GRÁFICOS EN EXCEL ───"]);
+  aoa.push(["TABLA 1 → Seleccionar el rango de datos → Insertar → Gráfico de Columnas Agrupadas"]);
+  aoa.push(["         Eje horizontal: Meses de verano, Series: un integrante por serie"]);
+  aoa.push(["TABLA 2 → Seleccionar Integrante + H.O30 + H.O40 + H.O42 → Insertar → Barras apiladas"]);
+  aoa.push(["TABLA 3 → Seleccionar Semana + columnas % → Insertar → Barras apiladas al 100%"]);
+  aoa.push(["TABLA 4 → Seleccionar Fecha + Disponibles → Insertar → Gráfico de Líneas"]);
+
+  return aoa;
+};
+
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return window.localStorage.getItem("horarios_auth_v2026") === "true";
@@ -2608,12 +2865,36 @@ const App = () => {
         }
       }
 
-      const colWidths = [{ wch: 18 }, ...days.map(() => ({ wch: 12 }))];
+      // ── Filas de totales en hoja Horarios ──────────────────────────
+      if (exportFormat !== "csv") {
+        const totalsTypes = [["TOTAL 30h", "O30"], ["TOTAL 40h", "O40"], ["TOTAL 42h", "O42"], ["TOTAL VAC", "V"]];
+        const totalRowsAoa = totalsTypes.map(([label, type]) => {
+          const tRow = [label];
+          days.forEach(day => { tRow.push(EMPLOYEES.filter(emp => schedule[emp.id][day.id] === type).length); });
+          if (exportIncludeFormulas) { tRow.push(null); tRow.push(null); }
+          return tRow;
+        });
+        XLSX.utils.sheet_add_aoa(ws, totalRowsAoa, { origin: { r: rows.length + 1, c: 0 } });
+        totalsTypes.forEach(([, type], tIdx) => {
+          const rIdx = rows.length + 1 + tIdx;
+          for (let c = 0; c < (days.length + 1 + (exportIncludeFormulas ? 2 : 0)); c++) {
+            const cellRef = XLSX.utils.encode_cell({ r: rIdx, c });
+            if (!ws[cellRef]) continue;
+            ws[cellRef].s = c === 0
+              ? { font: { bold: true, color: { rgb: preset.headerText } }, fill: { fgColor: { rgb: preset.headerBg } }, alignment: { horizontal: "left" } }
+              : createExportCellStyle(type, preset);
+          }
+        });
+        appendExportLog("Filas de totales añadidas a Horarios.");
+      }
+
+      const colWidths = [{ wch: 20 }, ...days.map(() => ({ wch: 11 }))];
       if (exportIncludeFormulas && exportFormat !== "csv") {
         colWidths.push({ wch: 18 });
         colWidths.push({ wch: 24 });
       }
       ws["!cols"] = colWidths;
+      ws["!freeze"] = { xSplit: 1, ySplit: 1 };
 
       if (exportProtectSheet && exportFormat !== "csv") {
         ws["!protect"] = {
@@ -2625,20 +2906,146 @@ const App = () => {
       }
 
       XLSX.utils.book_append_sheet(wb, ws, "Horarios");
-      setExportProgress(68);
-      setExportStatus("Añadiendo hojas auxiliares...");
+      setExportProgress(42);
+      setExportStatus("Generando hojas adicionales...");
       await waitTick();
 
-      const chartRows = buildChartDataRows({
-        employees: EMPLOYEES,
-        intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
-        forcedOfficeDetails: stats.forcedOfficeDetails,
-      });
-      if (exportIncludeChartData && exportFormat !== "csv") {
-        const wsChart = XLSX.utils.aoa_to_sheet(chartRows);
-        XLSX.utils.book_append_sheet(wb, wsChart, "Graficos_Datos");
-        appendExportLog("Datos de gráficos añadidos en hoja auxiliar.");
-        appendExportLog("Los gráficos incrustados no son soportados por la librería actual; se exportan datos listos para gráfico.", "warning");
+      // Estilos reutilizables para hojas auxiliares
+      const auxHeaderStyle = {
+        font: { bold: true, color: { rgb: preset.headerText } },
+        fill: { fgColor: { rgb: preset.headerBg } },
+        alignment: { horizontal: "center", wrapText: true },
+        border: { top: { style: "thin", color: { rgb: preset.border } }, bottom: { style: "thin", color: { rgb: preset.border } }, left: { style: "thin", color: { rgb: preset.border } }, right: { style: "thin", color: { rgb: preset.border } } },
+      };
+      const auxSubHeaderStyle = {
+        font: { bold: true, color: { rgb: preset.rowText } },
+        fill: { fgColor: { rgb: "E2E8F0" } },
+        alignment: { horizontal: "center" },
+      };
+      const auxTitleStyle = {
+        font: { bold: true, sz: 12, color: { rgb: "1E40AF" } },
+        fill: { fgColor: { rgb: "EFF6FF" } },
+      };
+      const auxSubtitleStyle = {
+        font: { italic: true, color: { rgb: "64748B" } },
+        fill: { fgColor: { rgb: "F8FAFC" } },
+      };
+      const applyRowStyle = (wsTarget, rIdx, colCount, style) => {
+        for (let c = 0; c < colCount; c++) {
+          const ref = XLSX.utils.encode_cell({ r: rIdx, c });
+          if (wsTarget[ref]) wsTarget[ref].s = style;
+        }
+      };
+
+      if (exportFormat !== "csv") {
+        // ── Hoja 2: Resumen_Mensual ───────────────────────────────────
+        const aoaResumen = buildResumenMensualSheet({ employees: EMPLOYEES, days, schedule });
+        const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
+        applyRowStyle(wsResumen, 0, aoaResumen[0].length, auxHeaderStyle);
+        applyRowStyle(wsResumen, 1, aoaResumen[1].length, auxSubHeaderStyle);
+        wsResumen["!freeze"] = { xSplit: 3, ySplit: 2 };
+        wsResumen["!cols"] = [{ wch: 16 }, { wch: 12 }, { wch: 10 }, ...Array(aoaResumen[0].length - 3).fill({ wch: 9 })];
+        XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen_Mensual");
+        appendExportLog("Hoja Resumen_Mensual generada.");
+        setExportProgress(52);
+        await waitTick();
+
+        // ── Hoja 3: Vista_Semanas ────────────────────────────────────
+        const aoaSemanas = buildVistaSemanasSheet({ employees: EMPLOYEES, days, schedule });
+        const wsSemanas = XLSX.utils.aoa_to_sheet(aoaSemanas);
+        applyRowStyle(wsSemanas, 0, aoaSemanas[0].length, auxHeaderStyle);
+        wsSemanas["!freeze"] = { xSplit: 1, ySplit: 1 };
+        wsSemanas["!cols"] = [{ wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsSemanas, "Vista_Semanas");
+        appendExportLog("Hoja Vista_Semanas generada.");
+        setExportProgress(60);
+        await waitTick();
+
+        // ── Hoja 4: Estadisticas ─────────────────────────────────────
+        const aoaStats = buildEstadisticasSheet({
+          employees: EMPLOYEES, days, schedule,
+          forcedOfficeDetails: stats.forcedOfficeDetails,
+          intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
+          totalHoursByEmp: stats.totalHoursByEmp,
+        });
+        const wsStats = XLSX.utils.aoa_to_sheet(aoaStats);
+        applyRowStyle(wsStats, 0, aoaStats[0].length, auxHeaderStyle);
+        // Style totals row (last row)
+        const statsLastRow = aoaStats.length - 1;
+        applyRowStyle(wsStats, statsLastRow, aoaStats[0].length, { font: { bold: true }, fill: { fgColor: { rgb: "DBEAFE" } } });
+        wsStats["!freeze"] = { xSplit: 1, ySplit: 1 };
+        wsStats["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 16 }, { wch: 13 }, { wch: 14 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, wsStats, "Estadisticas");
+        appendExportLog("Hoja Estadisticas generada.");
+        setExportProgress(68);
+        await waitTick();
+
+        // ── Hoja 5: Vacaciones ───────────────────────────────────────
+        const aoaVac = buildVacacionesSheet({ employees: EMPLOYEES, days, schedule });
+        const wsVac = XLSX.utils.aoa_to_sheet(aoaVac);
+        applyRowStyle(wsVac, 0, aoaVac[0].length, auxHeaderStyle);
+        // Color vacation rows rose
+        const vacStyle = { fill: { fgColor: { rgb: "FFF1F2" } }, font: { color: { rgb: "9F1239" } } };
+        for (let r = 1; r < EMPLOYEES.length * days.length + 1; r++) {
+          const firstCell = XLSX.utils.encode_cell({ r, c: 0 });
+          if (!wsVac[firstCell] || !wsVac[firstCell].v) break;
+          applyRowStyle(wsVac, r, aoaVac[0].length, vacStyle);
+        }
+        wsVac["!freeze"] = { xSplit: 1, ySplit: 1 };
+        wsVac["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsVac, "Vacaciones");
+        appendExportLog("Hoja Vacaciones generada.");
+        setExportProgress(75);
+        await waitTick();
+
+        // ── Hoja 6: Alertas ──────────────────────────────────────────
+        const aoaAlertas = buildAlertasSheet({ alerts: stats.alerts, days, employees: EMPLOYEES, schedule });
+        const wsAlertas = XLSX.utils.aoa_to_sheet(aoaAlertas);
+        applyRowStyle(wsAlertas, 0, aoaAlertas[0].length, auxHeaderStyle);
+        // Color rows by severity
+        for (let r = 1; r < aoaAlertas.length; r++) {
+          const sevCell = XLSX.utils.encode_cell({ r, c: 4 });
+          if (!wsAlertas[sevCell]) continue;
+          const sev = wsAlertas[sevCell].v;
+          const alertRowStyle = sev === "CRÍTICO"
+            ? { fill: { fgColor: { rgb: "FEF2F2" } }, font: { color: { rgb: "991B1B" } } }
+            : sev === "AVISO"
+              ? { fill: { fgColor: { rgb: "FFFBEB" } }, font: { color: { rgb: "92400E" } } }
+              : null;
+          if (alertRowStyle) applyRowStyle(wsAlertas, r, aoaAlertas[0].length, alertRowStyle);
+        }
+        wsAlertas["!freeze"] = { xSplit: 1, ySplit: 1 };
+        wsAlertas["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 30 }, { wch: 40 }, { wch: 35 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsAlertas, "Alertas");
+        appendExportLog("Hoja Alertas generada.");
+        setExportProgress(82);
+        await waitTick();
+
+        // ── Hoja 7: Datos_Graficos ───────────────────────────────────
+        if (exportIncludeChartData) {
+          const aoaGraficos = buildDatosGraficosSheet({
+            employees: EMPLOYEES, days, schedule,
+            intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
+            forcedOfficeDetails: stats.forcedOfficeDetails,
+            dailyCoverage: stats.dailyCoverage,
+          });
+          const wsGraficos = XLSX.utils.aoa_to_sheet(aoaGraficos);
+          // Style section titles and subtitles
+          aoaGraficos.forEach((row, r) => {
+            if (!row[0]) return;
+            const v = String(row[0]);
+            if (v.startsWith("TABLA")) applyRowStyle(wsGraficos, r, 1, auxTitleStyle);
+            else if (v.startsWith("Gráfico")) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);
+            else if (v.startsWith("───")) applyRowStyle(wsGraficos, r, 1, { font: { bold: true, color: { rgb: "1E40AF" } } });
+            else if (v.startsWith("TABLA") || v.match(/^[1-4]\./)) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);
+          });
+          wsGraficos["!cols"] = [{ wch: 20 }, { wch: 14 }, ...Array(10).fill({ wch: 12 })];
+          XLSX.utils.book_append_sheet(wb, wsGraficos, "Datos_Graficos");
+          appendExportLog("Hoja Datos_Graficos (4 tablas con instrucciones) generada.");
+          appendExportLog("Nota: los gráficos deben crearse manualmente en Excel usando los rangos indicados en cada tabla.", "warning");
+          setExportProgress(90);
+          await waitTick();
+        }
       }
 
       const fileBase = `planificacion_horarios_${currentYear}`;
