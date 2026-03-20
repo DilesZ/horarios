@@ -62,6 +62,20 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
+  test("la intensiva solo se asigna entre el 15 de junio y el 15 de septiembre", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const minDay = "2026-06-15";
+    const maxDay = "2026-09-15";
+    days.forEach((day) => {
+      EMPLOYEES.forEach((emp) => {
+        const type = schedule[emp.id][day.id];
+        if (type !== "O30") return;
+        expect(day.id >= minDay && day.id <= maxDay).toBe(true);
+      });
+    });
+  });
+
   test("no permite intensiva en días sueltos: O30 solo en semana operativa completa", () => {
     const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
     const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);

@@ -139,3 +139,10 @@ Mejoras de visualización y responsive (tercera iteración)
   - Vista calendario (4 meses, lunes a viernes), diseñada para evitar scroll lateral.
 - La vista calendario muestra cada mes en tarjetas responsivas y cada día incluye el estado por integrante en formato compacto.
 - Se mejora la adaptación móvil reduciendo padding general y priorizando bloques verticales en lugar de tablas anchas.
+
+Rectificaciones de reglas de intensiva (marzo 2026)
+
+- Se blinda la ventana de intensiva: O30 solo se permite del 15/06 al 15/09, sin excepciones por integrante.
+- Se aplica la restricción temporal en todas las fases del algoritmo (asignación inicial, compensaciones y rebalanceos posteriores).
+- Se refuerza el límite diario de intensivas en todos los ajustes finales para que nunca superen 3 personas por día.
+- Se añade test automático específico que valida que ninguna asignación O30 quede fuera del rango 15/06–15/09.

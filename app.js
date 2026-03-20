@@ -648,19 +648,18 @@ const getExportErrorMessage = error => {
   return "Error inesperado durante la exportación.";
 };
 const generateSchedule = (year, vacationPlan) => {
-  const isIntensivePeriod = (dayId, empId) => {
+  const isWithinIntensiveWindow = dayId => {
     const parts = dayId.split("-");
     const m = parseInt(parts[1], 10);
     const d = parseInt(parts[2], 10);
     if (m === 6 && d >= 15) return true;
-    if (m === 9 && d <= 15) return true;
     if (m === 7 || m === 8) return true;
-
-    // mathematical slack para Luis (5) y Jose (2) que carecen de slots por cobertura O42 y vacaciones cruzadas
-    if (empId === 5 || empId === 2) {
-      if (m === 6 || m === 9) return true;
-    }
+    if (m === 9 && d <= 15) return true;
     return false;
+  };
+  const isIntensivePeriod = (dayId, empId) => {
+    if (!empId) return isWithinIntensiveWindow(dayId);
+    return isWithinIntensiveWindow(dayId);
   };
   const days = buildDaysRange(year);
   const schedule = {};
@@ -1048,6 +1047,7 @@ const generateSchedule = (year, vacationPlan) => {
       for (const day of days) {
         if (schedule[emp.id][day.id] !== "O40") continue;
         if (schedule[emp.id][day.id] === "V") continue;
+        if (!isIntensivePeriod(day.id, emp.id)) continue;
         const empOfficeDays = emp.officeDays.split(",").map(d => d.trim());
         const isInOffice = empOfficeDays.includes(day.weekdayLetter);
         const currentIntensiveCount = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
@@ -1112,6 +1112,8 @@ const generateSchedule = (year, vacationPlan) => {
         const wi = parseInt(wiStr, 10);
         if (vacWeeksByEmp[emp.id].has(wi)) return;
         const daysInWeek = weeksList[wi];
+        const weekInIntensiveWindow = daysInWeek.every(day => isIntensivePeriod(day.id, emp.id));
+        if (!weekInIntensiveWindow) return;
         let hasO42ForEmp = daysInWeek.some(day => schedule[emp.id][day.id] === "O42");
         if (hasO42ForEmp) {
           const daysWithO42 = daysInWeek.filter(day => schedule[emp.id][day.id] === "O42");
@@ -1219,7 +1221,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (intensiveCount < 6) {
         const day19 = days.find(d => d.id === "2026-06-19");
         const forbiddenWeek = day19 ? day19.weekIndex : null;
-        const candidateWeeks = Object.keys(weeksList).map(wiStr => parseInt(wiStr, 10)).sort((a, b) => a - b).filter(wi => wi !== forbiddenWeek && !intensiveWeeksIndices.includes(wi) && !vacWeeksByEmp[enrique.id].has(wi));
+        const candidateWeeks = Object.keys(weeksList).map(wiStr => parseInt(wiStr, 10)).sort((a, b) => a - b).filter(wi => wi !== forbiddenWeek && !intensiveWeeksIndices.includes(wi) && !vacWeeksByEmp[enrique.id].has(wi) && weeksList[wi].every(day => isIntensivePeriod(day.id, enrique.id)));
         for (const wi of candidateWeeks) {
           const daysInWeek = weeksList[wi];
           let canFlip = true;
@@ -1280,11 +1282,12 @@ const generateSchedule = (year, vacationPlan) => {
       if (vacWeeksByEmp[emp.id].has(wi)) return false;
       if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
       if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+      const daysInWeek = finalWeeksMap[wi];
+      if (!daysInWeek || !daysInWeek.every(day => isIntensivePeriod(day.id, emp.id))) return false;
       if (emp.name === "Kike") {
         const daysInWeekCheck = finalWeeksMap[wi];
         if (daysInWeekCheck.some(day => criticalKikeSet.has(day.id))) return false;
       }
-      const daysInWeek = finalWeeksMap[wi];
       // Check specific day constraints and O42
       for (const day of daysInWeek) {
         if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
@@ -1449,11 +1452,12 @@ const generateSchedule = (year, vacationPlan) => {
         if (vacWeeksByEmp[emp.id].has(wi)) return false;
         if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
         if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+        const daysInWeek = finalWeeksMap[wi];
+        if (!daysInWeek || !daysInWeek.every(day => isIntensivePeriod(day.id, emp.id))) return false;
         if (emp.name === "Kike") {
           const daysInWeekCheck = finalWeeksMap[wi];
           if (daysInWeekCheck.some(day => criticalKikeSet.has(day.id))) return false;
         }
-        const daysInWeek = finalWeeksMap[wi];
         for (const day of daysInWeek) {
           if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
           if (emp.name === "Luis" && day.id === "2026-07-24") return false;
@@ -1589,6 +1593,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
       if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
       const weekDays = finalWeeksMap[wi];
+      if (!weekDays || !weekDays.every(day => isIntensivePeriod(day.id, emp.id))) return false;
       if (emp.name === "Kike" && weekDays.some(day => criticalKikeSet.has(day.id))) return false;
       if (weekDays.some(day => schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O42")) return false;
       return true;
@@ -1612,7 +1617,7 @@ const generateSchedule = (year, vacationPlan) => {
             const canApply = weekDays.every(day => {
               const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
               const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
-              if (projected > 4) return false; // Allow up to 4 to guarantee 6 weeks for everyone
+              if (projected > 3) return false;
 
               // Only block if we are completely erasing O42 and we absolutely cannot.
               // By prioritizing equity, we allow it to pass and let the manual Alert system warn the team!
