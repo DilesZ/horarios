@@ -269,13 +269,8 @@ const validateStrictWeeklyRules = ({ employees, days, schedule }) => {
 };
 
 const pickRegularWeekType = ({ employee, weekIndex, weekDays, schedule, getLateGroupForWeek }) => {
-  const counts = { O40: 0, O42: 0, O30: 0 };
-  weekDays.forEach((day) => {
-    const type = schedule[employee.id][day.id];
-    if (counts[type] !== undefined) counts[type] += 1;
-  });
-  if (counts.O40 > counts.O42) return "O40";
-  if (counts.O42 > counts.O40) return "O42";
+  const hasO42 = weekDays.some(day => schedule[employee.id][day.id] === "O42");
+  if (hasO42) return "O42";
   const lateGroup = getLateGroupForWeek(weekIndex);
   return employee.group === lateGroup ? "O42" : "O40";
 };
@@ -647,13 +642,17 @@ const generateSchedule = (year, vacationPlan) => {
         const isInOffice = daysOffice.includes(day.weekdayLetter);
         
         if (day.weekdayLetter !== "V") {
-          const hasFullSchedule = (type === "O40" || type === "O42");
+          // Asumimos que si no tiene turno ni vacaciones, tendra turno completo de tarde o normal asignado eventualmente
+          const mockType = type || "O40";
+          const hasFullSchedule = (mockType === "O40" || mockType === "O42");
           if (isInOffice && hasFullSchedule) {
             if (GROUP1.includes(e.name)) { group1HasOffice = true; group1Covering++; }
             if (GROUP2.includes(e.name)) { group2HasOffice = true; group2Covering++; }
           }
         } else {
-          if (isInOffice && type === "O40") {
+          // Viernes
+          const mockType = type || "O40";
+          if (isInOffice && (mockType === "O40" || mockType === "O42")) {
             hasO40InOfficeOnFriday = true;
           }
         }
@@ -854,10 +853,6 @@ const generateSchedule = (year, vacationPlan) => {
     const lateAvailable = EMPLOYEES.filter(
       (emp) => emp.group === lateGroup && !vacWeeksByEmp[emp.id].has(wi)
     ).sort((a, b) => {
-      // Priorizar a Luis para que NO sea ancla O42 y consiga intensivas si le faltan
-      if (a.name === "Luis" && b.name !== "Luis") return 1;
-      if (b.name === "Luis" && a.name !== "Luis") return -1;
-      
       const diff = intensiveWeeksByEmp[b.id] - intensiveWeeksByEmp[a.id];
       return diff !== 0 ? diff : a.id - b.id;
     });
@@ -866,10 +861,6 @@ const generateSchedule = (year, vacationPlan) => {
     const allEligible = EMPLOYEES.filter(
       (emp) => !vacWeeksByEmp[emp.id].has(wi) && (!anchor || emp.id !== anchor.id)
     ).sort((a, b) => {
-      // Priorizar a Luis en la eleccion de intensiva
-      if (a.name === "Luis" && b.name !== "Luis") return -1;
-      if (b.name === "Luis" && a.name !== "Luis") return 1;
-
       const diff = intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id];
       return diff !== 0 ? diff : a.id - b.id;
     });
@@ -972,6 +963,11 @@ const generateSchedule = (year, vacationPlan) => {
           const officeDays = emp.officeDays.split(",").map((d) => d.trim());
           return officeDays.includes(day.weekdayLetter);
         }).sort((a, b) => {
+          const aIsO30 = schedule[a.id][day.id] === "O30";
+          const bIsO30 = schedule[b.id][day.id] === "O30";
+          if (aIsO30 && !bIsO30) return 1;
+          if (!aIsO30 && bIsO30) return -1;
+
           const aInLateGroup = a.group === lateGroup;
           const bInLateGroup = b.group === lateGroup;
           if (aInLateGroup && !bInLateGroup) return -1;
