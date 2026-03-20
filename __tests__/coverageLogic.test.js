@@ -62,6 +62,24 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
+  test("todos los integrantes alcanzan al menos 6 semanas intensivas", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const weeksMap = {};
+    days.forEach((day) => {
+      weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+      weeksMap[day.weekIndex].push(day);
+    });
+    EMPLOYEES.forEach((emp) => {
+      let weeks = 0;
+      Object.keys(weeksMap).forEach((wi) => {
+        const weekDays = weeksMap[wi];
+        if (weekDays.every((day) => schedule[emp.id][day.id] === "O30")) weeks += 1;
+      });
+      expect(weeks).toBeGreaterThanOrEqual(6);
+    });
+  });
+
   test("genera registro detallado por integrante con objetivos mínimo e ideal", () => {
     const {
       generateSchedule,
