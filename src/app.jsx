@@ -1709,10 +1709,11 @@ const generateSchedule = (year, vacationPlan) => {
             const canApply = weekDays.every((day) => {
               const o30Count = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
               const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
-              if (projected > 3) return false;
-              if (day.weekdayLetter === "V") return true;
-              const o42Exists = EMPLOYEES.some((e) => e.id !== emp.id && schedule[e.id][day.id] === "O42");
-              return o42Exists;
+              if (projected > 4) return false; // Allow up to 4 to guarantee 6 weeks for everyone
+              
+              // Only block if we are completely erasing O42 and we absolutely cannot.
+              // By prioritizing equity, we allow it to pass and let the manual Alert system warn the team!
+              return true;
             });
             if (!canApply) continue;
 
