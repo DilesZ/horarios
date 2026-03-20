@@ -282,6 +282,176 @@ const buildEquityAudit = ({
     }
   };
 };
+const EXPORT_STYLE_PRESETS = {
+  corporativo: {
+    headerBg: "1E40AF",
+    headerText: "FFFFFF",
+    border: "CBD5E1",
+    rowText: "0F172A"
+  },
+  neutro: {
+    headerBg: "334155",
+    headerText: "FFFFFF",
+    border: "D1D5DB",
+    rowText: "111827"
+  }
+};
+const getExportStylePreset = key => {
+  return EXPORT_STYLE_PRESETS[key] || EXPORT_STYLE_PRESETS.corporativo;
+};
+const createExportCellStyle = (type, preset) => {
+  let fgColor = "FFFFFF";
+  let fontColor = preset.rowText;
+  if (type === "O40") {
+    fgColor = "2563EB";
+    fontColor = "FFFFFF";
+  } else if (type === "O42") {
+    fgColor = "4F46E5";
+    fontColor = "FFFFFF";
+  } else if (type === "O30") {
+    fgColor = "10B981";
+    fontColor = "FFFFFF";
+  } else if (type === "T30") {
+    fgColor = "14B8A6";
+    fontColor = "FFFFFF";
+  } else if (type === "V") {
+    fgColor = "F43F5E";
+    fontColor = "FFFFFF";
+  }
+  return {
+    fill: {
+      fgColor: {
+        rgb: fgColor
+      }
+    },
+    font: {
+      color: {
+        rgb: fontColor
+      }
+    },
+    alignment: {
+      horizontal: "center"
+    },
+    border: {
+      top: {
+        style: "thin",
+        color: {
+          rgb: preset.border
+        }
+      },
+      bottom: {
+        style: "thin",
+        color: {
+          rgb: preset.border
+        }
+      },
+      left: {
+        style: "thin",
+        color: {
+          rgb: preset.border
+        }
+      },
+      right: {
+        style: "thin",
+        color: {
+          rgb: preset.border
+        }
+      }
+    }
+  };
+};
+const validateExportPayload = ({
+  employees,
+  days,
+  schedule
+}) => {
+  const errors = [];
+  if (!Array.isArray(employees) || employees.length === 0) {
+    errors.push("No hay integrantes para exportar.");
+  }
+  if (!Array.isArray(days) || days.length === 0) {
+    errors.push("No hay días planificados para exportar.");
+  }
+  if (!schedule || typeof schedule !== "object") {
+    errors.push("La estructura de horarios no es válida.");
+  }
+  if (errors.length > 0) {
+    return {
+      ok: false,
+      errors
+    };
+  }
+  const validTypes = new Set(Object.keys(TYPES));
+  employees.forEach(emp => {
+    if (!schedule[emp.id]) {
+      errors.push(`Falta la fila de horario para ${emp.name}.`);
+      return;
+    }
+    days.forEach(day => {
+      const value = schedule[emp.id][day.id];
+      if (!validTypes.has(value)) {
+        errors.push(`Valor inválido "${value}" para ${emp.name} en ${day.id}.`);
+      }
+    });
+  });
+  return {
+    ok: errors.length === 0,
+    errors,
+    rowCount: employees.length,
+    columnCount: days.length + 1
+  };
+};
+const buildExportRows = ({
+  employees,
+  days,
+  schedule,
+  includeFormulas
+}) => {
+  const headers = ["Empleado", ...days.map(d => `${d.id} (${d.weekdayLetter})`)];
+  if (includeFormulas) {
+    headers.push("Días O30 (fórmula)");
+    headers.push("Horas estimadas (fórmula)");
+  }
+  const rows = employees.map(emp => {
+    const row = [emp.name];
+    days.forEach(day => {
+      row.push(schedule[emp.id][day.id]);
+    });
+    if (includeFormulas) {
+      row.push(null);
+      row.push(null);
+    }
+    return row;
+  });
+  return {
+    headers,
+    rows
+  };
+};
+const buildChartDataRows = ({
+  employees,
+  intensiveWeeksByEmp,
+  forcedOfficeDetails
+}) => {
+  const forcedByEmp = {};
+  employees.forEach(emp => {
+    forcedByEmp[emp.id] = 0;
+  });
+  forcedOfficeDetails.forEach(item => {
+    forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1;
+  });
+  const rows = [["Integrante", "Semanas intensivas", "Días forzados"]];
+  employees.forEach(emp => {
+    rows.push([emp.name, intensiveWeeksByEmp[emp.id] || 0, forcedByEmp[emp.id] || 0]);
+  });
+  return rows;
+};
+const getExportErrorMessage = error => {
+  if (!error) return "Error desconocido durante la exportación.";
+  if (typeof error === "string") return error;
+  if (error.message) return error.message;
+  return "Error inesperado durante la exportación.";
+};
 const generateSchedule = (year, vacationPlan) => {
   const days = buildDaysRange(year);
   const schedule = {};
@@ -1226,6 +1396,17 @@ const App = () => {
   });
   const [activeDashboardYear, setActiveDashboardYear] = useState(null);
   const [selectedVacationEmpName, setSelectedVacationEmpName] = useState(EMPLOYEES[0].name);
+  const [exportFormat, setExportFormat] = useState("xlsx");
+  const [exportStylePreset, setExportStylePreset] = useState("corporativo");
+  const [exportIncludeFormulas, setExportIncludeFormulas] = useState(true);
+  const [exportIncludeChartData, setExportIncludeChartData] = useState(true);
+  const [exportProtectSheet, setExportProtectSheet] = useState(false);
+  const [exportPassword, setExportPassword] = useState("");
+  const [exportInProgress, setExportInProgress] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportStatus, setExportStatus] = useState("");
+  const [exportError, setExportError] = useState("");
+  const [exportLogs, setExportLogs] = useState([]);
   useEffect(() => {
     try {
       window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
@@ -2002,72 +2183,78 @@ const App = () => {
       equityAudit
     };
   }, [schedule, days]);
-  const exportToExcel = () => {
-    // Definir estilos
-    const headerStyle = {
-      font: {
-        bold: true,
-        color: {
-          rgb: "FFFFFF"
-        }
-      },
-      fill: {
-        fgColor: {
-          rgb: "2563EB"
-        }
-      },
-      // blue-600
-      alignment: {
-        horizontal: "center"
-      },
-      border: {
-        top: {
-          style: "thin"
-        },
-        bottom: {
-          style: "thin"
-        },
-        left: {
-          style: "thin"
-        },
-        right: {
-          style: "thin"
-        }
-      }
+  const exportToExcel = async () => {
+    const appendExportLog = (message, level = "info") => {
+      setExportLogs(prev => [...prev, {
+        level,
+        message,
+        ts: new Date().toISOString()
+      }].slice(-80));
     };
-    const getCellStyle = type => {
-      let fgColor = "FFFFFF"; // default white
-      let fontColor = "000000";
-      if (type === "O40") {
-        fgColor = "2563EB";
-        fontColor = "FFFFFF";
-      } // blue-600
-      else if (type === "O42") {
-        fgColor = "4F46E5";
-        fontColor = "FFFFFF";
-      } // indigo-600
-      else if (type === "O30") {
-        fgColor = "10B981";
-        fontColor = "FFFFFF";
-      } // emerald-500
-      else if (type === "T30") {
-        fgColor = "14B8A6";
-        fontColor = "FFFFFF";
-      } // teal-500
-      else if (type === "V") {
-        fgColor = "F43F5E";
-        fontColor = "FFFFFF";
-      } // rose-500
-
-      return {
-        fill: {
-          fgColor: {
-            rgb: fgColor
+    const waitTick = () => new Promise(resolve => setTimeout(resolve, 0));
+    const downloadBlob = (blob, filename) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    };
+    setExportInProgress(true);
+    setExportProgress(0);
+    setExportStatus("Inicializando exportación...");
+    setExportError("");
+    setExportLogs([]);
+    appendExportLog("Inicio del proceso de exportación.");
+    try {
+      if (!["xlsx", "xls", "csv"].includes(exportFormat)) {
+        throw new Error("Formato no soportado. Selecciona .xlsx, .xls o .csv.");
+      }
+      const validation = validateExportPayload({
+        employees: EMPLOYEES,
+        days,
+        schedule
+      });
+      if (!validation.ok) {
+        throw new Error(`Validación fallida: ${validation.errors.join(" | ")}`);
+      }
+      appendExportLog(`Validación completada. Filas: ${validation.rowCount}, columnas: ${validation.columnCount}.`);
+      setExportProgress(12);
+      setExportStatus("Validación completada.");
+      await waitTick();
+      const preset = getExportStylePreset(exportStylePreset);
+      const {
+        headers,
+        rows
+      } = buildExportRows({
+        employees: EMPLOYEES,
+        days,
+        schedule,
+        includeFormulas: exportIncludeFormulas && exportFormat !== "csv"
+      });
+      const totalRows = rows.length + 1;
+      const isLargeExport = totalRows > 10000;
+      appendExportLog(`Preparación de dataset completada. Registros: ${totalRows}.`);
+      if (isLargeExport) {
+        appendExportLog("Se activará modo optimizado para exportación pesada.", "warning");
+      }
+      setExportProgress(24);
+      setExportStatus("Construyendo hoja principal...");
+      await waitTick();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const headerStyle = {
+        font: {
+          bold: true,
+          color: {
+            rgb: preset.headerText
           }
         },
-        font: {
-          color: {
-            rgb: fontColor
+        fill: {
+          fgColor: {
+            rgb: preset.headerBg
           }
         },
         alignment: {
@@ -2075,98 +2262,237 @@ const App = () => {
         },
         border: {
           top: {
-            style: "thin"
+            style: "thin",
+            color: {
+              rgb: preset.border
+            }
           },
           bottom: {
-            style: "thin"
+            style: "thin",
+            color: {
+              rgb: preset.border
+            }
           },
           left: {
-            style: "thin"
+            style: "thin",
+            color: {
+              rgb: preset.border
+            }
           },
           right: {
-            style: "thin"
+            style: "thin",
+            color: {
+              rgb: preset.border
+            }
           }
         }
       };
-    };
-
-    // Crear datos
-    const headers = ["Empleado", ...days.map(d => `${d.id} (${d.weekdayLetter})`)];
-    const dataRows = EMPLOYEES.map(emp => {
-      const row = [emp.name];
-      days.forEach(day => {
-        row.push(schedule[emp.id][day.id]);
-      });
-      return row;
-    });
-
-    // Crear hoja
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
-
-    // Aplicar estilos
-    // Headers (Row 0)
-    for (let c = 0; c < headers.length; c++) {
-      const cellRef = XLSX.utils.encode_cell({
-        r: 0,
-        c
-      });
-      if (!ws[cellRef]) continue;
-      ws[cellRef].s = headerStyle;
-    }
-
-    // Data Rows
-    dataRows.forEach((row, rIndex) => {
-      const rowIndex = rIndex + 1; // +1 porque row 0 es headers
-      row.forEach((cellValue, cIndex) => {
+      for (let c = 0; c < headers.length; c++) {
         const cellRef = XLSX.utils.encode_cell({
-          r: rowIndex,
-          c: cIndex
+          r: 0,
+          c
         });
-        if (!ws[cellRef]) return;
-        if (cIndex === 0) {
-          // Columna Empleado
-          ws[cellRef].s = {
-            font: {
-              bold: true
-            },
-            alignment: {
-              horizontal: "left"
-            },
-            border: {
-              top: {
-                style: "thin"
+        if (ws[cellRef]) ws[cellRef].s = headerStyle;
+      }
+      const lastDayColIndex = days.length;
+      const lastDayColLetter = XLSX.utils.encode_col(lastDayColIndex);
+      const o30FormulaCol = days.length + 1;
+      const hoursFormulaCol = days.length + 2;
+      for (let rIndex = 0; rIndex < rows.length; rIndex++) {
+        const row = rows[rIndex];
+        const rowIndex = rIndex + 1;
+        for (let cIndex = 0; cIndex < row.length; cIndex++) {
+          const cellRef = XLSX.utils.encode_cell({
+            r: rowIndex,
+            c: cIndex
+          });
+          if (!ws[cellRef]) continue;
+          if (cIndex === 0) {
+            ws[cellRef].s = {
+              font: {
+                bold: true,
+                color: {
+                  rgb: preset.rowText
+                }
               },
-              bottom: {
-                style: "thin"
+              alignment: {
+                horizontal: "left"
               },
-              left: {
-                style: "thin"
-              },
-              right: {
-                style: "thin"
+              border: {
+                top: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                bottom: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                left: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                right: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                }
               }
-            }
-          };
-        } else {
-          // Columnas de días
-          ws[cellRef].s = getCellStyle(cellValue);
+            };
+          } else if (cIndex <= days.length) {
+            ws[cellRef].s = createExportCellStyle(row[cIndex], preset);
+          } else {
+            ws[cellRef].s = {
+              font: {
+                color: {
+                  rgb: preset.rowText
+                }
+              },
+              alignment: {
+                horizontal: "center"
+              },
+              border: {
+                top: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                bottom: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                left: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                },
+                right: {
+                  style: "thin",
+                  color: {
+                    rgb: preset.border
+                  }
+                }
+              }
+            };
+          }
         }
-      });
-    });
-
-    // Ajustar ancho de columnas
-    const colWidths = [{
-      wch: 15
-    }]; // Primera columna más ancha
-    for (let i = 1; i < headers.length; i++) {
-      colWidths.push({
+        if (exportIncludeFormulas && exportFormat !== "csv") {
+          const excelRow = rIndex + 2;
+          const range = `B${excelRow}:${lastDayColLetter}${excelRow}`;
+          const o30Cell = XLSX.utils.encode_cell({
+            r: rowIndex,
+            c: o30FormulaCol
+          });
+          const hoursCell = XLSX.utils.encode_cell({
+            r: rowIndex,
+            c: hoursFormulaCol
+          });
+          ws[o30Cell] = {
+            t: "n",
+            f: `COUNTIF(${range},"O30")`,
+            s: ws[o30Cell]?.s
+          };
+          ws[hoursCell] = {
+            t: "n",
+            f: `COUNTIF(${range},"O30")*6+COUNTIF(${range},"O40")*8+COUNTIF(${range},"O42")*9`,
+            s: ws[hoursCell]?.s
+          };
+        }
+        if (isLargeExport && rIndex % 500 === 0) {
+          const progressBase = 24 + Math.min(36, Math.floor(rIndex / Math.max(1, rows.length) * 36));
+          setExportProgress(progressBase);
+          setExportStatus(`Aplicando estilos y fórmulas (${rIndex + 1}/${rows.length})...`);
+          await waitTick();
+        }
+      }
+      const colWidths = [{
+        wch: 18
+      }, ...days.map(() => ({
         wch: 12
+      }))];
+      if (exportIncludeFormulas && exportFormat !== "csv") {
+        colWidths.push({
+          wch: 18
+        });
+        colWidths.push({
+          wch: 24
+        });
+      }
+      ws["!cols"] = colWidths;
+      if (exportProtectSheet && exportFormat !== "csv") {
+        ws["!protect"] = {
+          password: exportPassword || "Horarios2026",
+          selectLockedCells: true,
+          selectUnlockedCells: true
+        };
+        appendExportLog("Protección de hoja activada.");
+      }
+      XLSX.utils.book_append_sheet(wb, ws, "Horarios");
+      setExportProgress(68);
+      setExportStatus("Añadiendo hojas auxiliares...");
+      await waitTick();
+      const chartRows = buildChartDataRows({
+        employees: EMPLOYEES,
+        intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
+        forcedOfficeDetails: stats.forcedOfficeDetails
       });
+      if (exportIncludeChartData && exportFormat !== "csv") {
+        const wsChart = XLSX.utils.aoa_to_sheet(chartRows);
+        XLSX.utils.book_append_sheet(wb, wsChart, "Graficos_Datos");
+        appendExportLog("Datos de gráficos añadidos en hoja auxiliar.");
+        appendExportLog("Los gráficos incrustados no son soportados por la librería actual; se exportan datos listos para gráfico.", "warning");
+      }
+      const fileBase = `planificacion_horarios_${currentYear}`;
+      if (exportFormat === "csv") {
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const csvBlob = new Blob([csv], {
+          type: "text/csv;charset=utf-8;"
+        });
+        const csvBytes = csvBlob.size;
+        if (csvBytes > 1024 * 1024 && typeof CompressionStream !== "undefined") {
+          const compression = new CompressionStream("gzip");
+          const compressedStream = new Blob([csv]).stream().pipeThrough(compression);
+          const compressedBlob = await new Response(compressedStream).blob();
+          downloadBlob(compressedBlob, `${fileBase}.csv.gz`);
+          appendExportLog(`CSV comprimido automáticamente (${Math.round(csvBytes / 1024)} KB -> ${Math.round(compressedBlob.size / 1024)} KB).`);
+        } else {
+          downloadBlob(csvBlob, `${fileBase}.csv`);
+          if (csvBytes > 1024 * 1024) {
+            appendExportLog("No se pudo comprimir automáticamente por limitaciones del navegador.", "warning");
+          }
+        }
+      } else {
+        const wbout = XLSX.write(wb, {
+          bookType: exportFormat,
+          type: "array",
+          compression: isLargeExport
+        });
+        const blob = new Blob([wbout], {
+          type: "application/octet-stream"
+        });
+        downloadBlob(blob, `${fileBase}.${exportFormat}`);
+      }
+      setExportProgress(100);
+      setExportStatus("Exportación completada correctamente.");
+      appendExportLog("Exportación finalizada con éxito.");
+    } catch (error) {
+      const message = getExportErrorMessage(error);
+      setExportError(`No se pudo completar la exportación: ${message}`);
+      setExportStatus("Exportación fallida.");
+      appendExportLog(`Error: ${message}`, "error");
+    } finally {
+      setExportInProgress(false);
     }
-    ws["!cols"] = colWidths;
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Horarios");
-    XLSX.writeFile(wb, `planificacion_horarios_${currentYear}.xlsx`);
   };
   const handleCellClick = (emp, day) => {
     const typeKey = schedule[emp.id][day.id];
@@ -2219,7 +2545,8 @@ const App = () => {
     className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
   }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
     onClick: exportToExcel,
-    className: "bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2"
+    disabled: exportInProgress,
+    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
   }, /*#__PURE__*/React.createElement("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: "16",
@@ -2246,13 +2573,92 @@ const App = () => {
     y2: "17"
   }), /*#__PURE__*/React.createElement("polyline", {
     points: "10 9 9 9 8 9"
-  })), "Exportar Excel"), /*#__PURE__*/React.createElement("button", {
+  })), exportInProgress ? "Exportando..." : "Exportar"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPlanning(generateSchedule(year, vacationPlan)),
     className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
   }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogout,
     className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
   }, "Cerrar Sesi\xF3n"))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-6 gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-gray-500 mb-1"
+  }, "Formato"), /*#__PURE__*/React.createElement("select", {
+    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+    value: exportFormat,
+    onChange: e => setExportFormat(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "xlsx"
+  }, ".xlsx"), /*#__PURE__*/React.createElement("option", {
+    value: "xls"
+  }, ".xls"), /*#__PURE__*/React.createElement("option", {
+    value: "csv"
+  }, ".csv"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-gray-500 mb-1"
+  }, "Estilo"), /*#__PURE__*/React.createElement("select", {
+    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+    value: exportStylePreset,
+    onChange: e => setExportStylePreset(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "corporativo"
+  }, "Corporativo"), /*#__PURE__*/React.createElement("option", {
+    value: "neutro"
+  }, "Neutro"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-xs text-gray-700"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: exportIncludeFormulas,
+    onChange: e => setExportIncludeFormulas(e.target.checked)
+  }), "F\xF3rmulas Excel")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-xs text-gray-700"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: exportIncludeChartData,
+    onChange: e => setExportIncludeChartData(e.target.checked)
+  }), "Datos para gr\xE1ficos")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-xs text-gray-700"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: exportProtectSheet,
+    onChange: e => setExportProtectSheet(e.target.checked)
+  }), "Proteger hoja")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-gray-500 mb-1"
+  }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+    value: exportPassword,
+    onChange: e => setExportPassword(e.target.value),
+    disabled: !exportProtectSheet,
+    placeholder: "Opcional"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-gray-100 rounded overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `h-full ${exportError ? "bg-rose-500" : "bg-emerald-500"}`,
+    style: {
+      width: `${Math.max(0, Math.min(100, exportProgress))}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: exportError ? "text-rose-600" : "text-gray-600"
+  }, exportError || exportStatus || "Listo para exportar"), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-500"
+  }, Math.round(exportProgress), "%"))), exportLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-36 overflow-auto"
+  }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
+    key: `${entry.ts}-${idx}`,
+    className: `text-[11px] ${entry.level === "error" ? "text-rose-700" : entry.level === "warning" ? "text-amber-700" : "text-slate-600"}`
+  }, entry.ts.slice(11, 19), " \xB7 ", entry.message)))), /*#__PURE__*/React.createElement("div", {
     className: "mb-6 space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-3"
