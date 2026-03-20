@@ -7,7 +7,7 @@ const loadSchedulingCore = () => {
   const raw = fs.readFileSync(appPath, "utf8");
   const cutoff = raw.indexOf("const App = () => {");
   const core = cutoff >= 0 ? raw.slice(0, cutoff) : raw;
-  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS };`;
+  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows };`;
   const sandbox = {
     console,
     globalThis: {},
@@ -98,5 +98,66 @@ describe("Registro formal de equidad distributiva", () => {
     expect(audit.summary).toHaveProperty("forcedDeviation");
     expect(audit.summary.forcedDeviation).toBeGreaterThan(0);
     expect(audit.equityAlerts.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Integridad de exportación", () => {
+  test("valida datos y detecta códigos de turno inválidos", () => {
+    const {
+      validateExportPayload,
+      generateSchedule,
+      EMPLOYEES,
+      DEFAULT_VACATION_PLAN_2026,
+    } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const okResult = validateExportPayload({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+    });
+    expect(okResult.ok).toBe(true);
+    expect(okResult.errors).toHaveLength(0);
+
+    const brokenSchedule = JSON.parse(JSON.stringify(schedule));
+    brokenSchedule[EMPLOYEES[0].id][days[0].id] = "INVALIDO";
+    const brokenResult = validateExportPayload({
+      employees: EMPLOYEES,
+      days,
+      schedule: brokenSchedule,
+    });
+    expect(brokenResult.ok).toBe(false);
+    expect(brokenResult.errors.length).toBeGreaterThan(0);
+  });
+
+  test("construye matriz exportable con columnas de fórmulas", () => {
+    const { buildExportRows, generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const table = buildExportRows({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+      includeFormulas: true,
+    });
+    expect(table.headers[0]).toBe("Empleado");
+    expect(table.rows).toHaveLength(EMPLOYEES.length);
+    expect(table.headers.slice(-2)).toEqual(["Días O30 (fórmula)", "Horas estimadas (fórmula)"]);
+    expect(table.rows[0].length).toBe(table.headers.length);
+  });
+
+  test("genera dataset de gráficos con una fila por integrante", () => {
+    const { buildChartDataRows, EMPLOYEES } = loadSchedulingCore();
+    const rows = buildChartDataRows({
+      employees: EMPLOYEES,
+      intensiveWeeksByEmp: {
+        [EMPLOYEES[0].id]: 6,
+        [EMPLOYEES[1].id]: 5,
+      },
+      forcedOfficeDetails: [
+        { dayId: "2026-06-04", empId: EMPLOYEES[0].id, reason: "Prueba" },
+        { dayId: "2026-06-05", empId: EMPLOYEES[0].id, reason: "Prueba" },
+      ],
+    });
+    expect(rows[0]).toEqual(["Integrante", "Semanas intensivas", "Días forzados"]);
+    expect(rows).toHaveLength(EMPLOYEES.length + 1);
   });
 });
