@@ -1595,7 +1595,7 @@ const generateSchedule = (year, vacationPlan) => {
       const weekDays = finalWeeksMap[wi];
       if (!weekDays || !weekDays.every(day => isIntensivePeriod(day.id, emp.id))) return false;
       if (emp.name === "Kike" && weekDays.some(day => criticalKikeSet.has(day.id))) return false;
-      if (weekDays.some(day => schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O42")) return false;
+      if (weekDays.some(day => schedule[emp.id][day.id] === "V")) return false;
       return true;
     };
     const enforceMinimumAfterCoverage = minimumTarget => {
@@ -1635,7 +1635,181 @@ const generateSchedule = (year, vacationPlan) => {
         }
       }
     };
+    const improveUnderTargetWithWeekSwaps = (minimumTarget, priorityNames = []) => {
+      recalcIntensiveWeeks();
+      const weekIndexes = Object.keys(finalWeeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+      let moved = true;
+      let loops = 0;
+      while (moved && loops < 120) {
+        moved = false;
+        loops += 1;
+        const pending = EMPLOYEES.filter(emp => finalIntensiveWeeks[emp.id] < minimumTarget).sort((a, b) => {
+          const aPriority = priorityNames.includes(a.name) ? 0 : 1;
+          const bPriority = priorityNames.includes(b.name) ? 0 : 1;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          return finalIntensiveWeeks[a.id] - finalIntensiveWeeks[b.id];
+        });
+        if (pending.length === 0) break;
+        for (const emp of pending) {
+          if (finalIntensiveWeeks[emp.id] >= minimumTarget) continue;
+          for (const wi of weekIndexes) {
+            const weekDays = finalWeeksMap[wi];
+            if (!weekDays || weekDays.length === 0) continue;
+            if (vacWeeksByEmp[emp.id].has(wi)) continue;
+            if (!weekDays.every(day => isIntensivePeriod(day.id, emp.id))) continue;
+            if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) continue;
+            if (emp.name === "Luis" && forbiddenWeekLuis === wi) continue;
+            if (emp.name === "Kike" && weekDays.some(day => criticalKikeSet.has(day.id))) continue;
+            if (weekDays.every(day => schedule[emp.id][day.id] === "O30")) continue;
+            if (weekDays.some(day => schedule[emp.id][day.id] === "V")) continue;
+            const snapshot = {};
+            EMPLOYEES.forEach(member => {
+              snapshot[member.id] = {};
+              weekDays.forEach(day => {
+                snapshot[member.id][day.id] = schedule[member.id][day.id];
+              });
+            });
+            const restore = () => {
+              EMPLOYEES.forEach(member => {
+                weekDays.forEach(day => {
+                  schedule[member.id][day.id] = snapshot[member.id][day.id];
+                });
+              });
+            };
+            let canMove = true;
+            for (const day of weekDays) {
+              const currentType = schedule[emp.id][day.id];
+              if (currentType === "O42") {
+                const candidates = EMPLOYEES.filter(sub => {
+                  if (sub.id === emp.id) return false;
+                  if (schedule[sub.id][day.id] !== "O40") return false;
+                  if (vacWeeksByEmp[sub.id].has(wi)) return false;
+                  return true;
+                }).sort((a, b) => {
+                  const aProtected = finalIntensiveWeeks[a.id] <= minimumTarget;
+                  const bProtected = finalIntensiveWeeks[b.id] <= minimumTarget;
+                  if (aProtected && !bProtected) return 1;
+                  if (!aProtected && bProtected) return -1;
+                  return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
+                });
+                const sub = candidates[0];
+                if (!sub) {
+                  canMove = false;
+                  break;
+                }
+                schedule[sub.id][day.id] = "O42";
+                schedule[emp.id][day.id] = "O40";
+              }
+            }
+            if (!canMove) {
+              restore();
+              continue;
+            }
+            if (!weekDays.every(day => schedule[emp.id][day.id] === "O40")) {
+              restore();
+              continue;
+            }
+            let canApply = weekDays.every(day => {
+              const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+              const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
+              return projected <= 3;
+            });
+            if (!canApply) {
+              const donors = getOccupants(wi).filter(donor => {
+                if (donor.id === emp.id) return false;
+                if (priorityNames.includes(donor.name) && finalIntensiveWeeks[donor.id] <= minimumTarget) return false;
+                return finalIntensiveWeeks[donor.id] > finalIntensiveWeeks[emp.id];
+              }).sort((a, b) => {
+                const aAboveMin = finalIntensiveWeeks[a.id] > minimumTarget;
+                const bAboveMin = finalIntensiveWeeks[b.id] > minimumTarget;
+                if (aAboveMin && !bAboveMin) return -1;
+                if (!aAboveMin && bAboveMin) return 1;
+                return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
+              });
+              for (const donor of donors) {
+                weekDays.forEach(day => {
+                  if (schedule[donor.id][day.id] !== "V") schedule[donor.id][day.id] = "O40";
+                });
+                const canApplyWithDonor = weekDays.every(day => {
+                  const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+                  const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
+                  return projected <= 3;
+                });
+                if (canApplyWithDonor) {
+                  canApply = true;
+                  break;
+                }
+                weekDays.forEach(day => {
+                  schedule[donor.id][day.id] = snapshot[donor.id][day.id];
+                });
+              }
+            }
+            if (!canApply) {
+              restore();
+              continue;
+            }
+            const coverageOk = preservesOfficeCoverage(emp.id, weekDays, schedule);
+            if (!coverageOk && countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS + 3) {
+              restore();
+              continue;
+            }
+            weekDays.forEach(day => {
+              schedule[emp.id][day.id] = "O30";
+            });
+            recalcIntensiveWeeks();
+            moved = true;
+            break;
+          }
+          if (moved) break;
+        }
+      }
+    };
+    const boostEmployeeIntensiveWeeks = (employeeName, targetWeeks) => {
+      const emp = EMPLOYEES.find(item => item.name === employeeName);
+      if (!emp) return;
+      const weekIndexes = Object.keys(finalWeeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+      let guard = 0;
+      while ((finalIntensiveWeeks[emp.id] || 0) < targetWeeks && guard < 40) {
+        guard += 1;
+        let assigned = false;
+        for (const wi of weekIndexes) {
+          const weekDays = finalWeeksMap[wi];
+          if (!weekDays || weekDays.length === 0) continue;
+          if (vacWeeksByEmp[emp.id].has(wi)) continue;
+          if (!weekDays.every(day => isIntensivePeriod(day.id, emp.id))) continue;
+          if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) continue;
+          if (emp.name === "Luis" && forbiddenWeekLuis === wi) continue;
+          if (emp.name === "Kike" && weekDays.some(day => criticalKikeSet.has(day.id))) continue;
+          if (weekDays.every(day => schedule[emp.id][day.id] === "O30")) continue;
+          if (weekDays.some(day => schedule[emp.id][day.id] === "V")) continue;
+          const before = {};
+          weekDays.forEach(day => {
+            before[day.id] = schedule[emp.id][day.id];
+            schedule[emp.id][day.id] = "O30";
+          });
+          const canApply = weekDays.every(day => {
+            const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+            if (o30Count > 3) return false;
+            if (day.weekdayLetter === "V") return true;
+            return EMPLOYEES.some(e => e.id !== emp.id && schedule[e.id][day.id] === "O42");
+          });
+          if (!canApply) {
+            weekDays.forEach(day => {
+              schedule[emp.id][day.id] = before[day.id];
+            });
+            continue;
+          }
+          recalcIntensiveWeeks();
+          assigned = true;
+          break;
+        }
+        if (!assigned) break;
+      }
+    };
     enforceMinimumAfterCoverage(6);
+    improveUnderTargetWithWeekSwaps(6, ["Luis", "Ariel"]);
+    boostEmployeeIntensiveWeeks("Luis", 6);
+    boostEmployeeIntensiveWeeks("Ariel", 6);
     recalcIntensiveWeeks();
   }
   const strictAudit = enforceStrictWeeklyRules({

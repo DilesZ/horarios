@@ -161,3 +161,9 @@ Actualización de ventana intensiva y test de regresión duro
 - Se añade un test de regresión duro que falla mostrando detalle de:
 - Fecha + integrante si aparece O30 fuera del rango 15/06–18/09.
 - Fecha + listado de integrantes si un día supera 3 personas en O30.
+
+Mejora de reparto para perfiles bajos (Luis/Ariel)
+
+- Se refuerza la fase final de reequilibrio para intentar recuperar semanas intensivas en perfiles por debajo del objetivo, priorizando Luis y Ariel.
+- Se permite convertir semanas candidatas en O30 cuando cumplen ventana 15/06–18/09 y tope diario de 3 intensivas.
+- Se incorpora una validación automática de mejora mínima para evitar volver al escenario con Luis por debajo de 5 semanas.

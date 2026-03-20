@@ -133,6 +133,27 @@ describe("Registro formal de equidad distributiva", () => {
     assertHardRegressionForIntensivas("src/app.jsx");
   });
 
+  test("mejora mínima de reparto para perfiles históricamente bajos", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore("src/app.jsx");
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const weeksMap = {};
+    days.forEach((day) => {
+      weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+      weeksMap[day.weekIndex].push(day);
+    });
+    const getIntensiveWeeks = (name) => {
+      const emp = EMPLOYEES.find((e) => e.name === name);
+      let count = 0;
+      Object.keys(weeksMap).forEach((wi) => {
+        const weekDays = weeksMap[wi];
+        if (weekDays.every((day) => schedule[emp.id][day.id] === "O30")) count += 1;
+      });
+      return count;
+    };
+    expect(getIntensiveWeeks("Luis")).toBeGreaterThanOrEqual(5);
+    expect(getIntensiveWeeks("Ariel")).toBeGreaterThanOrEqual(5);
+  });
+
   test("no permite intensiva en días sueltos: O30 solo en semana operativa completa", () => {
     const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
     const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
