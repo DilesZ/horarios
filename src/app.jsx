@@ -343,6 +343,14 @@ const generateSchedule = (year, vacationPlan) => {
     }
   });
 
+  const getLateGroupForWeek = (weekIndex) => {
+    const assignment = weekAssignments[weekIndex];
+    if (assignment === "A_LATE") return "A";
+    if (assignment === "B_LATE") return "B";
+    const defaultIsALate = SHIFT_BASE_A_18H ? weekIndex % 2 === 0 : weekIndex % 2 !== 0;
+    return defaultIsALate ? "A" : "B";
+  };
+
   EMPLOYEES.forEach((emp) => {
     schedule[emp.id] = {};
     days.forEach((day) => {
@@ -381,8 +389,7 @@ const generateSchedule = (year, vacationPlan) => {
   Object.keys(weeks).forEach((wiStr) => {
     const wi = parseInt(wiStr, 10);
     const weekDays = weeks[wi];
-    const lateGroupA = SHIFT_BASE_A_18H ? wi % 2 === 0 : wi % 2 !== 0;
-    const lateGroup = lateGroupA ? "A" : "B";
+    const lateGroup = getLateGroupForWeek(wi);
 
     const lateAvailable = EMPLOYEES.filter(
       (emp) => emp.group === lateGroup && !vacWeeksByEmp[emp.id].has(wi)
@@ -475,10 +482,39 @@ const generateSchedule = (year, vacationPlan) => {
           if (current === "V") return false;
           return emp.group === lateGroup;
         }).sort((a, b) => a.id - b.id);
-        const pick =
-          lateCandidates[0] ||
-          EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
+        const pick = lateCandidates[0] || EMPLOYEES.find((emp) => schedule[emp.id][day.id] !== "V");
         if (pick) {
+          schedule[pick.id][day.id] = "O42";
+        }
+      }
+
+      const hasO42InOffice = EMPLOYEES.some((emp) => {
+        if (schedule[emp.id][day.id] !== "O42") return false;
+        const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+        return officeDays.includes(day.weekdayLetter);
+      });
+
+      if (!hasO42InOffice) {
+        const candidates = EMPLOYEES.filter((emp) => {
+          if (schedule[emp.id][day.id] === "V") return false;
+          const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+          return officeDays.includes(day.weekdayLetter);
+        }).sort((a, b) => {
+          const aInLateGroup = a.group === lateGroup;
+          const bInLateGroup = b.group === lateGroup;
+          if (aInLateGroup && !bInLateGroup) return -1;
+          if (!aInLateGroup && bInLateGroup) return 1;
+          const typeA = schedule[a.id][day.id];
+          const typeB = schedule[b.id][day.id];
+          if (typeA === "O40" && typeB !== "O40") return -1;
+          if (typeB === "O40" && typeA !== "O40") return 1;
+          return a.id - b.id;
+        });
+        const pick = candidates[0];
+        if (pick) {
+          if (schedule[pick.id][day.id] === "O30") {
+            intensiveWeeksByEmp[pick.id] = Math.max(0, (intensiveWeeksByEmp[pick.id] || 0) - 1);
+          }
           schedule[pick.id][day.id] = "O42";
         }
       }
@@ -1001,8 +1037,7 @@ const generateSchedule = (year, vacationPlan) => {
       const hasO42 = EMPLOYEES.some((emp) => schedule[emp.id][day.id] === "O42");
       if (!hasO42) {
           // Restore O42 using the correct group for the week
-          const lateGroupA = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-          const lateGroup = lateGroupA ? "A" : "B";
+          const lateGroup = getLateGroupForWeek(day.weekIndex);
           
           const candidates = EMPLOYEES.filter(
               (emp) => emp.group === lateGroup && schedule[emp.id][day.id] !== "V"
@@ -1021,6 +1056,38 @@ const generateSchedule = (year, vacationPlan) => {
               if (schedule[pick.id][day.id] === "O30") finalIntensiveWeeks[pick.id]--;
               schedule[pick.id][day.id] = "O42";
           }
+      }
+
+      const hasO42InOffice = EMPLOYEES.some((emp) => {
+        if (schedule[emp.id][day.id] !== "O42") return false;
+        const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+        return officeDays.includes(day.weekdayLetter);
+      });
+
+      if (!hasO42InOffice) {
+        const lateGroup = getLateGroupForWeek(day.weekIndex);
+        const candidates = EMPLOYEES.filter((emp) => {
+          if (schedule[emp.id][day.id] === "V") return false;
+          const officeDays = emp.officeDays.split(",").map((d) => d.trim());
+          return officeDays.includes(day.weekdayLetter);
+        }).sort((a, b) => {
+          const aInLateGroup = a.group === lateGroup;
+          const bInLateGroup = b.group === lateGroup;
+          if (aInLateGroup && !bInLateGroup) return -1;
+          if (!aInLateGroup && bInLateGroup) return 1;
+          const typeA = schedule[a.id][day.id];
+          const typeB = schedule[b.id][day.id];
+          if (typeA === "O40" && typeB !== "O40") return -1;
+          if (typeB === "O40" && typeA !== "O40") return 1;
+          return finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id];
+        });
+        const pick = candidates[0];
+        if (pick) {
+          if (schedule[pick.id][day.id] === "O30") {
+            finalIntensiveWeeks[pick.id] = Math.max(0, (finalIntensiveWeeks[pick.id] || 0) - 1);
+          }
+          schedule[pick.id][day.id] = "O42";
+        }
       }
     });
   }
@@ -1476,6 +1543,7 @@ const App = () => {
       let present = 0,
         vacation = 0,
         shift18hCount = 0,
+        shift18hOfficeCount = 0,
         intensiveCount = 0;
       let group1HasOffice = false,
         group2HasOffice = false;
@@ -1493,6 +1561,7 @@ const App = () => {
         if (type === "O42") shift18hCount++;
         const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
         const isInOffice = daysOffice.includes(day.weekdayLetter);
+        if (type === "O42" && isInOffice) shift18hOfficeCount++;
         const hasFullSchedule = day.weekdayLetter === "V" ? (type === "O40") : (type === "O40" || type === "O42");
 
         if (isInOffice && hasFullSchedule) {
@@ -1509,6 +1578,27 @@ const App = () => {
 
       // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
       if (day.weekdayLetter !== "V") {
+        if (shift18hOfficeCount < 1) {
+          const o42Candidates = EMPLOYEES.filter((emp) => {
+            if (schedule[emp.id][day.id] !== "O42") return false;
+            const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+            return !daysOffice.includes(day.weekdayLetter);
+          });
+          if (o42Candidates.length > 0) {
+            o42Candidates.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
+            const candidate = o42Candidates[0];
+            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+            forcedOfficeSet[day.id].add(candidate.id);
+            forcedOfficeDetails.push({
+              dayId: day.id,
+              empId: candidate.id,
+              reason: "Cobertura 18h presencial (17:00-18:00)",
+            });
+            tempForcedCount[candidate.id]++;
+            shift18hOfficeCount = 1;
+          }
+        }
+
         if (!group1HasOffice && group2Covering.length === 0) {
           const candidate = getBestCandidate(GROUP1, day);
           if (candidate) {
@@ -1568,7 +1658,7 @@ const App = () => {
           }
         }
       }
-      return { dayId: day.id, present, vacation, shift18hCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
+      return { dayId: day.id, present, vacation, shift18hCount, shift18hOfficeCount, intensiveCount, group1HasOffice, group2HasOffice, group1Covering, group2Covering };
     });
     const alerts = [];
     dailyCoverage.forEach((d) => {
@@ -1588,13 +1678,13 @@ const App = () => {
         });
       }
 
-      if (need18h && d.shift18hCount < 1) {
+      if (need18h && d.shift18hOfficeCount < 1) {
         reasons.push({
           category: "turno18h",
           severity: "critical",
-          title: "Sin cobertura de tarde (18h)",
-          detail: `Nadie está asignado al turno O42 (hasta las 18:00) en ${WEEKDAY_FULL[day.weekdayLetter]}.`,
-          context: "Se requiere al menos 1 persona con turno O42 de lunes a jueves.",
+          title: "Sin cobertura presencial de tarde (17h-18h)",
+          detail: `No hay nadie en oficina cubriendo de 17:00 a 18:00 en ${WEEKDAY_FULL[day.weekdayLetter]}.`,
+          context: d.shift18hCount < 1 ? "No hay ningún turno O42 asignado." : "Hay turno O42 asignado, pero en teletrabajo.",
           icon: "clock"
         });
       }
