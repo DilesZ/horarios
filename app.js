@@ -1954,6 +1954,11 @@ const App = () => {
     });
   };
   const filteredEmployees = selectedEmp === "all" ? EMPLOYEES : EMPLOYEES.filter(e => e.id === parseInt(selectedEmp));
+  if (!isLoggedIn) {
+    return /*#__PURE__*/React.createElement(LoginForm, {
+      onLogin: handleLogin
+    });
+  }
   return /*#__PURE__*/React.createElement("div", {
     className: "min-h-screen bg-white p-6 text-brand-dark"
   }, /*#__PURE__*/React.createElement(WeekDetailModal, _extends({}, modalData, {
@@ -2020,7 +2025,10 @@ const App = () => {
   })), "Exportar Excel"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPlanning(generateSchedule(year, vacationPlan)),
     className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
-  }, "Resetear Plan"))), /*#__PURE__*/React.createElement("div", {
+  }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
+    onClick: handleLogout,
+    className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
+  }, "Cerrar Sesi\xF3n"))), /*#__PURE__*/React.createElement("div", {
     className: "mb-6 space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-3"
