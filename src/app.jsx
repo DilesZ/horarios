@@ -1467,6 +1467,59 @@ const generateSchedule = (year, vacationPlan) => {
       }
     });
 
+    const canGuaranteeAfterCoverage = (emp, wi) => {
+      if (vacWeeksByEmp[emp.id].has(wi)) return false;
+      if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
+      if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+      const weekDays = finalWeeksMap[wi];
+      if (emp.name === "Kike" && weekDays.some((day) => criticalKikeSet.has(day.id))) return false;
+      if (weekDays.some((day) => schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O42")) return false;
+      return true;
+    };
+
+    const enforceMinimumAfterCoverage = (minimumTarget) => {
+      recalcIntensiveWeeks();
+      let moved = true;
+      let loops = 0;
+      const weekIndexes = Object.keys(finalWeeksMap).map((k) => parseInt(k, 10)).sort((a, b) => a - b);
+      while (moved && loops < 120) {
+        moved = false;
+        loops += 1;
+        const pending = EMPLOYEES
+          .filter((emp) => finalIntensiveWeeks[emp.id] < minimumTarget)
+          .sort((a, b) => finalIntensiveWeeks[a.id] - finalIntensiveWeeks[b.id]);
+        if (pending.length === 0) break;
+
+        for (const emp of pending) {
+          if (finalIntensiveWeeks[emp.id] >= minimumTarget) continue;
+          for (const wi of weekIndexes) {
+            if (!canGuaranteeAfterCoverage(emp, wi)) continue;
+            const weekDays = finalWeeksMap[wi];
+            if (weekDays.every((day) => schedule[emp.id][day.id] === "O30")) continue;
+
+            const canApply = weekDays.every((day) => {
+              const o30Count = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
+              const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
+              if (projected > 3) return false;
+              if (day.weekdayLetter === "V") return true;
+              const o42Exists = EMPLOYEES.some((e) => e.id !== emp.id && schedule[e.id][day.id] === "O42");
+              return o42Exists;
+            });
+            if (!canApply) continue;
+
+            weekDays.forEach((day) => {
+              schedule[emp.id][day.id] = "O30";
+            });
+            recalcIntensiveWeeks();
+            moved = true;
+            break;
+          }
+          if (moved) break;
+        }
+      }
+    };
+
+    enforceMinimumAfterCoverage(6);
     recalcIntensiveWeeks();
   }
 
@@ -1591,6 +1644,7 @@ const App = () => {
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
   const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
+  const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
 
    useEffect(() => {
      try {
@@ -2624,8 +2678,18 @@ const App = () => {
             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-gray-800">Calendario de vacaciones</h4>
-                <span className="text-[11px] text-gray-500">Click en un día para alternar vacaciones</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500">Click en un día para alternar vacaciones</span>
+                  <button
+                    type="button"
+                    onClick={() => setVacationCalendarExpanded((prev) => !prev)}
+                    className="px-3 py-1 rounded-md text-xs font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors"
+                  >
+                    {vacationCalendarExpanded ? "Contraer" : "Expandir"}
+                  </button>
+                </div>
               </div>
+              {vacationCalendarExpanded && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {daysByMonth.map(([monthName, monthDays]) => (
                   <div key={monthName}>
@@ -2653,6 +2717,7 @@ const App = () => {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
         )}
