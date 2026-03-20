@@ -657,6 +657,14 @@ const getExportErrorMessage = error => {
   return "Error inesperado durante la exportación.";
 };
 const generateSchedule = (year, vacationPlan) => {
+  const isIntensivePeriod = dayId => {
+    const parts = dayId.split("-");
+    const m = parseInt(parts[1], 10);
+    const d = parseInt(parts[2], 10);
+    if (m === 6) return d >= 15;
+    if (m === 9) return d <= 15;
+    return m === 7 || m === 8;
+  };
   const days = buildDaysRange(year);
   const schedule = {};
   const vacWeeksByEmp = {};
@@ -903,18 +911,21 @@ const generateSchedule = (year, vacationPlan) => {
       reserve = reserveCandidates[0] || null;
     }
     const eligibleIntensive = reserve ? allEligible.filter(emp => emp.id !== reserve.id) : allEligible;
+    const isEligibleIntensiveWeek = weekDays.every(day => isIntensivePeriod(day.id));
     const selected = [];
-    for (const emp of eligibleIntensive) {
-      if (intensiveWeeksByEmp[emp.id] >= 6) continue;
-      if (selected.length >= 3) continue;
-      if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
-        selected.push(emp);
-        weekDays.forEach(day => {
-          if (schedule[emp.id][day.id] !== "V") {
-            schedule[emp.id][day.id] = "O30";
-          }
-        });
-        intensiveWeeksByEmp[emp.id] += 1;
+    if (isEligibleIntensiveWeek) {
+      for (const emp of eligibleIntensive) {
+        if (intensiveWeeksByEmp[emp.id] >= 6) continue;
+        if (selected.length >= 3) continue;
+        if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
+          selected.push(emp);
+          weekDays.forEach(day => {
+            if (schedule[emp.id][day.id] !== "V") {
+              schedule[emp.id][day.id] = "O30";
+            }
+          });
+          intensiveWeeksByEmp[emp.id] += 1;
+        }
       }
     }
     if (anchor) {
