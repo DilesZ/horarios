@@ -1271,6 +1271,13 @@ const generateSchedule = (year, vacationPlan) => {
               assigned = true;
               break;
             }
+            const canAssignWithLimit = daysInWeek.every(day => {
+              if (schedule[emp.id][day.id] === "V") return false;
+              const dailyO30 = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
+              const projectedO30 = schedule[emp.id][day.id] === "O30" ? dailyO30 : dailyO30 + 1;
+              return projectedO30 <= 3;
+            });
+            if (!canAssignWithLimit) continue;
             daysInWeek.forEach(day => {
               if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
             });
@@ -1354,30 +1361,6 @@ const generateSchedule = (year, vacationPlan) => {
       }
     });
     recalcIntensiveWeeks();
-    const minimumIntensiveTarget = 6;
-    const weekIndexes = Object.keys(finalWeeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
-    EMPLOYEES.forEach(emp => {
-      while (finalIntensiveWeeks[emp.id] < minimumIntensiveTarget) {
-        let improved = false;
-        for (const wi of weekIndexes) {
-          if (finalIntensiveWeeks[emp.id] >= minimumIntensiveTarget) break;
-          const daysInWeek = finalWeeksMap[wi];
-          if (daysInWeek.some(day => schedule[emp.id][day.id] === "V")) continue;
-          if (daysInWeek.every(day => schedule[emp.id][day.id] === "O30")) continue;
-          if (daysInWeek.some(day => schedule[emp.id][day.id] === "O42")) continue;
-          if (emp.name === "Enrique" && daysInWeek.some(day => day.id === "2026-06-19")) continue;
-          if (emp.name === "Luis" && daysInWeek.some(day => day.id === "2026-07-24")) continue;
-          if (emp.name === "Kike" && daysInWeek.some(day => criticalKikeSet.has(day.id))) continue;
-          daysInWeek.forEach(day => {
-            schedule[emp.id][day.id] = "O30";
-          });
-          recalcIntensiveWeeks();
-          improved = true;
-          break;
-        }
-        if (!improved) break;
-      }
-    });
   }
   return {
     schedule,
@@ -1516,8 +1499,8 @@ const App = () => {
   const [exportStatus, setExportStatus] = useState("");
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
-  const [exportPanelExpanded, setExportPanelExpanded] = useState(true);
-  const [equityPanelExpanded, setEquityPanelExpanded] = useState(true);
+  const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
+  const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
   useEffect(() => {
     try {
       window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
@@ -2692,16 +2675,16 @@ const App = () => {
     className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
   }, "Cerrar Sesi\xF3n"))), /*#__PURE__*/React.createElement("div", {
     className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setExportPanelExpanded(prev => !prev),
-    className: "w-full flex items-center justify-between text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-gray-800"
   }, "Exportaci\xF3n Excel y validaciones"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-gray-500"
-  }, exportPanelExpanded ? "Ocultar detalles" : "Mostrar detalles")), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-semibold text-brand-blue"
+  }, exportPanelExpanded ? "Detalles visibles" : "Panel contraído")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setExportPanelExpanded(prev => !prev),
+    className: "shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
   }, exportPanelExpanded ? "Contraer" : "Expandir")), exportPanelExpanded && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-6 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -2879,15 +2862,15 @@ const App = () => {
     className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setEquityPanelExpanded(prev => !prev),
-    className: "text-left"
-  }, /*#__PURE__*/React.createElement("h3", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-gray-800"
   }, "Detalles de equidad y validaciones"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-500"
-  }, equityPanelExpanded ? "Contraer detalles" : "Expandir detalles")), /*#__PURE__*/React.createElement("div", {
+  }, equityPanelExpanded ? "Detalles visibles" : "Panel contraído")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setEquityPanelExpanded(prev => !prev),
+    className: "shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
+  }, equityPanelExpanded ? "Contraer" : "Expandir"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-500"
   }, "Objetivo m\xEDnimo: ", stats.equityAudit.summary.minTarget, " \xB7 Ideal: ", stats.equityAudit.summary.idealTarget)), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"

@@ -1368,6 +1368,14 @@ const generateSchedule = (year, vacationPlan) => {
               break;
             }
 
+            const canAssignWithLimit = daysInWeek.every((day) => {
+              if (schedule[emp.id][day.id] === "V") return false;
+              const dailyO30 = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
+              const projectedO30 = schedule[emp.id][day.id] === "O30" ? dailyO30 : dailyO30 + 1;
+              return projectedO30 <= 3;
+            });
+            if (!canAssignWithLimit) continue;
+
             daysInWeek.forEach((day) => {
               if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
             });
@@ -1460,30 +1468,6 @@ const generateSchedule = (year, vacationPlan) => {
     });
 
     recalcIntensiveWeeks();
-    const minimumIntensiveTarget = 6;
-    const weekIndexes = Object.keys(finalWeeksMap).map((k) => parseInt(k, 10)).sort((a, b) => a - b);
-    EMPLOYEES.forEach((emp) => {
-      while (finalIntensiveWeeks[emp.id] < minimumIntensiveTarget) {
-        let improved = false;
-        for (const wi of weekIndexes) {
-          if (finalIntensiveWeeks[emp.id] >= minimumIntensiveTarget) break;
-          const daysInWeek = finalWeeksMap[wi];
-          if (daysInWeek.some((day) => schedule[emp.id][day.id] === "V")) continue;
-          if (daysInWeek.every((day) => schedule[emp.id][day.id] === "O30")) continue;
-          if (daysInWeek.some((day) => schedule[emp.id][day.id] === "O42")) continue;
-          if (emp.name === "Enrique" && daysInWeek.some((day) => day.id === "2026-06-19")) continue;
-          if (emp.name === "Luis" && daysInWeek.some((day) => day.id === "2026-07-24")) continue;
-          if (emp.name === "Kike" && daysInWeek.some((day) => criticalKikeSet.has(day.id))) continue;
-          daysInWeek.forEach((day) => {
-            schedule[emp.id][day.id] = "O30";
-          });
-          recalcIntensiveWeeks();
-          improved = true;
-          break;
-        }
-        if (!improved) break;
-      }
-    });
   }
 
   return { schedule, days };
@@ -1605,8 +1589,8 @@ const App = () => {
   const [exportStatus, setExportStatus] = useState("");
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
-  const [exportPanelExpanded, setExportPanelExpanded] = useState(true);
-  const [equityPanelExpanded, setEquityPanelExpanded] = useState(true);
+  const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
+  const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
 
    useEffect(() => {
      try {
@@ -2472,17 +2456,19 @@ const App = () => {
       </header>
 
       <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
-        <button
-          type="button"
-          onClick={() => setExportPanelExpanded((prev) => !prev)}
-          className="w-full flex items-center justify-between text-left"
-        >
+        <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-gray-800">Exportación Excel y validaciones</h3>
-            <p className="text-xs text-gray-500">{exportPanelExpanded ? "Ocultar detalles" : "Mostrar detalles"}</p>
+            <p className="text-xs text-gray-500">{exportPanelExpanded ? "Detalles visibles" : "Panel contraído"}</p>
           </div>
-          <span className="text-xs font-semibold text-brand-blue">{exportPanelExpanded ? "Contraer" : "Expandir"}</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setExportPanelExpanded((prev) => !prev)}
+            className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
+          >
+            {exportPanelExpanded ? "Contraer" : "Expandir"}
+          </button>
+        </div>
         {exportPanelExpanded && (
           <>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
@@ -2674,13 +2660,16 @@ const App = () => {
 
       <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-bold text-gray-800">Detalles de equidad y validaciones</h3>
+            <div className="text-xs text-gray-500">{equityPanelExpanded ? "Detalles visibles" : "Panel contraído"}</div>
+          </div>
           <button
             type="button"
             onClick={() => setEquityPanelExpanded((prev) => !prev)}
-            className="text-left"
+            className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
           >
-            <h3 className="text-sm font-bold text-gray-800">Detalles de equidad y validaciones</h3>
-            <div className="text-xs text-gray-500">{equityPanelExpanded ? "Contraer detalles" : "Expandir detalles"}</div>
+            {equityPanelExpanded ? "Contraer" : "Expandir"}
           </button>
           <div className="text-xs text-gray-500">
             Objetivo mínimo: {stats.equityAudit.summary.minTarget} · Ideal: {stats.equityAudit.summary.idealTarget}
