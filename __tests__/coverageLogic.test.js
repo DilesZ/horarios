@@ -150,8 +150,8 @@ describe("Registro formal de equidad distributiva", () => {
       });
       return count;
     };
-    expect(getIntensiveWeeks("Luis")).toBeGreaterThanOrEqual(5);
-    expect(getIntensiveWeeks("Ariel")).toBeGreaterThanOrEqual(5);
+    expect(getIntensiveWeeks("Luis")).toBeGreaterThanOrEqual(6);
+    expect(getIntensiveWeeks("Ariel")).toBeGreaterThanOrEqual(6);
   });
 
   test("no permite intensiva en días sueltos: O30 solo en semana operativa completa", () => {

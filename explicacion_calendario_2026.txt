@@ -167,3 +167,4 @@ Mejora de reparto para perfiles bajos (Luis/Ariel)
 - Se refuerza la fase final de reequilibrio para intentar recuperar semanas intensivas en perfiles por debajo del objetivo, priorizando Luis y Ariel.
 - Se permite convertir semanas candidatas en O30 cuando cumplen ventana 15/06–18/09 y tope diario de 3 intensivas.
 - Se incorpora una validación automática de mejora mínima para evitar volver al escenario con Luis por debajo de 5 semanas.
+- Ajuste adicional: se fuerza la búsqueda de combinación válida para que Ariel alcance 6 semanas intensivas en la versión de interfaz principal.

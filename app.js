@@ -1818,6 +1818,127 @@ const generateSchedule = (year, vacationPlan) => {
     schedule,
     getLateGroupForWeek
   });
+  if (year === 2026) {
+    const weeksMap = buildWeeksMap(days);
+    const ariel = EMPLOYEES.find(emp => emp.name === "Ariel");
+    const luis = EMPLOYEES.find(emp => emp.name === "Luis");
+    const countWeeksByEmp = (currentSchedule, empId) => {
+      let count = 0;
+      Object.keys(weeksMap).forEach(wi => {
+        if (weeksMap[wi].every(day => currentSchedule[empId][day.id] === "O30")) count += 1;
+      });
+      return count;
+    };
+    const countWeeksMap = currentSchedule => {
+      const byEmp = {};
+      EMPLOYEES.forEach(emp => {
+        byEmp[emp.id] = countWeeksByEmp(currentSchedule, emp.id);
+      });
+      return byEmp;
+    };
+    const allO30InWindow = currentSchedule => {
+      return days.every(day => {
+        const inWindow = day.id >= "2026-06-15" && day.id <= "2026-09-18";
+        const dailyO30 = EMPLOYEES.filter(emp => currentSchedule[emp.id][day.id] === "O30");
+        if (dailyO30.length > 3) return false;
+        if (!inWindow && dailyO30.length > 0) return false;
+        return true;
+      });
+    };
+    const hasOfficeO42Coverage = currentSchedule => {
+      return days.filter(day => day.weekdayLetter !== "V").every(day => {
+        return EMPLOYEES.some(emp => {
+          if (currentSchedule[emp.id][day.id] !== "O42") return false;
+          const officeDays = emp.officeDays.split(",").map(d => d.trim());
+          return officeDays.includes(day.weekdayLetter);
+        });
+      });
+    };
+    if (ariel && luis) {
+      const currentCounts = countWeeksMap(strictAudit.schedule);
+      if ((currentCounts[ariel.id] || 0) < 6) {
+        const candidateWeeks = Object.keys(weeksMap).map(wi => parseInt(wi, 10)).sort((a, b) => a - b).filter(wi => {
+          const weekDays = weeksMap[wi];
+          if (!weekDays || weekDays.length === 0) return false;
+          if (!weekDays.every(day => day.id >= "2026-06-15" && day.id <= "2026-09-18")) return false;
+          if (weekDays.some(day => strictAudit.schedule[ariel.id][day.id] === "V")) return false;
+          if (weekDays.every(day => strictAudit.schedule[ariel.id][day.id] === "O30")) return false;
+          return true;
+        });
+        for (const wi of candidateWeeks) {
+          const weekDays = weeksMap[wi];
+          const trial = JSON.parse(JSON.stringify(strictAudit.schedule));
+          weekDays.forEach(day => {
+            trial[ariel.id][day.id] = "O30";
+          });
+          const trialCounts = countWeeksMap(trial);
+          weekDays.forEach(day => {
+            while (EMPLOYEES.filter(emp => trial[emp.id][day.id] === "O30").length > 3) {
+              const donorCandidates = EMPLOYEES.filter(emp => {
+                if (emp.id === ariel.id) return false;
+                if (trial[emp.id][day.id] !== "O30") return false;
+                if (emp.id === luis.id && (trialCounts[emp.id] || 0) <= 6) return false;
+                return true;
+              }).sort((a, b) => (trialCounts[b.id] || 0) - (trialCounts[a.id] || 0));
+              const donor = donorCandidates[0];
+              if (!donor) break;
+              trial[donor.id][day.id] = "O40";
+              trialCounts[donor.id] = countWeeksByEmp(trial, donor.id);
+            }
+          });
+          weekDays.filter(day => day.weekdayLetter !== "V").forEach(day => {
+            const hasOfficeO42 = EMPLOYEES.some(emp => {
+              if (trial[emp.id][day.id] !== "O42") return false;
+              const officeDays = emp.officeDays.split(",").map(d => d.trim());
+              return officeDays.includes(day.weekdayLetter);
+            });
+            if (hasOfficeO42) return;
+            const candidates = EMPLOYEES.filter(emp => {
+              if (emp.id === ariel.id) return false;
+              if (trial[emp.id][day.id] === "V") return false;
+              const officeDays = emp.officeDays.split(",").map(d => d.trim());
+              return officeDays.includes(day.weekdayLetter);
+            }).sort((a, b) => {
+              const aType = trial[a.id][day.id];
+              const bType = trial[b.id][day.id];
+              if (aType === "O40" && bType !== "O40") return -1;
+              if (bType === "O40" && aType !== "O40") return 1;
+              return (trialCounts[b.id] || 0) - (trialCounts[a.id] || 0);
+            });
+            const pick = candidates[0];
+            if (pick) {
+              weekDays.forEach(weekDay => {
+                if (trial[pick.id][weekDay.id] !== "V") trial[pick.id][weekDay.id] = "O42";
+              });
+              trialCounts[pick.id] = countWeeksByEmp(trial, pick.id);
+            }
+          });
+          const normalized = enforceStrictWeeklyRules({
+            employees: EMPLOYEES,
+            days,
+            schedule: trial,
+            getLateGroupForWeek
+          });
+          const normalizedCounts = countWeeksMap(normalized.schedule);
+          const validation = validateStrictWeeklyRules({
+            employees: EMPLOYEES,
+            days,
+            schedule: normalized.schedule
+          });
+          const noOneBelowFive = EMPLOYEES.every(emp => (normalizedCounts[emp.id] || 0) >= 5);
+          if (!validation.ok) continue;
+          if (!allO30InWindow(normalized.schedule)) continue;
+          if (!hasOfficeO42Coverage(normalized.schedule)) continue;
+          if (!noOneBelowFive) continue;
+          if ((normalizedCounts[ariel.id] || 0) < 6) continue;
+          strictAudit.schedule = normalized.schedule;
+          strictAudit.violations = validation.violations;
+          strictAudit.summary = validation.summary;
+          break;
+        }
+      }
+    }
+  }
   return {
     schedule: strictAudit.schedule,
     days,
