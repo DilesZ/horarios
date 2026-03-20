@@ -130,3 +130,12 @@ Mejoras de comodidad visual (segunda iteración)
 - Se añade resaltado visual de fila y columna activa al mover el cursor por la matriz de turnos.
 - Se refuerza el contraste de colores de turnos (30h/40h/42h/Vacaciones) con paleta más oscura.
 - Se añade una leyenda rápida sticky encima de la tabla principal para referencia constante.
+
+Mejoras de visualización y responsive (tercera iteración)
+
+- Se elimina la visualización de detalles de equidad en la interfaz (botón y panel), manteniendo sus cálculos internos para lógica y validaciones.
+- Se añade un selector de modo de visualización:
+  - Vista matriz (clásica).
+  - Vista calendario (4 meses, lunes a viernes), diseñada para evitar scroll lateral.
+- La vista calendario muestra cada mes en tarjetas responsivas y cada día incluye el estado por integrante en formato compacto.
+- Se mejora la adaptación móvil reduciendo padding general y priorizando bloques verticales en lugar de tablas anchas.

@@ -1765,9 +1765,8 @@ const App = () => {
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
-  const [equitySectionOpen, setEquitySectionOpen] = useState(false);
   const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
-  const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState("matrix");
   const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
   useEffect(() => {
     try {
@@ -2893,6 +2892,21 @@ const App = () => {
     return EMPLOYEES.filter(emp => emp.name.toLowerCase().includes(query));
   }, [employeeSearch]);
   const filteredEmployees = selectedEmp === "all" ? quickFilteredEmployees : quickFilteredEmployees.filter(e => e.id === parseInt(selectedEmp, 10));
+  const weekdaysCalendar = ["L", "M", "X", "J", "V"];
+  const calendarMonths = useMemo(() => {
+    return daysByMonth.map(([monthName, monthDays]) => {
+      const weeksMap = {};
+      monthDays.forEach(day => {
+        weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
+        weeksMap[day.weekIndex][day.weekdayLetter] = day;
+      });
+      const weekIndexes = Object.keys(weeksMap).map(value => parseInt(value, 10)).sort((a, b) => a - b);
+      return {
+        monthName,
+        weeks: weekIndexes.map(index => weeksMap[index])
+      };
+    });
+  }, [daysByMonth]);
   const tableSpacing = tableDensity === "compact" ? {
     headerCell: "p-1.5",
     firstColHeader: "p-2.5",
@@ -2912,7 +2926,7 @@ const App = () => {
     });
   }
   return /*#__PURE__*/React.createElement("div", {
-    className: "min-h-screen bg-white p-6 text-brand-dark"
+    className: "min-h-screen bg-white p-3 sm:p-6 text-brand-dark"
   }, /*#__PURE__*/React.createElement(WeekDetailModal, _extends({}, modalData, {
     onClose: () => setModalData({
       ...modalData,
@@ -2966,7 +2980,6 @@ const App = () => {
       setVacationSectionOpen(prev => !prev);
       if (!vacationSectionOpen) {
         setExportPanelExpanded(false);
-        setEquitySectionOpen(false);
       }
     },
     className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${vacationSectionOpen ? "bg-teal-700" : "bg-teal-600 hover:bg-teal-700"}`
@@ -2974,7 +2987,6 @@ const App = () => {
     onClick: () => {
       setExportPanelExpanded(prev => !prev);
       if (!exportPanelExpanded) {
-        setEquitySectionOpen(false);
         setVacationSectionOpen(false);
       }
     },
@@ -3006,15 +3018,9 @@ const App = () => {
   }), /*#__PURE__*/React.createElement("polyline", {
     points: "10 9 9 9 8 9"
   })), exportPanelExpanded ? "Cerrar exportación" : "Exportar"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setEquitySectionOpen(prev => !prev);
-      if (!equitySectionOpen) {
-        setExportPanelExpanded(false);
-        setVacationSectionOpen(false);
-      }
-    },
-    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${equitySectionOpen ? "bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`
-  }, equitySectionOpen ? "Cerrar equidad" : "Ver equidad"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewMode(prev => prev === "matrix" ? "calendar" : "matrix"),
+    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${viewMode === "calendar" ? "bg-fuchsia-700" : "bg-fuchsia-600 hover:bg-fuchsia-700"}`
+  }, viewMode === "calendar" ? "Vista matriz" : "Vista calendario"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPlanning(generateSchedule(year, vacationPlan)),
     className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
   }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
@@ -3226,211 +3232,7 @@ const App = () => {
     }, day.weekdayLetter));
   }))))))), mode === "config" && !vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
     className: "rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700"
-  }, "El gestor de vacaciones est\xE1 oculto. Pulsa \u201CVer vacaciones\u201D en la barra superior para abrirlo.")), equitySectionOpen && /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 bg-white border border-indigo-200 rounded-xl p-4 shadow-sm"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-gray-800"
-  }, "Detalles de equidad y validaciones"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-500"
-  }, equityPanelExpanded ? "Detalles visibles" : "Panel contraído")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setEquityPanelExpanded(prev => !prev),
-    className: "shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
-  }, equityPanelExpanded ? "Contraer" : "Expandir"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setEquitySectionOpen(false),
-    className: "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
-  }, "Ocultar"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-500"
-  }, "Objetivo m\xEDnimo: ", stats.equityAudit.summary.minTarget, " \xB7 Ideal: ", stats.equityAudit.summary.idealTarget)), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Desviaci\xF3n intensivas"), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg font-bold ${stats.equityAudit.summary.intensiveDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`
-  }, stats.equityAudit.summary.intensiveDeviation)), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Desviaci\xF3n forzados"), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg font-bold ${stats.equityAudit.summary.forcedDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`
-  }, stats.equityAudit.summary.forcedDeviation)), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Semanas auditadas con desv\xEDo"), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg font-bold ${stats.equityAudit.summary.weeklyDeviationCount === 0 ? "text-emerald-600" : "text-amber-600"}`
-  }, stats.equityAudit.summary.weeklyDeviationCount)), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Estado de igualdad absoluta"), /*#__PURE__*/React.createElement("div", {
-    className: `text-sm font-bold ${stats.equityAudit.summary.equalsAbsolute ? "text-emerald-600" : "text-rose-600"}`
-  }, stats.equityAudit.summary.equalsAbsolute ? "Cumplido" : "Incumplido"))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Estado integridad semanal"), /*#__PURE__*/React.createElement("div", {
-    className: `text-sm font-bold ${stats.strictValidation.ok ? "text-emerald-600" : "text-rose-600"}`
-  }, stats.strictValidation.ok ? "Válido" : "Con incidencias")), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Incidencias detectadas"), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg font-bold ${stats.strictValidation.summary.total === 0 ? "text-emerald-600" : "text-rose-600"}`
-  }, stats.strictValidation.summary.total)), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Correcciones autom\xE1ticas"), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg font-bold ${stats.strictCorrections.length === 0 ? "text-gray-700" : "text-blue-700"}`
-  }, stats.strictCorrections.length)), /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-gray-200 p-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500"
-  }, "Regla m\xE1s frecuente"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs font-semibold text-gray-700"
-  }, Object.values(STRICT_WEEKLY_RULES).map(rule => ({
-    rule,
-    count: stats.strictValidation.summary.byRule[rule] || 0
-  })).sort((a, b) => b.count - a.count)[0]?.count > 0 ? Object.values(STRICT_WEEKLY_RULES).map(rule => ({
-    rule,
-    count: stats.strictValidation.summary.byRule[rule] || 0
-  })).sort((a, b) => b.count - a.count)[0].rule : "Sin incidencias"))), equityPanelExpanded && stats.strictValidation.summary.total > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-rose-200 bg-rose-50 p-3 mb-4 space-y-2"
-  }, Object.values(STRICT_WEEKLY_RULES).map(rule => {
-    const count = stats.strictValidation.summary.byRule[rule] || 0;
-    if (count === 0) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: rule,
-      className: "text-xs text-rose-700"
-    }, STRICT_WEEKLY_RULE_MESSAGES[rule], " \xB7 ", count, " casos.");
-  })), equityPanelExpanded && stats.strictValidation.violations.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto mb-4"
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full border-collapse text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Integrante"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Semana"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Regla"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Mensaje"))), /*#__PURE__*/React.createElement("tbody", null, stats.strictValidation.violations.slice(0, 40).map((item, index) => /*#__PURE__*/React.createElement("tr", {
-    key: `${item.employeeId}-${item.weekIndex}-${item.rule}-${index}`,
-    className: "hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-800"
-  }, item.employeeName), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-700"
-  }, item.weekLabel), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-700"
-  }, item.rule), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-700"
-  }, item.message)))))), equityPanelExpanded && stats.strictCorrections.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto mb-4"
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full border-collapse text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Integrante"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Semana"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Normalizaci\xF3n"))), /*#__PURE__*/React.createElement("tbody", null, stats.strictCorrections.slice(0, 40).map((item, index) => /*#__PURE__*/React.createElement("tr", {
-    key: `${item.employeeId}-${item.weekIndex}-${index}`,
-    className: "hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-800"
-  }, item.employeeName), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-700"
-  }, item.weekLabel), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-blue-700 font-semibold"
-  }, item.targetType)))))), equityPanelExpanded && stats.equityAudit.equityAlerts.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-2 mb-4"
-  }, stats.equityAudit.equityAlerts.map((alert, index) => /*#__PURE__*/React.createElement("div", {
-    key: index,
-    className: `rounded-lg border p-3 ${alert.severity === "critical" ? "bg-rose-50 border-rose-200" : "bg-amber-50 border-amber-200"}`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: `text-sm font-bold ${alert.severity === "critical" ? "text-rose-700" : "text-amber-700"}`
-  }, alert.title), /*#__PURE__*/React.createElement("div", {
-    className: `text-xs mt-1 ${alert.severity === "critical" ? "text-rose-600" : "text-amber-700"}`
-  }, alert.detail), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-500 mt-1"
-  }, alert.context)))), equityPanelExpanded && /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto mb-4"
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full border-collapse text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Integrante"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Semanas actuales"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Objetivo m\xEDnimo"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Objetivo ideal"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Brecha m\xEDnimo"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Brecha ideal"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "D\xEDas forzados"))), /*#__PURE__*/React.createElement("tbody", null, stats.equityAudit.memberRegistry.map(row => /*#__PURE__*/React.createElement("tr", {
-    key: row.id,
-    className: "hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-800"
-  }, row.name), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-800 font-semibold"
-  }, row.currentWeeks), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-600"
-  }, row.minTarget), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-600"
-  }, row.idealTarget), /*#__PURE__*/React.createElement("td", {
-    className: `p-2 border-b border-gray-200 text-center font-semibold ${row.minGap === 0 ? "text-emerald-600" : "text-rose-600"}`
-  }, row.minGap), /*#__PURE__*/React.createElement("td", {
-    className: `p-2 border-b border-gray-200 text-center font-semibold ${row.idealGap === 0 ? "text-emerald-600" : "text-amber-600"}`
-  }, row.idealGap), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-700"
-  }, row.forcedOfficeDays)))))), equityPanelExpanded && /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto"
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full border-collapse text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Semana"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left p-2 border-b border-gray-200 text-gray-600"
-  }, "Rango"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "M\xEDn acumulado"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "M\xE1x acumulado"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Desviaci\xF3n"), /*#__PURE__*/React.createElement("th", {
-    className: "text-center p-2 border-b border-gray-200 text-gray-600"
-  }, "Estado"))), /*#__PURE__*/React.createElement("tbody", null, stats.equityAudit.weeklyAudit.map(week => /*#__PURE__*/React.createElement("tr", {
-    key: week.weekIndex,
-    className: "hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-800"
-  }, week.label), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-gray-600"
-  }, week.startDayId, " \u2192 ", week.endDayId), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-700"
-  }, week.minWeeks), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 border-b border-gray-200 text-center text-gray-700"
-  }, week.maxWeeks), /*#__PURE__*/React.createElement("td", {
-    className: `p-2 border-b border-gray-200 text-center font-semibold ${week.deviation === 0 ? "text-emerald-600" : "text-amber-600"}`
-  }, week.deviation), /*#__PURE__*/React.createElement("td", {
-    className: `p-2 border-b border-gray-200 text-center font-semibold ${week.isEqual ? "text-emerald-600" : "text-amber-700"}`
-  }, week.isEqual ? "Igualdad" : "Desvío"))))))), /*#__PURE__*/React.createElement("div", {
+  }, "El gestor de vacaciones est\xE1 oculto. Pulsa \u201CVer vacaciones\u201D en la barra superior para abrirlo.")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
@@ -3816,7 +3618,7 @@ const App = () => {
     }, /*#__PURE__*/React.createElement("polyline", {
       points: "20 6 9 17 4 12"
     })), infoCount, " cubiertas")));
-  })()), /*#__PURE__*/React.createElement("div", {
+  })()), viewMode === "matrix" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sticky top-[4.5rem] z-30 mb-3 rounded-lg border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center gap-3 text-xs text-gray-700"
@@ -3994,7 +3796,61 @@ const App = () => {
   }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: days.length + 1,
     className: "p-6 text-center text-sm text-gray-500"
-  }, "No hay integrantes que coincidan con el filtro actual."))))), /*#__PURE__*/React.createElement("footer", {
+  }, "No hay integrantes que coincidan con el filtro actual.")))))) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4"
+  }, calendarMonths.map(month => /*#__PURE__*/React.createElement("div", {
+    key: month.monthName,
+    className: "rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "text-sm font-bold text-brand-blue"
+  }, month.monthName), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-gray-500"
+  }, filteredEmployees.length, " integrantes")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 border-b border-gray-200"
+  }, weekdaysCalendar.map(weekday => /*#__PURE__*/React.createElement("div", {
+    key: `${month.monthName}-${weekday}`,
+    className: "text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200"
+  }, WEEKDAY_FULL[weekday]))), /*#__PURE__*/React.createElement("div", null, month.weeks.map((week, weekIndex) => /*#__PURE__*/React.createElement("div", {
+    key: `${month.monthName}-week-${weekIndex}`,
+    className: "grid grid-cols-5 border-b last:border-b-0 border-gray-200"
+  }, weekdaysCalendar.map(weekday => {
+    const day = week[weekday];
+    if (!day) {
+      return /*#__PURE__*/React.createElement("div", {
+        key: `${month.monthName}-empty-${weekIndex}-${weekday}`,
+        className: "min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"
+      });
+    }
+    const hasAlert = stats.alerts.some(item => item.dayId === day.id);
+    const coverage = stats.dailyCoverage.find(item => item.dayId === day.id);
+    return /*#__PURE__*/React.createElement("div", {
+      key: day.id,
+      className: `min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-semibold text-gray-700"
+    }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`
+    }, coverage.present, "/6")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1"
+    }, filteredEmployees.map(emp => {
+      const typeKey = schedule[emp.id][day.id];
+      const style = TYPES[typeKey] || TYPES.O30;
+      const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+      const initials = emp.name.split(" ").map(part => part[0]).join("").toUpperCase().slice(0, 2);
+      return /*#__PURE__*/React.createElement("button", {
+        key: `${day.id}-${emp.id}`,
+        type: "button",
+        onClick: () => handleCellClick(emp, day),
+        className: `w-full text-left text-[10px] px-1.5 py-1 rounded ${style.color} ${style.text} hover:brightness-110 transition-colors`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "font-semibold"
+      }, initials), " ", style.short, isForcedOffice ? " · OF" : "");
+    })));
+  }))))))), /*#__PURE__*/React.createElement("footer", {
     className: "mt-8 text-center text-gray-500 text-sm"
   }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
     isOpen: !!selectedAlertDayId,

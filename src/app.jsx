@@ -1846,9 +1846,8 @@ const App = () => {
   const [exportError, setExportError] = useState("");
   const [exportLogs, setExportLogs] = useState([]);
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
-  const [equitySectionOpen, setEquitySectionOpen] = useState(false);
   const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
-  const [equityPanelExpanded, setEquityPanelExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState("matrix");
   const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
 
    useEffect(() => {
@@ -2696,6 +2695,23 @@ const App = () => {
   const filteredEmployees = selectedEmp === "all"
     ? quickFilteredEmployees
     : quickFilteredEmployees.filter((e) => e.id === parseInt(selectedEmp, 10));
+  const weekdaysCalendar = ["L", "M", "X", "J", "V"];
+  const calendarMonths = useMemo(() => {
+    return daysByMonth.map(([monthName, monthDays]) => {
+      const weeksMap = {};
+      monthDays.forEach((day) => {
+        weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
+        weeksMap[day.weekIndex][day.weekdayLetter] = day;
+      });
+      const weekIndexes = Object.keys(weeksMap)
+        .map((value) => parseInt(value, 10))
+        .sort((a, b) => a - b);
+      return {
+        monthName,
+        weeks: weekIndexes.map((index) => weeksMap[index]),
+      };
+    });
+  }, [daysByMonth]);
 
   const tableSpacing = tableDensity === "compact"
     ? {
@@ -2719,7 +2735,7 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6 text-brand-dark">
+    <div className="min-h-screen bg-white p-3 sm:p-6 text-brand-dark">
       <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
       <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
       <header className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-4">
@@ -2766,7 +2782,6 @@ const App = () => {
               setVacationSectionOpen((prev) => !prev);
               if (!vacationSectionOpen) {
                 setExportPanelExpanded(false);
-                setEquitySectionOpen(false);
               }
             }}
             className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${vacationSectionOpen ? "bg-teal-700" : "bg-teal-600 hover:bg-teal-700"}`}
@@ -2777,7 +2792,6 @@ const App = () => {
             onClick={() => {
               setExportPanelExpanded((prev) => !prev);
               if (!exportPanelExpanded) {
-                setEquitySectionOpen(false);
                 setVacationSectionOpen(false);
               }
             }}
@@ -2793,16 +2807,10 @@ const App = () => {
             {exportPanelExpanded ? "Cerrar exportación" : "Exportar"}
           </button>
           <button
-            onClick={() => {
-              setEquitySectionOpen((prev) => !prev);
-              if (!equitySectionOpen) {
-                setExportPanelExpanded(false);
-                setVacationSectionOpen(false);
-              }
-            }}
-            className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${equitySectionOpen ? "bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
+            onClick={() => setViewMode((prev) => (prev === "matrix" ? "calendar" : "matrix"))}
+            className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${viewMode === "calendar" ? "bg-fuchsia-700" : "bg-fuchsia-600 hover:bg-fuchsia-700"}`}
           >
-            {equitySectionOpen ? "Cerrar equidad" : "Ver equidad"}
+            {viewMode === "calendar" ? "Vista matriz" : "Vista calendario"}
           </button>
           <button
             onClick={() => setPlanning(generateSchedule(year, vacationPlan))}
@@ -3056,228 +3064,6 @@ const App = () => {
         )}
       </div>
 
-      {equitySectionOpen && (
-      <div className="mb-6 bg-white border border-indigo-200 rounded-xl p-4 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-          <div>
-            <h3 className="text-sm font-bold text-gray-800">Detalles de equidad y validaciones</h3>
-            <div className="text-xs text-gray-500">{equityPanelExpanded ? "Detalles visibles" : "Panel contraído"}</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setEquityPanelExpanded((prev) => !prev)}
-            className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-blue-800 transition-colors shadow-md"
-          >
-            {equityPanelExpanded ? "Contraer" : "Expandir"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEquitySectionOpen(false)}
-            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
-          >
-            Ocultar
-          </button>
-          <div className="text-xs text-gray-500">
-            Objetivo mínimo: {stats.equityAudit.summary.minTarget} · Ideal: {stats.equityAudit.summary.idealTarget}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Desviación intensivas</div>
-            <div className={`text-lg font-bold ${stats.equityAudit.summary.intensiveDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`}>
-              {stats.equityAudit.summary.intensiveDeviation}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Desviación forzados</div>
-            <div className={`text-lg font-bold ${stats.equityAudit.summary.forcedDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`}>
-              {stats.equityAudit.summary.forcedDeviation}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Semanas auditadas con desvío</div>
-            <div className={`text-lg font-bold ${stats.equityAudit.summary.weeklyDeviationCount === 0 ? "text-emerald-600" : "text-amber-600"}`}>
-              {stats.equityAudit.summary.weeklyDeviationCount}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Estado de igualdad absoluta</div>
-            <div className={`text-sm font-bold ${stats.equityAudit.summary.equalsAbsolute ? "text-emerald-600" : "text-rose-600"}`}>
-              {stats.equityAudit.summary.equalsAbsolute ? "Cumplido" : "Incumplido"}
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Estado integridad semanal</div>
-            <div className={`text-sm font-bold ${stats.strictValidation.ok ? "text-emerald-600" : "text-rose-600"}`}>
-              {stats.strictValidation.ok ? "Válido" : "Con incidencias"}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Incidencias detectadas</div>
-            <div className={`text-lg font-bold ${stats.strictValidation.summary.total === 0 ? "text-emerald-600" : "text-rose-600"}`}>
-              {stats.strictValidation.summary.total}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Correcciones automáticas</div>
-            <div className={`text-lg font-bold ${stats.strictCorrections.length === 0 ? "text-gray-700" : "text-blue-700"}`}>
-              {stats.strictCorrections.length}
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <div className="text-[11px] text-gray-500">Regla más frecuente</div>
-            <div className="text-xs font-semibold text-gray-700">
-              {Object.values(STRICT_WEEKLY_RULES)
-                .map((rule) => ({
-                  rule,
-                  count: stats.strictValidation.summary.byRule[rule] || 0,
-                }))
-                .sort((a, b) => b.count - a.count)[0]?.count > 0
-                ? Object.values(STRICT_WEEKLY_RULES)
-                    .map((rule) => ({
-                      rule,
-                      count: stats.strictValidation.summary.byRule[rule] || 0,
-                    }))
-                    .sort((a, b) => b.count - a.count)[0].rule
-                : "Sin incidencias"}
-            </div>
-          </div>
-        </div>
-        {equityPanelExpanded && stats.strictValidation.summary.total > 0 && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 mb-4 space-y-2">
-            {Object.values(STRICT_WEEKLY_RULES).map((rule) => {
-              const count = stats.strictValidation.summary.byRule[rule] || 0;
-              if (count === 0) return null;
-              return (
-                <div key={rule} className="text-xs text-rose-700">
-                  {STRICT_WEEKLY_RULE_MESSAGES[rule]} · {count} casos.
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {equityPanelExpanded && stats.strictValidation.violations.length > 0 && (
-          <div className="overflow-x-auto mb-4">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Integrante</th>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Semana</th>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Regla</th>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Mensaje</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.strictValidation.violations.slice(0, 40).map((item, index) => (
-                  <tr key={`${item.employeeId}-${item.weekIndex}-${item.rule}-${index}`} className="hover:bg-gray-50">
-                    <td className="p-2 border-b border-gray-200 text-gray-800">{item.employeeName}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.weekLabel}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.rule}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.message}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {equityPanelExpanded && stats.strictCorrections.length > 0 && (
-          <div className="overflow-x-auto mb-4">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Integrante</th>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Semana</th>
-                  <th className="text-left p-2 border-b border-gray-200 text-gray-600">Normalización</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.strictCorrections.slice(0, 40).map((item, index) => (
-                  <tr key={`${item.employeeId}-${item.weekIndex}-${index}`} className="hover:bg-gray-50">
-                    <td className="p-2 border-b border-gray-200 text-gray-800">{item.employeeName}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-700">{item.weekLabel}</td>
-                    <td className="p-2 border-b border-gray-200 text-blue-700 font-semibold">{item.targetType}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {equityPanelExpanded && stats.equityAudit.equityAlerts.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {stats.equityAudit.equityAlerts.map((alert, index) => (
-              <div
-                key={index}
-                className={`rounded-lg border p-3 ${alert.severity === "critical" ? "bg-rose-50 border-rose-200" : "bg-amber-50 border-amber-200"}`}
-              >
-                <div className={`text-sm font-bold ${alert.severity === "critical" ? "text-rose-700" : "text-amber-700"}`}>{alert.title}</div>
-                <div className={`text-xs mt-1 ${alert.severity === "critical" ? "text-rose-600" : "text-amber-700"}`}>{alert.detail}</div>
-                <div className="text-[11px] text-gray-500 mt-1">{alert.context}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {equityPanelExpanded && (
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                <th className="text-left p-2 border-b border-gray-200 text-gray-600">Integrante</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Semanas actuales</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Objetivo mínimo</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Objetivo ideal</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Brecha mínimo</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Brecha ideal</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Días forzados</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.equityAudit.memberRegistry.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
-                  <td className="p-2 border-b border-gray-200 text-gray-800">{row.name}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-800 font-semibold">{row.currentWeeks}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-600">{row.minTarget}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-600">{row.idealTarget}</td>
-                  <td className={`p-2 border-b border-gray-200 text-center font-semibold ${row.minGap === 0 ? "text-emerald-600" : "text-rose-600"}`}>{row.minGap}</td>
-                  <td className={`p-2 border-b border-gray-200 text-center font-semibold ${row.idealGap === 0 ? "text-emerald-600" : "text-amber-600"}`}>{row.idealGap}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-700">{row.forcedOfficeDays}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        )}
-        {equityPanelExpanded && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                <th className="text-left p-2 border-b border-gray-200 text-gray-600">Semana</th>
-                <th className="text-left p-2 border-b border-gray-200 text-gray-600">Rango</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Mín acumulado</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Máx acumulado</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Desviación</th>
-                <th className="text-center p-2 border-b border-gray-200 text-gray-600">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.equityAudit.weeklyAudit.map((week) => (
-                <tr key={week.weekIndex} className="hover:bg-gray-50">
-                  <td className="p-2 border-b border-gray-200 text-gray-800">{week.label}</td>
-                  <td className="p-2 border-b border-gray-200 text-gray-600">{week.startDayId} → {week.endDayId}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-700">{week.minWeeks}</td>
-                  <td className="p-2 border-b border-gray-200 text-center text-gray-700">{week.maxWeeks}</td>
-                  <td className={`p-2 border-b border-gray-200 text-center font-semibold ${week.deviation === 0 ? "text-emerald-600" : "text-amber-600"}`}>{week.deviation}</td>
-                  <td className={`p-2 border-b border-gray-200 text-center font-semibold ${week.isEqual ? "text-emerald-600" : "text-amber-700"}`}>{week.isEqual ? "Igualdad" : "Desvío"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        )}
-      </div>
-      )}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4">
           <div className="p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue">
@@ -3423,135 +3209,204 @@ const App = () => {
         )
       }
 
-      <div className="sticky top-[4.5rem] z-30 mb-3 rounded-lg border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700">
-          <span className="font-semibold text-gray-800">Leyenda rápida</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-700"></span>30h</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-700"></span>40h</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-violet-700"></span>42h</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-700"></span>Vacaciones</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-700"></span>Icono casa/edificio: ubicación</span>
-        </div>
-      </div>
+      {viewMode === "matrix" ? (
+        <>
+          <div className="sticky top-[4.5rem] z-30 mb-3 rounded-lg border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700">
+              <span className="font-semibold text-gray-800">Leyenda rápida</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-700"></span>30h</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-700"></span>40h</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-violet-700"></span>42h</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-700"></span>Vacaciones</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-700"></span>Icono casa/edificio: ubicación</span>
+            </div>
+          </div>
 
-      <div
-        className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl"
-        onMouseLeave={() => {
-          setHoveredEmpId(null);
-          setHoveredDayId(null);
-        }}
-      >
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr>
-              <th className={`sticky left-0 z-20 bg-gray-50 ${tableSpacing.firstColHeader} border-b border-r border-gray-200 w-48 min-w-[12rem]`}>
-                <div className="font-bold text-brand-blue">Integrante</div>
-              </th>
-              {days.map((day) => {
-                const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-                const hasAlert = stats.alerts.some(a => a.dayId === day.id);
-                return (
-                  <th
-                    key={day.id}
-                    onMouseEnter={() => setHoveredDayId(day.id)}
-                    className={`${tableSpacing.headerCell} border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 relative ${
-                      hoveredDayId === day.id ? "bg-blue-50" : "bg-gray-50"
-                    }`}
-                  >
-                    {hasAlert && (
-                      <div 
-                        className="absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors"
-                        title="Día con alertas (Click para ver)"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAlertDayId(day.id);
-                        }}
-                      >
-                        !
-                      </div>
-                    )}
-                    <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
-                    <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
-                    <div className="mt-1 text-[9px] text-gray-400 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
-                    <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
-                      <div
-                        className={`h-full ${stats.dailyCoverage.find((s) => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`}
-                        style={{ width: `${(stats.dailyCoverage.find((s) => s.dayId === day.id).present / 6) * 100}%` }}
-                      ></div>
-                    </div>
+          <div
+            className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl"
+            onMouseLeave={() => {
+              setHoveredEmpId(null);
+              setHoveredDayId(null);
+            }}
+          >
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className={`sticky left-0 z-20 bg-gray-50 ${tableSpacing.firstColHeader} border-b border-r border-gray-200 w-48 min-w-[12rem]`}>
+                    <div className="font-bold text-brand-blue">Integrante</div>
                   </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEmployees.map((emp) => (
-              <tr
-                key={emp.id}
-                onMouseEnter={() => setHoveredEmpId(emp.id)}
-                className={`group transition-colors ${hoveredEmpId === emp.id ? "bg-blue-50/40" : "hover:bg-gray-50"}`}
-              >
-                <td className={`sticky left-0 z-10 ${tableSpacing.firstColCell} border-r border-b border-gray-200 ${
-                  hoveredEmpId === emp.id ? "bg-blue-50" : "bg-white group-hover:bg-gray-50"
-                }`}>
-                  <div className="font-medium text-gray-900">{emp.name}</div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <span className={`w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`}></span>Grupo {emp.group}
-                  </div>
-                  <div className="text-[11px] text-gray-400 mt-1">
-                    Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
-                  </div>
-                </td>
-                {days.map((day) => {
-                  const typeKey = schedule[emp.id][day.id];
-                  const style = TYPES[typeKey] || TYPES["O30"];
-                  const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
-                  const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-                  const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
-                  const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
-                  const isHighlighted = hoveredEmpId === emp.id || hoveredDayId === day.id;
-                  return (
-                    <td
-                      key={day.id}
-                      onMouseEnter={() => {
-                        setHoveredEmpId(emp.id);
-                        setHoveredDayId(day.id);
-                      }}
-                      className={`${tableSpacing.bodyCell} border-b border-gray-200 relative cursor-pointer border-l border-gray-100 ${
-                        isHighlighted ? "bg-blue-50/50" : ""
-                      }`}
-                      onClick={() => handleCellClick(emp, day)}
-                    >
-                      <div className={`w-full ${tableSpacing.slotHeight} rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} ring-1 ring-black/10 ${isHighlighted ? "brightness-110 scale-[1.02]" : "hover:brightness-110 hover:scale-105"} transform`}>
-                        <span>{style.short}</span>
-                        {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
-                        {isWFH && (
-                          <div className="absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5" title="Teletrabajo">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  {days.map((day) => {
+                    const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+                    const hasAlert = stats.alerts.some(a => a.dayId === day.id);
+                    return (
+                      <th
+                        key={day.id}
+                        onMouseEnter={() => setHoveredDayId(day.id)}
+                        className={`${tableSpacing.headerCell} border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 relative ${
+                          hoveredDayId === day.id ? "bg-blue-50" : "bg-gray-50"
+                        }`}
+                      >
+                        {hasAlert && (
+                          <div
+                            className="absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors"
+                            title="Día con alertas (Click para ver)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedAlertDayId(day.id);
+                            }}
+                          >
+                            !
                           </div>
                         )}
-                        {(isInOffice || isForcedOffice) && typeKey !== "V" && (
-                          <div className={`absolute top-0.5 right-0.5 rounded p-0.5 ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`} title={isForcedOffice ? "Forzado oficina" : "En oficina"}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
-                          </div>
-                        )}
+                        <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
+                        <div className="text-xs font-mono text-gray-600">{day.label.split(" ")[1]}</div>
+                        <div className="mt-1 text-[9px] text-gray-400 font-normal">{turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"}</div>
+                        <div className="mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden">
+                          <div
+                            className={`h-full ${stats.dailyCoverage.find((s) => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`}
+                            style={{ width: `${(stats.dailyCoverage.find((s) => s.dayId === day.id).present / 6) * 100}%` }}
+                          ></div>
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmployees.map((emp) => (
+                  <tr
+                    key={emp.id}
+                    onMouseEnter={() => setHoveredEmpId(emp.id)}
+                    className={`group transition-colors ${hoveredEmpId === emp.id ? "bg-blue-50/40" : "hover:bg-gray-50"}`}
+                  >
+                    <td className={`sticky left-0 z-10 ${tableSpacing.firstColCell} border-r border-b border-gray-200 ${
+                      hoveredEmpId === emp.id ? "bg-blue-50" : "bg-white group-hover:bg-gray-50"
+                    }`}>
+                      <div className="font-medium text-gray-900">{emp.name}</div>
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className={`w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`}></span>Grupo {emp.group}
+                      </div>
+                      <div className="text-[11px] text-gray-400 mt-1">
+                        Intensiva: {stats.intensiveWeeksByEmp[emp.id]} semanas · Horas: {stats.totalHoursByEmp[emp.id]}
                       </div>
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {filteredEmployees.length === 0 && (
-              <tr>
-                <td colSpan={days.length + 1} className="p-6 text-center text-sm text-gray-500">
-                  No hay integrantes que coincidan con el filtro actual.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    {days.map((day) => {
+                      const typeKey = schedule[emp.id][day.id];
+                      const style = TYPES[typeKey] || TYPES["O30"];
+                      const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+                      const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+                      const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
+                      const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
+                      const isHighlighted = hoveredEmpId === emp.id || hoveredDayId === day.id;
+                      return (
+                        <td
+                          key={day.id}
+                          onMouseEnter={() => {
+                            setHoveredEmpId(emp.id);
+                            setHoveredDayId(day.id);
+                          }}
+                          className={`${tableSpacing.bodyCell} border-b border-gray-200 relative cursor-pointer border-l border-gray-100 ${
+                            isHighlighted ? "bg-blue-50/50" : ""
+                          }`}
+                          onClick={() => handleCellClick(emp, day)}
+                        >
+                          <div className={`w-full ${tableSpacing.slotHeight} rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} ring-1 ring-black/10 ${isHighlighted ? "brightness-110 scale-[1.02]" : "hover:brightness-110 hover:scale-105"} transform`}>
+                            <span>{style.short}</span>
+                            {typeKey === "O42" && <div className="absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"></div>}
+                            {isWFH && (
+                              <div className="absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5" title="Teletrabajo">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                              </div>
+                            )}
+                            {(isInOffice || isForcedOffice) && typeKey !== "V" && (
+                              <div className={`absolute top-0.5 right-0.5 rounded p-0.5 ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`} title={isForcedOffice ? "Forzado oficina" : "En oficina"}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {filteredEmployees.length === 0 && (
+                  <tr>
+                    <td colSpan={days.length + 1} className="p-6 text-center text-sm text-gray-500">
+                      No hay integrantes que coincidan con el filtro actual.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
+          {calendarMonths.map((month) => (
+            <div key={month.monthName} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h4 className="text-sm font-bold text-brand-blue">{month.monthName}</h4>
+                <span className="text-[11px] text-gray-500">{filteredEmployees.length} integrantes</span>
+              </div>
+              <div className="grid grid-cols-5 border-b border-gray-200">
+                {weekdaysCalendar.map((weekday) => (
+                  <div key={`${month.monthName}-${weekday}`} className="text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200">
+                    {WEEKDAY_FULL[weekday]}
+                  </div>
+                ))}
+              </div>
+              <div>
+                {month.weeks.map((week, weekIndex) => (
+                  <div key={`${month.monthName}-week-${weekIndex}`} className="grid grid-cols-5 border-b last:border-b-0 border-gray-200">
+                    {weekdaysCalendar.map((weekday) => {
+                      const day = week[weekday];
+                      if (!day) {
+                        return <div key={`${month.monthName}-empty-${weekIndex}-${weekday}`} className="min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"></div>;
+                      }
+                      const hasAlert = stats.alerts.some((item) => item.dayId === day.id);
+                      const coverage = stats.dailyCoverage.find((item) => item.dayId === day.id);
+                      return (
+                        <div key={day.id} className={`min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-semibold text-gray-700">{day.label.split(" ")[1]}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                              {coverage.present}/6
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {filteredEmployees.map((emp) => {
+                              const typeKey = schedule[emp.id][day.id];
+                              const style = TYPES[typeKey] || TYPES.O30;
+                              const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+                              const initials = emp.name
+                                .split(" ")
+                                .map((part) => part[0])
+                                .join("")
+                                .toUpperCase()
+                                .slice(0, 2);
+                              return (
+                                <button
+                                  key={`${day.id}-${emp.id}`}
+                                  type="button"
+                                  onClick={() => handleCellClick(emp, day)}
+                                  className={`w-full text-left text-[10px] px-1.5 py-1 rounded ${style.color} ${style.text} hover:brightness-110 transition-colors`}
+                                >
+                                  <span className="font-semibold">{initials}</span> {style.short}{isForcedOffice ? " · OF" : ""}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
