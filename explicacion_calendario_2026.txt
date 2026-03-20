@@ -129,7 +129,7 @@ Mejoras de comodidad visual (segunda iteración)
 - Se añade filtro rápido por nombre de integrante.
 - Se añade resaltado visual de fila y columna activa al mover el cursor por la matriz de turnos.
 - Se refuerza el contraste de colores de turnos (30h/40h/42h/Vacaciones) con paleta más oscura.
-- Se añade una leyenda rápida sticky encima de la tabla principal para referencia constante.
+- Se elimina la leyenda rápida horizontal sticky de la vista matriz para limpiar la interfaz.
 
 Mejoras de visualización y responsive (tercera iteración)
 

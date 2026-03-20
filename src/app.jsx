@@ -3967,17 +3967,6 @@ const App = () => {
 
       {viewMode === "matrix" ? (
         <>
-          <div className="sticky top-[4.5rem] z-30 mb-3 rounded-lg border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700">
-              <span className="font-semibold text-gray-800">Leyenda rápida</span>
-              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-700"></span>30h</span>
-              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-700"></span>40h</span>
-              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-violet-700"></span>42h</span>
-              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-700"></span>Vacaciones</span>
-              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-700"></span>Icono casa/edificio: ubicación</span>
-            </div>
-          </div>
-
           <div
             className="overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl"
             onMouseLeave={() => {
