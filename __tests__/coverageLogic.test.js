@@ -7,7 +7,7 @@ const loadSchedulingCore = () => {
   const raw = fs.readFileSync(appPath, "utf8");
   const cutoff = raw.indexOf("const App = () => {");
   const core = cutoff >= 0 ? raw.slice(0, cutoff) : raw;
-  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 };`;
+  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS };`;
   const sandbox = {
     console,
     globalThis: {},
@@ -46,5 +46,57 @@ describe("Cobertura presencial 17:00-18:00", () => {
       });
       expect(hasOfficeO42).toBe(true);
     });
+  });
+});
+
+describe("Registro formal de equidad distributiva", () => {
+  test("genera registro detallado por integrante con objetivos mínimo e ideal", () => {
+    const {
+      generateSchedule,
+      EMPLOYEES,
+      DEFAULT_VACATION_PLAN_2026,
+      buildEquityAudit,
+      EQUITY_MIN_INTENSIVE_WEEKS,
+      EQUITY_IDEAL_INTENSIVE_WEEKS,
+    } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const audit = buildEquityAudit({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+      forcedOfficeDetails: [],
+    });
+    expect(audit.memberRegistry).toHaveLength(EMPLOYEES.length);
+    audit.memberRegistry.forEach((member) => {
+      expect(member).toHaveProperty("name");
+      expect(member).toHaveProperty("currentWeeks");
+      expect(member.minTarget).toBe(EQUITY_MIN_INTENSIVE_WEEKS);
+      expect(member.idealTarget).toBe(EQUITY_IDEAL_INTENSIVE_WEEKS);
+      expect(member.currentWeeks).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  test("genera auditoría semanal y alertas automáticas de desviación", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const forcedOfficeDetails = [
+      { dayId: "2026-06-04", empId: EMPLOYEES[0].id, reason: "Prueba de control" },
+      { dayId: "2026-06-05", empId: EMPLOYEES[0].id, reason: "Prueba de control" },
+    ];
+    const audit = buildEquityAudit({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+      forcedOfficeDetails,
+    });
+    expect(audit.weeklyAudit.length).toBeGreaterThan(0);
+    audit.weeklyAudit.forEach((week) => {
+      expect(week).toHaveProperty("deviation");
+      expect(week).toHaveProperty("isEqual");
+      expect(week.deviation).toBeGreaterThanOrEqual(0);
+    });
+    expect(audit.summary).toHaveProperty("forcedDeviation");
+    expect(audit.summary.forcedDeviation).toBeGreaterThan(0);
+    expect(audit.equityAlerts.length).toBeGreaterThan(0);
   });
 });

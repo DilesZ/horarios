@@ -140,6 +140,148 @@ const HOURS_PER_TYPE = {
   O42: 9,
   V: 0
 };
+const EQUITY_MIN_INTENSIVE_WEEKS = 6;
+const EQUITY_IDEAL_INTENSIVE_WEEKS = 7;
+const buildEquityAudit = ({
+  employees,
+  days,
+  schedule,
+  forcedOfficeDetails
+}) => {
+  const weeksMap = {};
+  days.forEach(day => {
+    weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+    weeksMap[day.weekIndex].push(day);
+  });
+  const intensiveWeeksByEmp = {};
+  employees.forEach(emp => {
+    intensiveWeeksByEmp[emp.id] = 0;
+  });
+  const orderedWeekIndexes = Object.keys(weeksMap).map(wi => parseInt(wi, 10)).sort((a, b) => a - b);
+  orderedWeekIndexes.forEach(wi => {
+    const weekDays = weeksMap[wi];
+    employees.forEach(emp => {
+      if (weekDays.every(day => schedule[emp.id][day.id] === "O30")) {
+        intensiveWeeksByEmp[emp.id] += 1;
+      }
+    });
+  });
+  const forcedDaysByEmp = {};
+  employees.forEach(emp => {
+    forcedDaysByEmp[emp.id] = 0;
+  });
+  forcedOfficeDetails.forEach(item => {
+    forcedDaysByEmp[item.empId] = (forcedDaysByEmp[item.empId] || 0) + 1;
+  });
+  const memberRegistry = employees.map(emp => {
+    const currentWeeks = intensiveWeeksByEmp[emp.id] || 0;
+    return {
+      id: emp.id,
+      name: emp.name,
+      currentWeeks,
+      minTarget: EQUITY_MIN_INTENSIVE_WEEKS,
+      idealTarget: EQUITY_IDEAL_INTENSIVE_WEEKS,
+      minGap: Math.max(0, EQUITY_MIN_INTENSIVE_WEEKS - currentWeeks),
+      idealGap: Math.max(0, EQUITY_IDEAL_INTENSIVE_WEEKS - currentWeeks),
+      forcedOfficeDays: forcedDaysByEmp[emp.id] || 0
+    };
+  });
+  const cumulativeByEmp = {};
+  employees.forEach(emp => {
+    cumulativeByEmp[emp.id] = 0;
+  });
+  const weeklyAudit = orderedWeekIndexes.map(wi => {
+    const weekDays = weeksMap[wi];
+    employees.forEach(emp => {
+      if (weekDays.every(day => schedule[emp.id][day.id] === "O30")) {
+        cumulativeByEmp[emp.id] += 1;
+      }
+    });
+    const values = employees.map(emp => cumulativeByEmp[emp.id]);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const startDay = weekDays[0];
+    const endDay = weekDays[weekDays.length - 1];
+    return {
+      weekIndex: wi,
+      label: `Semana ${wi + 1}`,
+      startDayId: startDay ? startDay.id : null,
+      endDayId: endDay ? endDay.id : null,
+      minWeeks: minValue,
+      maxWeeks: maxValue,
+      deviation: maxValue - minValue,
+      isEqual: maxValue - minValue === 0
+    };
+  });
+  const intensiveValues = memberRegistry.map(item => item.currentWeeks);
+  const forcedValues = memberRegistry.map(item => item.forcedOfficeDays);
+  const minIntensive = Math.min(...intensiveValues);
+  const maxIntensive = Math.max(...intensiveValues);
+  const minForced = Math.min(...forcedValues);
+  const maxForced = Math.max(...forcedValues);
+  const belowMinMembers = memberRegistry.filter(item => item.currentWeeks < EQUITY_MIN_INTENSIVE_WEEKS).map(item => item.name);
+  const belowIdealMembers = memberRegistry.filter(item => item.currentWeeks < EQUITY_IDEAL_INTENSIVE_WEEKS).map(item => item.name);
+  const mostForcedMembers = memberRegistry.filter(item => item.forcedOfficeDays === maxForced).map(item => item.name);
+  const weeklyDeviationCount = weeklyAudit.filter(item => !item.isEqual).length;
+  const equityAlerts = [];
+  if (belowMinMembers.length > 0) {
+    equityAlerts.push({
+      severity: "critical",
+      title: "Objetivo mínimo incumplido",
+      detail: `No alcanzan ${EQUITY_MIN_INTENSIVE_WEEKS} semanas: ${belowMinMembers.join(", ")}.`,
+      context: "Mecanismo correctivo: priorizar asignación intensiva a miembros por debajo del mínimo."
+    });
+  }
+  if (belowIdealMembers.length > 0) {
+    equityAlerts.push({
+      severity: "warning",
+      title: "Objetivo ideal no homogéneo",
+      detail: `No alcanzan ${EQUITY_IDEAL_INTENSIVE_WEEKS} semanas: ${belowIdealMembers.join(", ")}.`,
+      context: "Mecanismo correctivo: intercambiar semanas intensivas desde perfiles con mayor carga."
+    });
+  }
+  if (maxIntensive - minIntensive > 0) {
+    equityAlerts.push({
+      severity: maxIntensive - minIntensive > 1 ? "critical" : "warning",
+      title: "Desviación de reparto intensivo",
+      detail: `Diferencia actual de ${maxIntensive - minIntensive} semanas entre integrantes.`,
+      context: "Auditoría semanal activa hasta alcanzar igualdad absoluta."
+    });
+  }
+  if (maxForced - minForced > 0) {
+    equityAlerts.push({
+      severity: maxForced - minForced > 1 ? "critical" : "warning",
+      title: "Desviación en oficina forzada",
+      detail: `Diferencia actual de ${maxForced - minForced} días forzados. Mayor carga: ${mostForcedMembers.join(", ")}.`,
+      context: "Mecanismo correctivo: selección obligatoria del candidato con menor carga forzada acumulada."
+    });
+  }
+  if (weeklyDeviationCount > 0) {
+    equityAlerts.push({
+      severity: "warning",
+      title: "Desviación detectada en auditoría semanal",
+      detail: `${weeklyDeviationCount} semanas presentan desviación respecto al criterio de igualdad absoluta.`,
+      context: "Sanción operativa: bloquear nuevas intensivas a perfiles por encima del mínimo acumulado hasta equilibrar."
+    });
+  }
+  return {
+    memberRegistry,
+    weeklyAudit,
+    equityAlerts,
+    summary: {
+      minTarget: EQUITY_MIN_INTENSIVE_WEEKS,
+      idealTarget: EQUITY_IDEAL_INTENSIVE_WEEKS,
+      minIntensive,
+      maxIntensive,
+      minForced,
+      maxForced,
+      intensiveDeviation: maxIntensive - minIntensive,
+      forcedDeviation: maxForced - minForced,
+      weeklyDeviationCount,
+      equalsAbsolute: maxIntensive - minIntensive === 0 && maxForced - minForced === 0
+    }
+  };
+};
 const generateSchedule = (year, vacationPlan) => {
   const days = buildDaysRange(year);
   const schedule = {};
@@ -1577,6 +1719,12 @@ const App = () => {
     // Rastreo local de carga para reparto equitativo
     const tempForcedCount = {};
     EMPLOYEES.forEach(e => tempForcedCount[e.id] = 0);
+    const pickLowestForcedCandidate = candidates => {
+      if (!candidates || candidates.length === 0) return null;
+      const minLoad = Math.min(...candidates.map(candidate => tempForcedCount[candidate.id] || 0));
+      const pool = candidates.filter(candidate => (tempForcedCount[candidate.id] || 0) === minLoad).sort((a, b) => a.id - b.id);
+      return pool[0] || null;
+    };
     const getBestCandidate = (groupNames, day) => {
       const candidates = EMPLOYEES.filter(emp => {
         if (!groupNames.includes(emp.name)) return false;
@@ -1587,10 +1735,7 @@ const App = () => {
         return !daysOffice.includes(day.weekdayLetter);
       });
       if (candidates.length === 0) return null;
-
-      // Ordenar por quién lleva menos carga forzada hasta ahora
-      candidates.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
-      return candidates[0];
+      return pickLowestForcedCandidate(candidates);
     };
     const dailyCoverage = days.map(day => {
       let present = 0,
@@ -1636,8 +1781,7 @@ const App = () => {
             return !daysOffice.includes(day.weekdayLetter);
           });
           if (o42Candidates.length > 0) {
-            o42Candidates.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
-            const candidate = o42Candidates[0];
+            const candidate = pickLowestForcedCandidate(o42Candidates);
             forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
             forcedOfficeSet[day.id].add(candidate.id);
             forcedOfficeDetails.push({
@@ -1697,8 +1841,9 @@ const App = () => {
             return !daysOffice.includes("V");
           });
           if (o40NotOffice.length > 0) {
-            o40NotOffice.sort((a, b) => tempForcedCount[a.id] - tempForcedCount[b.id]);
-            let candidate = o40NotOffice.find(e => e.name === "Luis") || o40NotOffice.find(e => e.group !== lateGroup) || o40NotOffice[0];
+            const preferred = o40NotOffice.filter(e => e.name === "Luis");
+            const nonLate = o40NotOffice.filter(e => e.group !== lateGroup);
+            const candidate = pickLowestForcedCandidate(preferred) || pickLowestForcedCandidate(nonLate) || pickLowestForcedCandidate(o40NotOffice);
             if (candidate) {
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
               forcedOfficeSet[day.id].add(candidate.id);
@@ -1841,13 +1986,20 @@ const App = () => {
         if (daysInWeek.every(day => schedule[emp.id][day.id] === "O30")) intensiveWeeksByEmp[emp.id] += 1;
       });
     });
+    const equityAudit = buildEquityAudit({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+      forcedOfficeDetails
+    });
     return {
       dailyCoverage,
       alerts,
       forcedOfficeSet,
       forcedOfficeDetails,
       intensiveWeeksByEmp,
-      totalHoursByEmp
+      totalHoursByEmp,
+      equityAudit
     };
   }, [schedule, days]);
   const exportToExcel = () => {
@@ -2197,6 +2349,117 @@ const App = () => {
       className: "text-[9px] opacity-80"
     }, day.weekdayLetter));
   })))))))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-gray-800"
+  }, "Registro formal de equidad distributiva"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-500"
+  }, "Objetivo m\xEDnimo: ", stats.equityAudit.summary.minTarget, " \xB7 Ideal: ", stats.equityAudit.summary.idealTarget)), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg border border-gray-200 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-gray-500"
+  }, "Desviaci\xF3n intensivas"), /*#__PURE__*/React.createElement("div", {
+    className: `text-lg font-bold ${stats.equityAudit.summary.intensiveDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`
+  }, stats.equityAudit.summary.intensiveDeviation)), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg border border-gray-200 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-gray-500"
+  }, "Desviaci\xF3n forzados"), /*#__PURE__*/React.createElement("div", {
+    className: `text-lg font-bold ${stats.equityAudit.summary.forcedDeviation === 0 ? "text-emerald-600" : "text-amber-600"}`
+  }, stats.equityAudit.summary.forcedDeviation)), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg border border-gray-200 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-gray-500"
+  }, "Semanas auditadas con desv\xEDo"), /*#__PURE__*/React.createElement("div", {
+    className: `text-lg font-bold ${stats.equityAudit.summary.weeklyDeviationCount === 0 ? "text-emerald-600" : "text-amber-600"}`
+  }, stats.equityAudit.summary.weeklyDeviationCount)), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg border border-gray-200 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-gray-500"
+  }, "Estado de igualdad absoluta"), /*#__PURE__*/React.createElement("div", {
+    className: `text-sm font-bold ${stats.equityAudit.summary.equalsAbsolute ? "text-emerald-600" : "text-rose-600"}`
+  }, stats.equityAudit.summary.equalsAbsolute ? "Cumplido" : "Incumplido"))), stats.equityAudit.equityAlerts.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 mb-4"
+  }, stats.equityAudit.equityAlerts.map((alert, index) => /*#__PURE__*/React.createElement("div", {
+    key: index,
+    className: `rounded-lg border p-3 ${alert.severity === "critical" ? "bg-rose-50 border-rose-200" : "bg-amber-50 border-amber-200"}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `text-sm font-bold ${alert.severity === "critical" ? "text-rose-700" : "text-amber-700"}`
+  }, alert.title), /*#__PURE__*/React.createElement("div", {
+    className: `text-xs mt-1 ${alert.severity === "critical" ? "text-rose-600" : "text-amber-700"}`
+  }, alert.detail), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-gray-500 mt-1"
+  }, alert.context)))), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto mb-4"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full border-collapse text-xs"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "text-left p-2 border-b border-gray-200 text-gray-600"
+  }, "Integrante"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Semanas actuales"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Objetivo m\xEDnimo"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Objetivo ideal"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Brecha m\xEDnimo"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Brecha ideal"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "D\xEDas forzados"))), /*#__PURE__*/React.createElement("tbody", null, stats.equityAudit.memberRegistry.map(row => /*#__PURE__*/React.createElement("tr", {
+    key: row.id,
+    className: "hover:bg-gray-50"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-800"
+  }, row.name), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-800 font-semibold"
+  }, row.currentWeeks), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-600"
+  }, row.minTarget), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-600"
+  }, row.idealTarget), /*#__PURE__*/React.createElement("td", {
+    className: `p-2 border-b border-gray-200 text-center font-semibold ${row.minGap === 0 ? "text-emerald-600" : "text-rose-600"}`
+  }, row.minGap), /*#__PURE__*/React.createElement("td", {
+    className: `p-2 border-b border-gray-200 text-center font-semibold ${row.idealGap === 0 ? "text-emerald-600" : "text-amber-600"}`
+  }, row.idealGap), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-700"
+  }, row.forcedOfficeDays)))))), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full border-collapse text-xs"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "text-left p-2 border-b border-gray-200 text-gray-600"
+  }, "Semana"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left p-2 border-b border-gray-200 text-gray-600"
+  }, "Rango"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "M\xEDn acumulado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "M\xE1x acumulado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Desviaci\xF3n"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center p-2 border-b border-gray-200 text-gray-600"
+  }, "Estado"))), /*#__PURE__*/React.createElement("tbody", null, stats.equityAudit.weeklyAudit.map(week => /*#__PURE__*/React.createElement("tr", {
+    key: week.weekIndex,
+    className: "hover:bg-gray-50"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-800"
+  }, week.label), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, week.startDayId, " \u2192 ", week.endDayId), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-700"
+  }, week.minWeeks), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-center text-gray-700"
+  }, week.maxWeeks), /*#__PURE__*/React.createElement("td", {
+    className: `p-2 border-b border-gray-200 text-center font-semibold ${week.deviation === 0 ? "text-emerald-600" : "text-amber-600"}`
+  }, week.deviation), /*#__PURE__*/React.createElement("td", {
+    className: `p-2 border-b border-gray-200 text-center font-semibold ${week.isEqual ? "text-emerald-600" : "text-amber-700"}`
+  }, week.isEqual ? "Igualdad" : "Desvío"))))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
