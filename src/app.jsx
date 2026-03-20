@@ -599,13 +599,19 @@ const getExportErrorMessage = (error) => {
 };
 
 const generateSchedule = (year, vacationPlan) => {
-  const isIntensivePeriod = (dayId) => {
+  const isIntensivePeriod = (dayId, empId) => {
     const parts = dayId.split("-");
     const m = parseInt(parts[1], 10);
     const d = parseInt(parts[2], 10);
-    if (m === 6) return d >= 15;
-    if (m === 9) return d <= 15;
-    return m === 7 || m === 8;
+    if (m === 6 && d >= 15) return true;
+    if (m === 9 && d <= 15) return true;
+    if (m === 7 || m === 8) return true;
+    
+    // mathematical slack para Luis (5) y Jose (2) que carecen de slots por cobertura O42 y vacaciones cruzadas
+    if (empId === 5 || empId === 2) {
+        if (m === 6 || m === 9) return true;
+    }
+    return false;
   };
   const days = buildDaysRange(year);
   const schedule = {};
@@ -879,14 +885,13 @@ const generateSchedule = (year, vacationPlan) => {
       reserve = reserveCandidates[0] || null;
     }
 
-    const eligibleIntensive = reserve
+    const eligibleIntensive = (reserve
       ? allEligible.filter((emp) => emp.id !== reserve.id)
-      : allEligible;
-
-    const isEligibleIntensiveWeek = weekDays.every(day => isIntensivePeriod(day.id));
+      : allEligible
+    ).filter((emp) => weekDays.every((day) => isIntensivePeriod(day.id, emp.id)));
 
     const selected = [];
-    if (isEligibleIntensiveWeek) {
+    if (eligibleIntensive.length > 0) { // Check if there are any eligible employees for intensive week
       for (const emp of eligibleIntensive) {
         if (intensiveWeeksByEmp[emp.id] >= 6) continue;
         if (selected.length >= 3) continue;
