@@ -50,6 +50,27 @@ describe("Cobertura presencial 17:00-18:00", () => {
 });
 
 describe("Registro formal de equidad distributiva", () => {
+  test("garantiza al menos 6 semanas intensivas por integrante", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const weeksMap = {};
+    days.forEach((day) => {
+      weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+      weeksMap[day.weekIndex].push(day);
+    });
+
+    EMPLOYEES.forEach((emp) => {
+      let intensiveWeeks = 0;
+      Object.keys(weeksMap).forEach((wi) => {
+        const weekDays = weeksMap[wi];
+        if (weekDays.every((day) => schedule[emp.id][day.id] === "O30")) {
+          intensiveWeeks += 1;
+        }
+      });
+      expect(intensiveWeeks).toBeGreaterThanOrEqual(6);
+    });
+  });
+
   test("genera registro detallado por integrante con objetivos mínimo e ideal", () => {
     const {
       generateSchedule,
