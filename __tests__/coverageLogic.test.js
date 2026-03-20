@@ -1,13 +1,24 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const babel = require("@babel/core");
 
-const loadSchedulingCore = () => {
-  const appPath = path.join(__dirname, "..", "app.js");
+const loadSchedulingCore = (entryFile = "app.js") => {
+  const appPath = path.join(__dirname, "..", entryFile);
   const raw = fs.readFileSync(appPath, "utf8");
   const cutoff = raw.indexOf("const App = () => {");
   const core = cutoff >= 0 ? raw.slice(0, cutoff) : raw;
-  const wrapped = `${core}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows, validateStrictWeeklyRules };`;
+  const executableCore = entryFile.endsWith(".jsx")
+    ? babel.transformSync(core, {
+        presets: [
+          ["@babel/preset-env", { targets: { node: "current" } }],
+          ["@babel/preset-react", { runtime: "classic" }],
+        ],
+        babelrc: false,
+        configFile: false,
+      }).code
+    : core;
+  const wrapped = `${executableCore}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows, validateStrictWeeklyRules };`;
   const sandbox = {
     console,
     globalThis: {},
@@ -73,6 +84,18 @@ describe("Registro formal de equidad distributiva", () => {
         if (type !== "O30") return;
         expect(day.id >= minDay && day.id <= maxDay).toBe(true);
       });
+    });
+  });
+
+  test("la versión de src/app.jsx también respeta ventana y tope de 3 intensivas", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore("src/app.jsx");
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    days.forEach((day) => {
+      const dailyIntensive = EMPLOYEES.filter((emp) => schedule[emp.id][day.id] === "O30");
+      expect(dailyIntensive.length).toBeLessThanOrEqual(3);
+      if (dailyIntensive.length > 0) {
+        expect(day.id >= "2026-06-15" && day.id <= "2026-09-15").toBe(true);
+      }
     });
   });
 

@@ -599,19 +599,18 @@ const getExportErrorMessage = (error) => {
 };
 
 const generateSchedule = (year, vacationPlan) => {
-  const isIntensivePeriod = (dayId, empId) => {
+  const isWithinIntensiveWindow = (dayId) => {
     const parts = dayId.split("-");
     const m = parseInt(parts[1], 10);
     const d = parseInt(parts[2], 10);
     if (m === 6 && d >= 15) return true;
-    if (m === 9 && d <= 15) return true;
     if (m === 7 || m === 8) return true;
-    
-    // mathematical slack para Luis (5) y Jose (2) que carecen de slots por cobertura O42 y vacaciones cruzadas
-    if (empId === 5 || empId === 2) {
-        if (m === 6 || m === 9) return true;
-    }
+    if (m === 9 && d <= 15) return true;
     return false;
+  };
+  const isIntensivePeriod = (dayId, empId) => {
+    if (!empId) return isWithinIntensiveWindow(dayId);
+    return isWithinIntensiveWindow(dayId);
   };
   const days = buildDaysRange(year);
   const schedule = {};
@@ -765,9 +764,23 @@ const generateSchedule = (year, vacationPlan) => {
         weekAssignments[wi] = "A_LATE";
         return;
       }
+      // Válvula de presión matemática para Grupo A (David, Luis, Enrique están bloqueados)
+      if (wi === 4) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
       // Semana 20-24 Julio (Week 7): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
       if (wi === 7) {
         weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Válvula de presión matemática para Grupo A
+      if (wi === 8) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      if (wi === 10) {
+        weekAssignments[wi] = "B_LATE";
         return;
       }
     }
@@ -885,13 +898,12 @@ const generateSchedule = (year, vacationPlan) => {
       reserve = reserveCandidates[0] || null;
     }
 
-    const eligibleIntensive = (reserve
-      ? allEligible.filter((emp) => emp.id !== reserve.id)
-      : allEligible
-    ).filter((emp) => weekDays.every((day) => isIntensivePeriod(day.id, emp.id)));
+    const isEligibleIntensiveWeek = weekDays.every((day) => isIntensivePeriod(day.id));
+
+    const eligibleIntensive = isEligibleIntensiveWeek ? allEligible : [];
 
     const selected = [];
-    if (eligibleIntensive.length > 0) { // Check if there are any eligible employees for intensive week
+    if (isEligibleIntensiveWeek) {
       for (const emp of eligibleIntensive) {
         if (intensiveWeeksByEmp[emp.id] >= 6) continue;
         if (selected.length >= 3) continue;
@@ -1052,6 +1064,7 @@ const generateSchedule = (year, vacationPlan) => {
       for (const day of days) {
         if (schedule[emp.id][day.id] !== "O40") continue;
         if (schedule[emp.id][day.id] === "V") continue;
+        if (!isIntensivePeriod(day.id, emp.id)) continue;
 
         const empOfficeDays = emp.officeDays.split(",").map((d) => d.trim());
         const isInOffice = empOfficeDays.includes(day.weekdayLetter);
@@ -1132,6 +1145,8 @@ const generateSchedule = (year, vacationPlan) => {
         const wi = parseInt(wiStr, 10);
         if (vacWeeksByEmp[emp.id].has(wi)) return;
         const daysInWeek = weeksList[wi];
+        const weekInIntensiveWindow = daysInWeek.every((day) => isIntensivePeriod(day.id, emp.id));
+        if (!weekInIntensiveWindow) return;
         let hasO42ForEmp = daysInWeek.some(
           (day) => schedule[emp.id][day.id] === "O42"
         );
@@ -1254,7 +1269,8 @@ const generateSchedule = (year, vacationPlan) => {
             (wi) =>
               wi !== forbiddenWeek &&
               !intensiveWeeksIndices.includes(wi) &&
-              !vacWeeksByEmp[enrique.id].has(wi)
+              !vacWeeksByEmp[enrique.id].has(wi) &&
+              weeksList[wi].every((day) => isIntensivePeriod(day.id, enrique.id))
           );
 
         for (const wi of candidateWeeks) {
@@ -1332,12 +1348,13 @@ const generateSchedule = (year, vacationPlan) => {
       if (vacWeeksByEmp[emp.id].has(wi)) return false;
       if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
       if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+      const daysInWeek = finalWeeksMap[wi];
+      if (!daysInWeek || !daysInWeek.every((day) => isIntensivePeriod(day.id, emp.id))) return false;
       if (emp.name === "Kike") {
         const daysInWeekCheck = finalWeeksMap[wi];
         if (daysInWeekCheck.some((day) => criticalKikeSet.has(day.id)))
           return false;
       }
-      const daysInWeek = finalWeeksMap[wi];
       // Check specific day constraints and O42
       for (const day of daysInWeek) {
         if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
@@ -1519,11 +1536,12 @@ const generateSchedule = (year, vacationPlan) => {
         if (vacWeeksByEmp[emp.id].has(wi)) return false;
         if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
         if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
+        const daysInWeek = finalWeeksMap[wi];
+        if (!daysInWeek || !daysInWeek.every((day) => isIntensivePeriod(day.id, emp.id))) return false;
         if (emp.name === "Kike") {
           const daysInWeekCheck = finalWeeksMap[wi];
           if (daysInWeekCheck.some((day) => criticalKikeSet.has(day.id))) return false;
         }
-        const daysInWeek = finalWeeksMap[wi];
         for (const day of daysInWeek) {
           if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
           if (emp.name === "Luis" && day.id === "2026-07-24") return false;
@@ -1682,6 +1700,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (emp.name === "Enrique" && forbiddenWeekEnrique === wi) return false;
       if (emp.name === "Luis" && forbiddenWeekLuis === wi) return false;
       const weekDays = finalWeeksMap[wi];
+      if (!weekDays || !weekDays.every((day) => isIntensivePeriod(day.id, emp.id))) return false;
       if (emp.name === "Kike" && weekDays.some((day) => criticalKikeSet.has(day.id))) return false;
       if (weekDays.some((day) => schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O42")) return false;
       return true;
@@ -1710,11 +1729,10 @@ const generateSchedule = (year, vacationPlan) => {
             const canApply = weekDays.every((day) => {
               const o30Count = EMPLOYEES.filter((e) => schedule[e.id][day.id] === "O30").length;
               const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
-              if (projected > 4) return false; // Allow up to 4 to guarantee 6 weeks for everyone
-              
-              // Only block if we are completely erasing O42 and we absolutely cannot.
-              // By prioritizing equity, we allow it to pass and let the manual Alert system warn the team!
-              return true;
+              if (projected > 3) return false;
+              if (day.weekdayLetter === "V") return true;
+              const o42Exists = EMPLOYEES.some((e) => e.id !== emp.id && schedule[e.id][day.id] === "O42");
+              return o42Exists;
             });
             if (!canApply) continue;
 
