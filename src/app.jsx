@@ -605,7 +605,7 @@ const generateSchedule = (year, vacationPlan) => {
     const d = parseInt(parts[2], 10);
     if (m === 6 && d >= 15) return true;
     if (m === 7 || m === 8) return true;
-    if (m === 9 && d <= 15) return true;
+    if (m === 9 && d <= 18) return true;
     return false;
   };
   const isIntensivePeriod = (dayId, empId) => {

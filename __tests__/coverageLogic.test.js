@@ -36,6 +36,35 @@ const isInOffice = (employee, weekdayLetter) => {
   return employee.officeDays.split(",").map((d) => d.trim()).includes(weekdayLetter);
 };
 
+const assertHardRegressionForIntensivas = (entryFile) => {
+  const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore(entryFile);
+  const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+  const minDay = "2026-06-15";
+  const maxDay = "2026-09-18";
+  const outOfWindow = [];
+  const dailyOverLimit = [];
+  days.forEach((day) => {
+    const intensivePeople = EMPLOYEES.filter((emp) => schedule[emp.id][day.id] === "O30");
+    if (intensivePeople.length > 3) {
+      dailyOverLimit.push(`${day.id} (${intensivePeople.length}): ${intensivePeople.map((p) => p.name).join(", ")}`);
+    }
+    if (day.id < minDay || day.id > maxDay) {
+      intensivePeople.forEach((emp) => {
+        outOfWindow.push(`${day.id}: ${emp.name}`);
+      });
+    }
+  });
+  if (outOfWindow.length > 0 || dailyOverLimit.length > 0) {
+    throw new Error(
+      [
+        `Regresión de intensivas en ${entryFile}:`,
+        outOfWindow.length > 0 ? `- Fuera de ventana (${minDay}..${maxDay}): ${outOfWindow.join(" | ")}` : "- Fuera de ventana: OK",
+        dailyOverLimit.length > 0 ? `- Exceso diario (>3): ${dailyOverLimit.join(" | ")}` : "- Exceso diario (>3): OK",
+      ].join("\n")
+    );
+  }
+};
+
 describe("Cobertura presencial 17:00-18:00", () => {
   test("el 4 de junio de 2026 tiene cobertura O42 en oficina", () => {
     const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
@@ -73,11 +102,11 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
-  test("la intensiva solo se asigna entre el 15 de junio y el 15 de septiembre", () => {
+  test("la intensiva solo se asigna entre el 15 de junio y el 18 de septiembre", () => {
     const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore();
     const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
     const minDay = "2026-06-15";
-    const maxDay = "2026-09-15";
+    const maxDay = "2026-09-18";
     days.forEach((day) => {
       EMPLOYEES.forEach((emp) => {
         const type = schedule[emp.id][day.id];
@@ -94,9 +123,14 @@ describe("Registro formal de equidad distributiva", () => {
       const dailyIntensive = EMPLOYEES.filter((emp) => schedule[emp.id][day.id] === "O30");
       expect(dailyIntensive.length).toBeLessThanOrEqual(3);
       if (dailyIntensive.length > 0) {
-        expect(day.id >= "2026-06-15" && day.id <= "2026-09-15").toBe(true);
+        expect(day.id >= "2026-06-15" && day.id <= "2026-09-18").toBe(true);
       }
     });
+  });
+
+  test("regresión dura de intensivas para app.js y src/app.jsx", () => {
+    assertHardRegressionForIntensivas("app.js");
+    assertHardRegressionForIntensivas("src/app.jsx");
   });
 
   test("no permite intensiva en días sueltos: O30 solo en semana operativa completa", () => {

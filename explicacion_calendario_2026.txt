@@ -142,14 +142,22 @@ Mejoras de visualización y responsive (tercera iteración)
 
 Rectificaciones de reglas de intensiva (marzo 2026)
 
-- Se blinda la ventana de intensiva: O30 solo se permite del 15/06 al 15/09, sin excepciones por integrante.
+- Se blinda la ventana de intensiva: O30 solo se permite del 15/06 al 18/09, sin excepciones por integrante.
 - Se aplica la restricción temporal en todas las fases del algoritmo (asignación inicial, compensaciones y rebalanceos posteriores).
 - Se refuerza el límite diario de intensivas en todos los ajustes finales para que nunca superen 3 personas por día.
-- Se añade test automático específico que valida que ninguna asignación O30 quede fuera del rango 15/06–15/09.
+- Se añade test automático específico que valida que ninguna asignación O30 quede fuera del rango 15/06–18/09.
 
 Rectificación adicional en la app principal (src/app.jsx)
 
 - Se alinea la misma regla estricta en la fuente principal de interfaz (`src/app.jsx`) para evitar divergencias con `app.js`.
 - Se añaden pruebas automáticas ejecutando también la lógica desde `src/app.jsx` para validar:
-- Ventana obligatoria de O30 entre 15/06 y 15/09.
+- Ventana obligatoria de O30 entre 15/06 y 18/09.
 - Máximo de 3 personas en intensiva por día.
+
+Actualización de ventana intensiva y test de regresión duro
+
+- Se amplía la ventana de intensiva hasta el 18/09 (rango final: 15/06–18/09) para facilitar más semanas intensivas por integrante.
+- Se mantiene el límite estricto de máximo 3 personas en intensiva por día.
+- Se añade un test de regresión duro que falla mostrando detalle de:
+- Fecha + integrante si aparece O30 fuera del rango 15/06–18/09.
+- Fecha + listado de integrantes si un día supera 3 personas en O30.
