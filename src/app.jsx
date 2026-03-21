@@ -175,6 +175,11 @@ const buildWeeksMap = (days) => {
   return weeksMap;
 };
 
+const getLateGroupForWeekGlobal = (weekIndex) => {
+  const defaultIsALate = SHIFT_BASE_A_18H ? weekIndex % 2 === 0 : weekIndex % 2 !== 0;
+  return defaultIsALate ? "A" : "B";
+};
+
 const buildWeeklyViolation = ({ rule, employee, weekIndex, weekDays, types, detail }) => ({
   rule,
   message: STRICT_WEEKLY_RULE_MESSAGES[rule],
@@ -3064,7 +3069,7 @@ const App = () => {
       // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
       if (day.weekdayLetter !== "V") {
         if (shift18hOfficeCount < 1) {
-          const lateGroup = getLateGroupForWeek(day.weekIndex);
+          const lateGroup = getLateGroupForWeekGlobal(day.weekIndex);
           const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
           
           const o42Candidates = EMPLOYEES.filter((emp) => {
