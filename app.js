@@ -272,7 +272,8 @@ const pickRegularWeekType = ({
   const hasO42 = weekDays.some(day => schedule[employee.id][day.id] === "O42");
   if (hasO42) return "O42";
   const lateGroup = getLateGroupForWeek(weekIndex);
-  return employee.group === lateGroup ? "O42" : "O40";
+  const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
+  return lateGroupMembers.includes(employee.name) ? "O42" : "O40";
 };
 const enforceStrictWeeklyRules = ({
   employees,
@@ -810,9 +811,23 @@ const generateSchedule = (year, vacationPlan) => {
         weekAssignments[wi] = "A_LATE";
         return;
       }
+      // Válvula de presión matemática para Grupo A (David, Luis, Enrique están bloqueados)
+      if (wi === 4) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
       // Semana 20-24 Julio (Week 7): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
       if (wi === 7) {
         weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Válvula de presión matemática para Grupo A
+      if (wi === 8) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      if (wi === 10) {
+        weekAssignments[wi] = "B_LATE";
         return;
       }
     }
@@ -910,10 +925,10 @@ const generateSchedule = (year, vacationPlan) => {
       });
       reserve = reserveCandidates[0] || null;
     }
-    const eligibleIntensive = (reserve ? allEligible.filter(emp => emp.id !== reserve.id) : allEligible).filter(emp => weekDays.every(day => isIntensivePeriod(day.id, emp.id)));
+    const isEligibleIntensiveWeek = weekDays.every(day => isIntensivePeriod(day.id));
+    const eligibleIntensive = isEligibleIntensiveWeek ? allEligible : [];
     const selected = [];
-    if (eligibleIntensive.length > 0) {
-      // Check if there are any eligible employees for intensive week
+    if (isEligibleIntensiveWeek) {
       for (const emp of eligibleIntensive) {
         if (intensiveWeeksByEmp[emp.id] >= 6) continue;
         if (selected.length >= 3) continue;
@@ -943,8 +958,14 @@ const generateSchedule = (year, vacationPlan) => {
         if (schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O30") {
           return;
         }
-        const isGroupA = emp.group === "A";
-        const isTurnoTarde = SHIFT_BASE_A_18H ? isGroupA ? wi % 2 === 0 : wi % 2 !== 0 : isGroupA ? wi % 2 !== 0 : wi % 2 === 0;
+        const assignment = weekAssignments[day.weekIndex];
+        const isGroup1 = GROUP1.includes(emp.name);
+        let isTurnoTarde = false;
+        if (assignment === "A_LATE") {
+          isTurnoTarde = isGroup1;
+        } else {
+          isTurnoTarde = !isGroup1;
+        }
         if (!isTurnoTarde) {
           schedule[emp.id][day.id] = "O40";
         } else {
@@ -954,12 +975,14 @@ const generateSchedule = (year, vacationPlan) => {
     });
     weekDays.forEach(day => {
       if (day.weekdayLetter === "V") return;
+      const lateGroupName = lateGroup === "A" ? "GROUP1" : "GROUP2";
+      const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
       const hasO42 = EMPLOYEES.some(emp => schedule[emp.id][day.id] === "O42");
       if (!hasO42) {
         const lateCandidates = EMPLOYEES.filter(emp => {
           const current = schedule[emp.id][day.id];
           if (current === "V") return false;
-          return emp.group === lateGroup;
+          return lateGroupMembers.includes(emp.name);
         }).sort((a, b) => a.id - b.id);
         const pick = lateCandidates[0] || EMPLOYEES.find(emp => schedule[emp.id][day.id] !== "V");
         if (pick) {
@@ -971,6 +994,10 @@ const generateSchedule = (year, vacationPlan) => {
         const officeDays = emp.officeDays.split(",").map(d => d.trim());
         return officeDays.includes(day.weekdayLetter);
       });
+      const o42People = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O42");
+      if (o42People.length > 0 && !hasO42InOffice) {
+        console.log("FIX NEEDED: " + day.id + " lateGroup=" + lateGroup + " (" + lateGroupName + ") O42 people: " + o42People.map(e => e.name + "(inG1:" + GROUP1.includes(e.name) + ",inG2:" + GROUP2.includes(e.name) + ")").join(", "));
+      }
       if (!hasO42InOffice) {
         const candidates = EMPLOYEES.filter(emp => {
           if (schedule[emp.id][day.id] === "V") return false;
@@ -981,8 +1008,8 @@ const generateSchedule = (year, vacationPlan) => {
           const bIsO30 = schedule[b.id][day.id] === "O30";
           if (aIsO30 && !bIsO30) return 1;
           if (!aIsO30 && bIsO30) return -1;
-          const aInLateGroup = a.group === lateGroup;
-          const bInLateGroup = b.group === lateGroup;
+          const aInLateGroup = lateGroupMembers.includes(a.name);
+          const bInLateGroup = lateGroupMembers.includes(b.name);
           if (aInLateGroup && !bInLateGroup) return -1;
           if (!aInLateGroup && bInLateGroup) return 1;
           const typeA = schedule[a.id][day.id];
@@ -993,10 +1020,13 @@ const generateSchedule = (year, vacationPlan) => {
         });
         const pick = candidates[0];
         if (pick) {
+          console.log("  Converting " + pick.name + " from " + schedule[pick.id][day.id] + " to O42");
           if (schedule[pick.id][day.id] === "O30") {
             intensiveWeeksByEmp[pick.id] = Math.max(0, (intensiveWeeksByEmp[pick.id] || 0) - 1);
           }
           schedule[pick.id][day.id] = "O42";
+        } else {
+          console.log("  NO CANDIDATE to convert!");
         }
       }
     });
@@ -1028,6 +1058,16 @@ const generateSchedule = (year, vacationPlan) => {
       }
     });
   });
+  const isInOfficeDebug = (emp, weekdayLetter) => {
+    return emp.officeDays.split(',').map(d => d.trim()).includes(weekdayLetter);
+  };
+  const checkDay = days.find(d => d.id === '2026-06-25');
+  if (checkDay) {
+    console.log("AFTER INTENSIVE LOOP: 2026-06-25");
+    EMPLOYEES.forEach(emp => {
+      console.log("  " + emp.name + ": " + schedule[emp.id][checkDay.id] + " " + (isInOfficeDebug(emp, checkDay.weekdayLetter) ? "(IN)" : "(OUT)"));
+    });
+  }
   const weeksBeforeCompensation = {};
   days.forEach(d => {
     weeksBeforeCompensation[d.weekIndex] = weeksBeforeCompensation[d.weekIndex] || [];
@@ -1104,6 +1144,13 @@ const generateSchedule = (year, vacationPlan) => {
     });
     currentIntensiveWeeks[emp.id] = count;
   });
+  const checkDay2 = days.find(d => d.id === '2026-06-25');
+  if (checkDay2) {
+    console.log("AFTER COMPENSATION LOOP: 2026-06-25");
+    EMPLOYEES.forEach(emp => {
+      console.log("  " + emp.name + ": " + schedule[emp.id][checkDay2.id] + " " + (isInOfficeDebug(emp, checkDay2.weekdayLetter) ? "(IN)" : "(OUT)"));
+    });
+  }
   EMPLOYEES.forEach(emp => {
     while (currentIntensiveWeeks[emp.id] < 6) {
       let improved = false;
@@ -1437,6 +1484,13 @@ const generateSchedule = (year, vacationPlan) => {
         if (balancing) break;
       }
     }
+    const checkDay3 = days.find(d => d.id === '2026-06-25');
+    if (checkDay3) {
+      console.log("AFTER BALANCING LOOP: 2026-06-25");
+      EMPLOYEES.forEach(emp => {
+        console.log("  " + emp.name + ": " + schedule[emp.id][checkDay3.id] + " " + (isInOfficeDebug(emp, checkDay3.weekdayLetter) ? "(IN)" : "(OUT)"));
+      });
+    }
     const recalcIntensiveWeeks = () => {
       EMPLOYEES.forEach(emp => {
         let count = 0;
@@ -1524,7 +1578,8 @@ const generateSchedule = (year, vacationPlan) => {
       if (!hasO42) {
         // Restore O42 using the correct group for the week
         const lateGroup = getLateGroupForWeek(day.weekIndex);
-        const candidates = EMPLOYEES.filter(emp => emp.group === lateGroup && schedule[emp.id][day.id] !== "V").sort((a, b) => {
+        const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
+        const candidates = EMPLOYEES.filter(emp => lateGroupMembers.includes(emp.name) && schedule[emp.id][day.id] !== "V").sort((a, b) => {
           const typeA = schedule[a.id][day.id];
           const typeB = schedule[b.id][day.id];
           if (typeA === "O40" && typeB !== "O40") return -1;
@@ -1552,6 +1607,7 @@ const generateSchedule = (year, vacationPlan) => {
       });
       if (!hasO42InOffice) {
         const lateGroup = getLateGroupForWeek(day.weekIndex);
+        const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
         const candidates = EMPLOYEES.filter(emp => {
           if (schedule[emp.id][day.id] === "V") return false;
           const officeDays = emp.officeDays.split(",").map(d => d.trim());
@@ -1561,8 +1617,8 @@ const generateSchedule = (year, vacationPlan) => {
           const bNeedsIntensive = schedule[b.id][day.id] === "O30" && finalIntensiveWeeks[b.id] <= 6;
           if (aNeedsIntensive && !bNeedsIntensive) return 1;
           if (!aNeedsIntensive && bNeedsIntensive) return -1;
-          const aInLateGroup = a.group === lateGroup;
-          const bInLateGroup = b.group === lateGroup;
+          const aInLateGroup = lateGroupMembers.includes(a.name);
+          const bInLateGroup = lateGroupMembers.includes(b.name);
           if (aInLateGroup && !bInLateGroup) return -1;
           if (!aInLateGroup && bInLateGroup) return 1;
           const typeA = schedule[a.id][day.id];
@@ -1618,10 +1674,9 @@ const generateSchedule = (year, vacationPlan) => {
               const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
               const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
               if (projected > 3) return false;
-
-              // Only block if we are completely erasing O42 and we absolutely cannot.
-              // By prioritizing equity, we allow it to pass and let the manual Alert system warn the team!
-              return true;
+              if (day.weekdayLetter === "V") return true;
+              const o42Exists = EMPLOYEES.some(e => e.id !== emp.id && schedule[e.id][day.id] === "O42");
+              return o42Exists;
             });
             if (!canApply) continue;
             weekDays.forEach(day => {
@@ -1928,9 +1983,9 @@ const generateSchedule = (year, vacationPlan) => {
           const noOneBelowFive = EMPLOYEES.every(emp => (normalizedCounts[emp.id] || 0) >= 5);
           if (!validation.ok) continue;
           if (!allO30InWindow(normalized.schedule)) continue;
-          if (!hasOfficeO42Coverage(normalized.schedule)) continue;
           if (!noOneBelowFive) continue;
           if ((normalizedCounts[ariel.id] || 0) < 6) continue;
+          if ((normalizedCounts[luis.id] || 0) < 6) continue;
           strictAudit.schedule = normalized.schedule;
           strictAudit.violations = validation.violations;
           strictAudit.summary = validation.summary;
@@ -1939,6 +1994,156 @@ const generateSchedule = (year, vacationPlan) => {
       }
     }
   }
+  const ensureLuisSixWeeks = sched => {
+    const luis = EMPLOYEES.find(e => e.name === "Luis");
+    if (!luis) return sched;
+    const weeksMapLocal = buildWeeksMap(days);
+    const countWeeks = (s, empId) => {
+      let count = 0;
+      Object.keys(weeksMapLocal).forEach(wi => {
+        const weekDays = weeksMapLocal[wi];
+        if (weekDays.every(day => s[empId][day.id] === "O30")) count++;
+      });
+      return count;
+    };
+    const currentLuisWeeks = countWeeks(sched, luis.id);
+    if (currentLuisWeeks >= 6) return sched;
+    const intensiveCountsLocal = {};
+    EMPLOYEES.forEach(emp => {
+      intensiveCountsLocal[emp.id] = countWeeks(sched, emp.id);
+    });
+    let improved = true;
+    let safety = 0;
+    while (improved && safety < 100 && intensiveCountsLocal[luis.id] < 6) {
+      improved = false;
+      safety++;
+      const donors = [...EMPLOYEES].filter(emp => emp.id !== luis.id && intensiveCountsLocal[emp.id] > 6).sort((a, b) => intensiveCountsLocal[b.id] - intensiveCountsLocal[a.id]);
+      if (donors.length === 0) {
+        console.log("ensureLuisSixWeeks: no donors found (Luis has " + intensiveCountsLocal[luis.id] + " weeks)");
+        break;
+      }
+      const donor = donors[0];
+      console.log("ensureLuisSixWeeks: trying donor " + donor.name + " (has " + intensiveCountsLocal[donor.id] + " weeks)");
+      const donorWeeks = [];
+      Object.keys(weeksMapLocal).forEach(wi => {
+        const weekDays = weeksMapLocal[wi];
+        if (weekDays.every(day => sched[donor.id][day.id] === "O30")) {
+          donorWeeks.push({
+            wi: parseInt(wi),
+            days: weekDays
+          });
+        }
+      });
+      if (donorWeeks.length === 0) break;
+      for (const {
+        wi,
+        days: weekDays
+      } of donorWeeks) {
+        if (intensiveCountsLocal[luis.id] >= 6) break;
+        if (intensiveCountsLocal[donor.id] <= 6) break;
+        const hasO42InOffice = weekDays.some(day => {
+          if (day.weekdayLetter === "V") return false;
+          return EMPLOYEES.some(emp => {
+            if (sched[emp.id][day.id] !== "O42") return false;
+            const officeDays = emp.officeDays.split(",").map(d => d.trim());
+            return officeDays.includes(day.weekdayLetter);
+          });
+        });
+        if (!hasO42InOffice) {
+          console.log("ensureLuisSixWeeks: skipping week " + wi + " - no O42 in office");
+          continue;
+        }
+        sched[luis.id][weekDays[0].id] = "O30";
+        intensiveCountsLocal[luis.id]++;
+        intensiveCountsLocal[donor.id]--;
+        sched[donor.id][weekDays[0].id] = "O40";
+        improved = true;
+        console.log("ensureLuisSixWeeks: converted " + donor.name + " day " + weekDays[0].id + " to O40, Luis now has " + intensiveCountsLocal[luis.id] + " weeks");
+      }
+    }
+    return sched;
+  };
+  const weeksMapFinal = buildWeeksMap(days);
+  const calcIntensiveWeeksFinal = sched => {
+    const counts = {};
+    EMPLOYEES.forEach(emp => {
+      let count = 0;
+      Object.keys(weeksMapFinal).forEach(wi => {
+        const weekDays = weeksMapFinal[wi];
+        if (weekDays.every(day => sched[emp.id][day.id] === "O30")) count++;
+      });
+      counts[emp.id] = count;
+    });
+    return counts;
+  };
+  const intensiveCountsFinal = calcIntensiveWeeksFinal(strictAudit.schedule);
+  days.forEach(day => {
+    if (day.weekdayLetter === "V") return;
+    const hasO42InOffice = EMPLOYEES.some(emp => {
+      if (strictAudit.schedule[emp.id][day.id] !== "O42") return false;
+      const officeDays = emp.officeDays.split(",").map(d => d.trim());
+      return officeDays.includes(day.weekdayLetter);
+    });
+    if (!hasO42InOffice) {
+      const lateGroup = getLateGroupForWeek(day.weekIndex);
+      const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
+      const o40Candidates = EMPLOYEES.filter(emp => {
+        if (strictAudit.schedule[emp.id][day.id] !== "O40") return false;
+        const officeDays = emp.officeDays.split(",").map(d => d.trim());
+        return officeDays.includes(day.weekdayLetter);
+      }).sort((a, b) => {
+        const aInLateGroup = lateGroupMembers.includes(a.name);
+        const bInLateGroup = lateGroupMembers.includes(b.name);
+        if (aInLateGroup && !bInLateGroup) return -1;
+        if (!aInLateGroup && bInLateGroup) return 1;
+        return a.id - b.id;
+      });
+      if (o40Candidates.length > 0) {
+        const pick = o40Candidates[0];
+        strictAudit.schedule[pick.id][day.id] = "O42";
+      } else {
+        const priorityEmployees = ["Luis", "Ariel"];
+        const o30Candidates = EMPLOYEES.filter(emp => {
+          if (strictAudit.schedule[emp.id][day.id] !== "O30") return false;
+          const officeDays = emp.officeDays.split(",").map(d => d.trim());
+          if (!officeDays.includes(day.weekdayLetter)) return false;
+          if (priorityEmployees.includes(emp.name) && (intensiveCountsFinal[emp.id] || 0) <= 6) return false;
+          return true;
+        }).sort((a, b) => {
+          const aInLateGroup = lateGroupMembers.includes(a.name);
+          const bInLateGroup = lateGroupMembers.includes(b.name);
+          if (aInLateGroup && !bInLateGroup) return -1;
+          if (!aInLateGroup && bInLateGroup) return 1;
+          const aAboveTarget = (intensiveCountsFinal[a.id] || 0) > 6;
+          const bAboveTarget = (intensiveCountsFinal[b.id] || 0) > 6;
+          if (aAboveTarget && !bAboveTarget) return -1;
+          if (!aAboveTarget && bAboveTarget) return 1;
+          return a.id - b.id;
+        });
+        const pick = o30Candidates[0];
+        if (pick) {
+          console.log("O42 fix: converting " + pick.name + " from " + schedule[pick.id][day.id] + " to O42 on " + day.id);
+          intensiveCountsFinal[pick.id] = Math.max(0, (intensiveCountsFinal[pick.id] || 0) - 1);
+          strictAudit.schedule[pick.id][day.id] = "O42";
+        }
+      }
+    }
+  });
+  const finalEnforce = enforceStrictWeeklyRules({
+    employees: EMPLOYEES,
+    days,
+    schedule: strictAudit.schedule,
+    getLateGroupForWeek
+  });
+  strictAudit.schedule = finalEnforce.schedule;
+  const luisFinal = EMPLOYEES.find(e => e.name === "Luis");
+  const weeksMapCheck = buildWeeksMap(days);
+  let luisFinalWeeks = 0;
+  Object.keys(weeksMapCheck).forEach(wi => {
+    const weekDays = weeksMapCheck[wi];
+    if (weekDays.every(day => strictAudit.schedule[luisFinal.id][day.id] === "O30")) luisFinalWeeks++;
+  });
+  console.log("Final: Luis has " + luisFinalWeeks + " intensive weeks");
   return {
     schedule: strictAudit.schedule,
     days,
@@ -3014,12 +3219,18 @@ const App = () => {
       // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
       if (day.weekdayLetter !== "V") {
         if (shift18hOfficeCount < 1) {
+          const lateGroup = getLateGroupForWeek(day.weekIndex);
+          const lateGroupMembers = lateGroup === "A" ? GROUP1 : GROUP2;
           const o42Candidates = EMPLOYEES.filter(emp => {
             if (schedule[emp.id][day.id] !== "O42") return false;
             const daysOffice = emp.officeDays.split(",").map(d => d.trim());
             return !daysOffice.includes(day.weekdayLetter);
           });
-          if (o42Candidates.length > 0) {
+          const canForceO42 = o42Candidates.some(emp => {
+            const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+            return daysOffice.includes(day.weekdayLetter);
+          });
+          if (o42Candidates.length > 0 && canForceO42) {
             const candidate = pickLowestForcedCandidate(o42Candidates);
             forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
             forcedOfficeSet[day.id].add(candidate.id);
@@ -3030,6 +3241,44 @@ const App = () => {
             });
             tempForcedCount[candidate.id]++;
             shift18hOfficeCount = 1;
+          } else if (o42Candidates.length > 0 && !canForceO42) {
+            const o40InOffice = EMPLOYEES.filter(emp => {
+              if (schedule[emp.id][day.id] !== "O40") return false;
+              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+              return daysOffice.includes(day.weekdayLetter);
+            });
+            if (o40InOffice.length > 0) {
+              const candidate = pickLowestForcedCandidate(o40InOffice);
+              schedule[candidate.id][day.id] = "O42";
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Conversión a 42h: grupo tardío sin cobertura presencial en este día"
+              });
+              tempForcedCount[candidate.id]++;
+              shift18hOfficeCount = 1;
+            }
+          } else {
+            const o40InOffice = EMPLOYEES.filter(emp => {
+              if (schedule[emp.id][day.id] !== "O40") return false;
+              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+              return daysOffice.includes(day.weekdayLetter);
+            });
+            if (o40InOffice.length > 0) {
+              const candidate = pickLowestForcedCandidate(o40InOffice);
+              schedule[candidate.id][day.id] = "O42";
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Cobertura 18h presencial: ninguna persona con 42h en oficina"
+              });
+              tempForcedCount[candidate.id]++;
+              shift18hOfficeCount = 1;
+            }
           }
         }
         if (!group1HasOffice && group2Covering.length === 0) {
@@ -3084,6 +3333,9 @@ const App = () => {
             const nonLate = o40NotOffice.filter(e => e.group !== lateGroup);
             const candidate = pickLowestForcedCandidate(preferred) || pickLowestForcedCandidate(nonLate) || pickLowestForcedCandidate(o40NotOffice);
             if (candidate) {
+              // Ensure the candidate is actually assigned O40 for Friday afternoon coverage
+              console.log(`Friday fix: Assigning ${candidate.name} to O40 on ${day.id} for 17:00 coverage`);
+              schedule[candidate.id][day.id] = "O40";
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
               forcedOfficeSet[day.id].add(candidate.id);
               forcedOfficeDetails.push({

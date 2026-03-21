@@ -2256,6 +2256,14 @@ const generateSchedule = (year, vacationPlan) => {
     }
   });
 
+  const finalEnforce = enforceStrictWeeklyRules({
+    employees: EMPLOYEES,
+    days,
+    schedule: strictAudit.schedule,
+    getLateGroupForWeek,
+  });
+  strictAudit.schedule = finalEnforce.schedule;
+
   const luisFinal = EMPLOYEES.find(e => e.name === "Luis");
   const weeksMapCheck = buildWeeksMap(days);
   let luisFinalWeeks = 0;
