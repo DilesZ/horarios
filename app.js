@@ -1002,24 +1002,18 @@ const generateSchedule = (year, vacationPlan) => {
       if (o42People.length > 0 && !hasO42InOffice) {
         console.log("FIX NEEDED: " + day.id + " lateGroup=" + lateGroup + " (" + lateGroupName + ") O42 people: " + o42People.map(e => e.name + "(inG1:" + GROUP1.includes(e.name) + ",inG2:" + GROUP2.includes(e.name) + ")").join(", "));
       }
-      if (!hasO42InOffice) {
+      const currentO42Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O42").length;
+      if (!hasO42InOffice && currentO42Count < 3) {
         const candidates = EMPLOYEES.filter(emp => {
           if (schedule[emp.id][day.id] === "V") return false;
           const officeDays = emp.officeDays.split(",").map(d => d.trim());
-          return officeDays.includes(day.weekdayLetter);
+          if (!officeDays.includes(day.weekdayLetter)) return false;
+          return lateGroupMembers.includes(emp.name);
         }).sort((a, b) => {
-          const aIsO30 = schedule[a.id][day.id] === "O30";
-          const bIsO30 = schedule[b.id][day.id] === "O30";
-          if (aIsO30 && !bIsO30) return 1;
-          if (!aIsO30 && bIsO30) return -1;
-          const aInLateGroup = lateGroupMembers.includes(a.name);
-          const bInLateGroup = lateGroupMembers.includes(b.name);
-          if (aInLateGroup && !bInLateGroup) return -1;
-          if (!aInLateGroup && bInLateGroup) return 1;
-          const typeA = schedule[a.id][day.id];
-          const typeB = schedule[b.id][day.id];
-          if (typeA === "O40" && typeB !== "O40") return -1;
-          if (typeB === "O40" && typeA !== "O40") return 1;
+          const aIsO40 = schedule[a.id][day.id] === "O40";
+          const bIsO40 = schedule[b.id][day.id] === "O40";
+          if (aIsO40 && !bIsO40) return -1;
+          if (!aIsO40 && bIsO40) return 1;
           return a.id - b.id;
         });
         const pick = candidates[0];
@@ -1029,8 +1023,6 @@ const generateSchedule = (year, vacationPlan) => {
             intensiveWeeksByEmp[pick.id] = Math.max(0, (intensiveWeeksByEmp[pick.id] || 0) - 1);
           }
           schedule[pick.id][day.id] = "O42";
-        } else {
-          console.log("  NO CANDIDATE to convert!");
         }
       }
     });
@@ -2083,6 +2075,8 @@ const generateSchedule = (year, vacationPlan) => {
   const intensiveCountsFinal = calcIntensiveWeeksFinal(strictAudit.schedule);
   days.forEach(day => {
     if (day.weekdayLetter === "V") return;
+    const currentO42Count = EMPLOYEES.filter(emp => strictAudit.schedule[emp.id][day.id] === "O42").length;
+    if (currentO42Count >= 3) return;
     const hasO42InOffice = EMPLOYEES.some(emp => {
       if (strictAudit.schedule[emp.id][day.id] !== "O42") return false;
       const officeDays = emp.officeDays.split(",").map(d => d.trim());
@@ -2105,7 +2099,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (o40Candidates.length > 0) {
         const pick = o40Candidates[0];
         strictAudit.schedule[pick.id][day.id] = "O42";
-      } else {
+      } else if (currentO42Count < 3) {
         const priorityEmployees = ["Luis", "Ariel"];
         const o30Candidates = EMPLOYEES.filter(emp => {
           if (strictAudit.schedule[emp.id][day.id] !== "O30") return false;
