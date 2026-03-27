@@ -3,7 +3,7 @@ const path = require("path");
 const vm = require("vm");
 const babel = require("@babel/core");
 
-const loadSchedulingCore = (entryFile = "app.js") => {
+const loadSchedulingCore = (entryFile = "src/app.jsx") => {
   const appPath = path.join(__dirname, "..", entryFile);
   const raw = fs.readFileSync(appPath, "utf8");
   const cutoff = raw.indexOf("const App = () => {");
@@ -128,8 +128,7 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
-  test("regresión dura de intensivas para app.js y src/app.jsx", () => {
-    assertHardRegressionForIntensivas("app.js");
+  test("regresión dura de intensivas para src/app.jsx", () => {
     assertHardRegressionForIntensivas("src/app.jsx");
   });
 
