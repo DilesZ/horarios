@@ -2307,6 +2307,40 @@ const generateSchedule = (year, vacationPlan) => {
   });
   strictAudit.schedule = finalEnforce.schedule;
 
+  // Garantía de cobertura viernes: al menos 1 persona con O40 en cada viernes
+  days.filter(d => d.weekdayLetter === "V").forEach(day => {
+    const sch = strictAudit.schedule;
+    const hasO40 = EMPLOYEES.some(emp => sch[emp.id][day.id] === "O40");
+    if (!hasO40) {
+      const weekDays = days.filter(d => d.weekIndex === day.weekIndex);
+      const monThu = weekDays.filter(d => d.weekdayLetter !== "V");
+
+      // Buscar candidatos O42 cuya conversión a O40 no rompa cobertura Mon-Thu
+      const o42All = EMPLOYEES.filter(emp => sch[emp.id][day.id] === "O42");
+      const safeCandidate = o42All.find(candidate => {
+        // ¿Si convertimos a este candidato, cada L-J sigue teniendo al menos otro O42 en oficina?
+        return monThu.every(md => {
+          const othersO42 = EMPLOYEES.some(emp => {
+            if (emp.id === candidate.id) return false;
+            if (sch[emp.id][md.id] !== "O42") return false;
+            const od = emp.officeDays.split(",").map(x => x.trim());
+            return od.includes(md.weekdayLetter);
+          });
+          return othersO42;
+        });
+      });
+
+      if (safeCandidate) {
+        // Convertir toda la semana para no mezclar O40/O42
+        weekDays.forEach(wd => {
+          if (sch[safeCandidate.id][wd.id] === "O42") {
+            sch[safeCandidate.id][wd.id] = "O40";
+          }
+        });
+      }
+    }
+  });
+
   return {
     schedule: strictAudit.schedule,
     days,
@@ -3235,6 +3269,32 @@ const App = () => {
                 dayId: day.id,
                 empId: candidate.id,
                 reason: "Viernes: se requiere 40h en oficina hasta las 17:00",
+              });
+              tempForcedCount[candidate.id]++;
+            }
+          } else {
+            // No hay nadie con O40. Convertir un O42 presencial a O40 para cubrir viernes.
+            const o42InOffice = EMPLOYEES.filter((emp) => {
+              const type = schedule[emp.id][day.id];
+              if (type !== "O42") return false;
+              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+              return daysOffice.includes("V");
+            });
+            const o42NotOffice = EMPLOYEES.filter((emp) => {
+              const type = schedule[emp.id][day.id];
+              if (type !== "O42") return false;
+              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+              return !daysOffice.includes("V");
+            });
+            const candidate = pickLowestForcedCandidate(o42InOffice) || pickLowestForcedCandidate(o42NotOffice);
+            if (candidate) {
+              schedule[candidate.id][day.id] = "O40";
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Viernes: conversión O42→O40 para cobertura presencial hasta 17:00",
               });
               tempForcedCount[candidate.id]++;
             }

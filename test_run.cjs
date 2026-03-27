@@ -4,12 +4,12 @@ const { useState, useMemo, useEffect } = React;
 /* global XLSX */
 
 const EMPLOYEES = [
-  { id: 1, name: "Kike", role: "SysAdmin", officeDays: "L, M, X, V", group: "A" },
-  { id: 2, name: "Jose", role: "DevOps", officeDays: "L, X, J, V", group: "B" },
+  { id: 1, name: "Kike", role: "SysAdmin", officeDays: "X, J, V", group: "A" },
+  { id: 2, name: "Jose", role: "DevOps", officeDays: "L, M, V", group: "B" },
   { id: 3, name: "Enrique", role: "Manager", officeDays: "X, J", group: "B" },
   { id: 4, name: "David", role: "Backend", officeDays: "J, V", group: "A" },
   { id: 5, name: "Luis", role: "Frontend", officeDays: "L, M", group: "A" },
-  { id: 6, name: "Ariel", role: "FullStack", officeDays: "L, M, J, V", group: "B" },
+  { id: 6, name: "Ariel", role: "FullStack", officeDays: "L, M, X", group: "B" },
 ];
 
 const MONTH_NAMES = [
@@ -150,7 +150,7 @@ const GROUP2 = ["Jose", "Ariel", "Kike"];
 const SHIFT_BASE_A_18H = true;
 const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
 const EQUITY_MIN_INTENSIVE_WEEKS = 6;
-const EQUITY_IDEAL_INTENSIVE_WEEKS = 7;
+const EQUITY_IDEAL_INTENSIVE_WEEKS = 6;
 const STRICT_WEEKLY_RULES = {
   INTENSIVE_FULL_WEEK_ONLY: "INTENSIVE_FULL_WEEK_ONLY",
   MIXED_40_42_IN_WEEK: "MIXED_40_42_IN_WEEK",
@@ -2679,14 +2679,33 @@ const buildChartDataRows = ({ employees, intensiveWeeksByEmp, forcedOfficeDetail
 
 
 const plan = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
-const counts = {};
+const targetDayId = "2026-07-17"; // July 17th
+const schedule = plan.schedule;
+
+console.log("=== Schedule para el "+targetDayId+" ===");
 EMPLOYEES.forEach(emp => {
-    let count = 0;
-    const weeks = [...new Set(plan.days.map(d => d.weekIndex))];
-    weeks.forEach(wi => {
-        const daysInWeek = plan.days.filter(d => d.weekIndex === wi);
-        if (daysInWeek.every(d => plan.schedule[emp.id][d.id] === "O30")) count++;
-    });
-    counts[emp.name] = count;
+    let type = schedule[emp.id][targetDayId];
+    console.log(emp.name + " (" + emp.officeDays + "): " + type);
 });
-console.log(counts);
+
+// Also evaluate dailyCoverage directly if we can
+const dayObj = plan.days.find(d => d.id === targetDayId);
+const statsState = buildChartDataRows({employees: EMPLOYEES, intensiveWeeksByEmp: {}, forcedOfficeDetails: []}); 
+// Actually we need the alerts. Let's rebuild the dailyCoverage for this day using the logic from the app.
+let shift18hOfficeCount = 0;
+let hasO40InOffice = EMPLOYEES.some(emp => {
+    const type = schedule[emp.id][targetDayId];
+    if (type !== "O40") return false;
+    const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+    return daysOffice.includes("V");
+});
+
+console.log("\n¿Alguien con O40 presencial? " + hasO40InOffice);
+
+// Evaluemos si hay alertas
+let present = 0;
+EMPLOYEES.forEach(e => {
+    if(schedule[e.id][targetDayId] !== "V") present++;
+});
+console.log("Presentes: " + present);
+
