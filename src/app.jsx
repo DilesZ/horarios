@@ -4,12 +4,12 @@ const { useState, useMemo, useEffect } = React;
 /* global XLSX */
 
 const EMPLOYEES = [
-  { id: 1, name: "Kike", role: "SysAdmin", officeDays: "L, M, X, V", group: "A" },
-  { id: 2, name: "Jose", role: "DevOps", officeDays: "L, X, J, V", group: "B" },
+  { id: 1, name: "Kike", role: "SysAdmin", officeDays: "X, J, V", group: "A" },
+  { id: 2, name: "Jose", role: "DevOps", officeDays: "L, M, V", group: "B" },
   { id: 3, name: "Enrique", role: "Manager", officeDays: "X, J", group: "B" },
   { id: 4, name: "David", role: "Backend", officeDays: "J, V", group: "A" },
   { id: 5, name: "Luis", role: "Frontend", officeDays: "L, M", group: "A" },
-  { id: 6, name: "Ariel", role: "FullStack", officeDays: "L, M, J, V", group: "B" },
+  { id: 6, name: "Ariel", role: "FullStack", officeDays: "L, M, X", group: "B" },
 ];
 
 const MONTH_NAMES = [

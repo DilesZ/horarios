@@ -12,13 +12,13 @@ const EMPLOYEES = [{
   id: 1,
   name: "Kike",
   role: "SysAdmin",
-  officeDays: "L, M, X, V",
+  officeDays: "X, J, V",
   group: "A"
 }, {
   id: 2,
   name: "Jose",
   role: "DevOps",
-  officeDays: "L, X, J, V",
+  officeDays: "L, M, V",
   group: "B"
 }, {
   id: 3,
@@ -42,7 +42,7 @@ const EMPLOYEES = [{
   id: 6,
   name: "Ariel",
   role: "FullStack",
-  officeDays: "L, M, J, V",
+  officeDays: "L, M, X",
   group: "B"
 }];
 const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
