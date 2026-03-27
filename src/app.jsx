@@ -3119,75 +3119,6 @@ const App = () => {
 
       // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
       if (day.weekdayLetter !== "V") {
-        if (shift18hOfficeCount < 1) {
-          const lateGroup = getLateGroupForWeekGlobal(day.weekIndex);
-          const lateGroupMembers = getShiftGroupMemberNames(lateGroup);
-          
-          const o42Candidates = EMPLOYEES.filter((emp) => {
-            if (schedule[emp.id][day.id] !== "O42") return false;
-            const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-            return !daysOffice.includes(day.weekdayLetter);
-          });
-          
-          const canForceO42 = o42Candidates.some((emp) => {
-            const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-            return daysOffice.includes(day.weekdayLetter);
-          });
-          
-          if (o42Candidates.length > 0 && canForceO42) {
-            const candidate = pickLowestForcedCandidate(o42Candidates);
-            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-            forcedOfficeSet[day.id].add(candidate.id);
-            forcedOfficeDetails.push({
-              dayId: day.id,
-              empId: candidate.id,
-              reason: "Cobertura 18h presencial (17:00-18:00)",
-            });
-            tempForcedCount[candidate.id]++;
-            shift18hOfficeCount = 1;
-          } else if (o42Candidates.length > 0 && !canForceO42) {
-            const o40InOffice = EMPLOYEES.filter((emp) => {
-              if (schedule[emp.id][day.id] !== "O40") return false;
-              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-              return daysOffice.includes(day.weekdayLetter);
-            });
-            
-            if (o40InOffice.length > 0) {
-              const candidate = pickLowestForcedCandidate(o40InOffice);
-              schedule[candidate.id][day.id] = "O42";
-              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-              forcedOfficeSet[day.id].add(candidate.id);
-              forcedOfficeDetails.push({
-                dayId: day.id,
-                empId: candidate.id,
-                reason: "Conversión a 42h: grupo tardío sin cobertura presencial en este día",
-              });
-              tempForcedCount[candidate.id]++;
-              shift18hOfficeCount = 1;
-            }
-          } else {
-            const o40InOffice = EMPLOYEES.filter((emp) => {
-              if (schedule[emp.id][day.id] !== "O40") return false;
-              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-              return daysOffice.includes(day.weekdayLetter);
-            });
-            
-            if (o40InOffice.length > 0) {
-              const candidate = pickLowestForcedCandidate(o40InOffice);
-              schedule[candidate.id][day.id] = "O42";
-              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-              forcedOfficeSet[day.id].add(candidate.id);
-              forcedOfficeDetails.push({
-                dayId: day.id,
-                empId: candidate.id,
-                reason: "Cobertura 18h presencial: ninguna persona con 42h en oficina",
-              });
-              tempForcedCount[candidate.id]++;
-              shift18hOfficeCount = 1;
-            }
-          }
-        }
-
         if (!group1HasOffice && group2Covering.length === 0) {
           const candidate = getBestCandidate(GROUP1, day);
           if (candidate) {
@@ -3208,6 +3139,55 @@ const App = () => {
             group2HasOffice = true;
             group2Covering.push(candidate.name);
             tempForcedCount[candidate.id]++;
+          }
+        }
+
+        shift18hOfficeCount = EMPLOYEES.filter(emp => {
+          if (schedule[emp.id][day.id] !== "O42") return false;
+          const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+          if (daysOffice.includes(day.weekdayLetter)) return true;
+          if (forcedOfficeSet[day.id] && forcedOfficeSet[day.id].has(emp.id)) return true;
+          return false;
+        }).length;
+
+        if (shift18hOfficeCount < 1) {
+          const o42Candidates = EMPLOYEES.filter((emp) => {
+            if (schedule[emp.id][day.id] !== "O42") return false;
+            const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+            return !daysOffice.includes(day.weekdayLetter);
+          });
+
+          if (o42Candidates.length > 0) {
+            const candidate = pickLowestForcedCandidate(o42Candidates);
+            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+            forcedOfficeSet[day.id].add(candidate.id);
+            forcedOfficeDetails.push({
+              dayId: day.id,
+              empId: candidate.id,
+              reason: "Cobertura 18h presencial (17:00-18:00)",
+            });
+            tempForcedCount[candidate.id]++;
+            shift18hOfficeCount = 1;
+          } else {
+            const o40InOffice = EMPLOYEES.filter((emp) => {
+              if (schedule[emp.id][day.id] !== "O40") return false;
+              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
+              return daysOffice.includes(day.weekdayLetter);
+            });
+
+            if (o40InOffice.length > 0) {
+              const candidate = pickLowestForcedCandidate(o40InOffice);
+              schedule[candidate.id][day.id] = "O42";
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Conversión a 42h: falta cobertura presencial de tarde",
+              });
+              tempForcedCount[candidate.id]++;
+              shift18hOfficeCount = 1;
+            }
           }
         }
       }
