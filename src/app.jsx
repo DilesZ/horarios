@@ -150,7 +150,7 @@ const GROUP2 = ["Jose", "Ariel", "Kike"];
 const SHIFT_BASE_A_18H = true;
 const HOURS_PER_TYPE = { O30: 6, O40: 8, O42: 9, V: 0 };
 const EQUITY_MIN_INTENSIVE_WEEKS = 6;
-const EQUITY_IDEAL_INTENSIVE_WEEKS = 7;
+const EQUITY_IDEAL_INTENSIVE_WEEKS = 6;
 const STRICT_WEEKLY_RULES = {
   INTENSIVE_FULL_WEEK_ONLY: "INTENSIVE_FULL_WEEK_ONLY",
   MIXED_40_42_IN_WEEK: "MIXED_40_42_IN_WEEK",
@@ -2694,6 +2694,17 @@ const App = () => {
     clearAuthSession();
   };
 
+  const handleResetPlan = () => {
+    if (window.confirm("¿Seguro que quieres resetear el plan? Se borrarán los dashboards guardados y se restaurarán las vacaciones por defecto.")) {
+      setVacationPlan(DEFAULT_VACATION_PLAN_2026);
+      setPlanning(generateSchedule(year, DEFAULT_VACATION_PLAN_2026));
+      setAcceptedDashboards({});
+      setActiveDashboardYear(null);
+      setMode("config");
+      window.localStorage.removeItem("horarios_dashboards");
+    }
+  };
+
   const [year, setYear] = useState(2026);
   const [vacationPlan, setVacationPlan] = useState(DEFAULT_VACATION_PLAN_2026);
   const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
@@ -3871,7 +3882,7 @@ const App = () => {
             {viewMode === "calendar" ? "Vista matriz" : "Vista calendario"}
           </button>
           <button
-            onClick={() => setPlanning(generateSchedule(year, vacationPlan))}
+            onClick={handleResetPlan}
             className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
           >
             Resetear Plan
