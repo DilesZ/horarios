@@ -29,6 +29,8 @@ const MONTH_NAMES = [
 const WEEKDAY_LETTER = { 1: "L", 2: "M", 3: "X", 4: "J", 5: "V" };
 const WEEKDAY_FULL = { L: "Lunes", M: "Martes", X: "Miércoles", J: "Jueves", V: "Viernes" };
 
+const PUBLIC_HOLIDAYS = ["2026-06-24"];
+
 const buildDaysRange = (year) => {
   const start = new Date(year, 5, 1);
   const end = new Date(year, 8, 30);
@@ -42,7 +44,8 @@ const buildDaysRange = (year) => {
     const month = MONTH_NAMES[d.getMonth()];
     const label = `${month.substring(0, 3)} ${String(d.getDate()).padStart(2, "0")}`;
     const weekdayLetter = WEEKDAY_LETTER[day];
-    days.push({ id, label, month, weekdayLetter, weekIndex });
+    const isHoliday = PUBLIC_HOLIDAYS.includes(id);
+    days.push({ id, label, month, weekdayLetter, weekIndex, isHoliday });
   }
   return days;
 };
@@ -53,6 +56,7 @@ const TYPES = {
   O30: { label: "Intensiva 30h (hasta las 14:00)", color: "bg-emerald-700", text: "text-white", short: "30" },
   T30: { label: "Teletrabajo 30h", color: "bg-cyan-700", text: "text-white", short: "T30" },
   V: { label: "Vacaciones", color: "bg-rose-700", text: "text-white", short: "VAC" },
+  F: { label: "Festivo", color: "bg-amber-100", text: "text-amber-800", short: "FES" },
 };
 
 const COVERAGE_BANDS = {
@@ -243,7 +247,7 @@ const clearAuthSession = () => {
 };
 
 const getCoverageBandForShift = (typeKey, weekdayLetter) => {
-  if (!typeKey || typeKey === "V") return null;
+  if (!typeKey || typeKey === "V" || typeKey === "F") return null;
   if (typeKey === "O42") return weekdayLetter === "V" ? "14" : "18";
   if (typeKey === "O40") return "17";
   if (typeKey === "O30" || typeKey === "T30") return "14";
@@ -1086,6 +1090,10 @@ const generateSchedule = (year, vacationPlan) => {
   EMPLOYEES.forEach((emp) => {
     schedule[emp.id] = {};
     days.forEach((day) => {
+      if (day.isHoliday) {
+        schedule[emp.id][day.id] = "F";
+        return;
+      }
       const vacationsForEmp = vacationPlan[emp.name] || [];
       if (vacationsForEmp.includes(day.id)) {
         schedule[emp.id][day.id] = "V";
