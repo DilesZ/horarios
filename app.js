@@ -515,6 +515,29 @@ const pickRegularWeekType = ({
   const lateGroup = getLateGroupForWeek(weekIndex);
   return isEmployeeInShiftGroup(employee, lateGroup) ? "O42" : "O40";
 };
+const getEmployeeRegularWeekType = ({
+  schedule,
+  employeeId,
+  weekDays
+}) => {
+  const nonVacationTypes = weekDays.map(day => schedule[employeeId][day.id]).filter(type => type && type !== "V");
+  const regularTypes = [...new Set(nonVacationTypes.filter(type => type === "O40" || type === "O42"))];
+  if (regularTypes.length === 1) return regularTypes[0];
+  if (regularTypes.includes("O42")) return "O42";
+  if (regularTypes.includes("O40")) return "O40";
+  return null;
+};
+const buildWeekSegments = weekIndexes => {
+  return weekIndexes.reduce((segments, weekIndex) => {
+    const lastSegment = segments[segments.length - 1];
+    if (!lastSegment || lastSegment[lastSegment.length - 1] !== weekIndex - 1) {
+      segments.push([weekIndex]);
+    } else {
+      lastSegment.push(weekIndex);
+    }
+    return segments;
+  }, []);
+};
 const enforceStrictWeeklyRules = ({
   employees,
   days,
@@ -2170,6 +2193,50 @@ const generateSchedule = (year, vacationPlan) => {
         });
       });
     }
+    function enforceEdgeWeekAlternation(sched) {
+      const finalWeeks = buildWeeksMap(days);
+      const segments = buildWeekSegments(Object.keys(finalWeeks).map(wi => parseInt(wi, 10)).filter(wi => finalWeeks[wi].every(day => !isIntensivePeriod(day.id))).sort((a, b) => a - b));
+      segments.forEach(segment => {
+        EMPLOYEES.forEach(emp => {
+          let previousType = null;
+          segment.forEach(weekIndex => {
+            const weekDays = finalWeeks[weekIndex];
+            const currentType = getEmployeeRegularWeekType({
+              schedule: sched,
+              employeeId: emp.id,
+              weekDays
+            });
+            if (!currentType) {
+              previousType = null;
+              return;
+            }
+            if (previousType && currentType === previousType) {
+              const targetType = currentType === "O40" ? "O42" : "O40";
+              const snapshot = {};
+              weekDays.forEach(day => {
+                snapshot[day.id] = sched[emp.id][day.id];
+                if (sched[emp.id][day.id] !== "V" && sched[emp.id][day.id] !== "O30") {
+                  sched[emp.id][day.id] = targetType;
+                }
+              });
+              if (!isValidCoverage(weekDays, sched)) {
+                weekDays.forEach(day => {
+                  sched[emp.id][day.id] = snapshot[day.id];
+                });
+              } else {
+                previousType = targetType;
+                return;
+              }
+            }
+            previousType = getEmployeeRegularWeekType({
+              schedule: sched,
+              employeeId: emp.id,
+              weekDays
+            });
+          });
+        });
+      });
+    }
     function ensureMinSixWeeksAllFinal(sched) {
       const weeksL = buildWeeksMap(days);
       const countW = (s, id) => {
@@ -2237,8 +2304,16 @@ const generateSchedule = (year, vacationPlan) => {
       }
     }
     ensureMinSixWeeksAllFinal(strictAudit.schedule);
+    enforceEdgeWeekAlternation(strictAudit.schedule);
     applyUniversalHardening(strictAudit.schedule);
   }
+  const refreshedStrictValidation = validateStrictWeeklyRules({
+    employees: EMPLOYEES,
+    days,
+    schedule: strictAudit.schedule
+  });
+  strictAudit.violations = refreshedStrictValidation.violations;
+  strictAudit.summary = refreshedStrictValidation.summary;
   return {
     schedule: strictAudit.schedule,
     days,

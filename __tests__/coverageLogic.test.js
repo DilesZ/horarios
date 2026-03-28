@@ -219,6 +219,51 @@ describe("Registro formal de equidad distributiva", () => {
     });
   });
 
+  test("alterna semanas 40h y 42h fuera de la ventana intensiva en junio y septiembre", () => {
+    const { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026 } = loadSchedulingCore("src/app.jsx");
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const weeksMap = {};
+    days.forEach((day) => {
+      weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || [];
+      weeksMap[day.weekIndex].push(day);
+    });
+    const edgeWeeks = Object.keys(weeksMap)
+      .map((wi) => parseInt(wi, 10))
+      .filter((wi) => weeksMap[wi].every((day) => day.id < "2026-06-15" || day.id > "2026-09-18"))
+      .sort((a, b) => a - b);
+    const segments = edgeWeeks.reduce((accumulator, weekIndex) => {
+      const lastSegment = accumulator[accumulator.length - 1];
+      if (!lastSegment || lastSegment[lastSegment.length - 1] !== weekIndex - 1) {
+        accumulator.push([weekIndex]);
+      } else {
+        lastSegment.push(weekIndex);
+      }
+      return accumulator;
+    }, []);
+    const getRegularType = (employeeId, weekDays) => {
+      const regularTypes = [...new Set(
+        weekDays
+          .map((day) => schedule[employeeId][day.id])
+          .filter((type) => type === "O40" || type === "O42")
+      )];
+      expect(regularTypes.length).toBe(1);
+      return regularTypes[0];
+    };
+
+    EMPLOYEES.forEach((emp) => {
+      segments.forEach((segment) => {
+        let previousType = null;
+        segment.forEach((weekIndex) => {
+          const currentType = getRegularType(emp.id, weeksMap[weekIndex]);
+          if (previousType) {
+            expect(currentType).not.toBe(previousType);
+          }
+          previousType = currentType;
+        });
+      });
+    });
+  });
+
   test("regresión dura de intensivas para src/app.jsx", () => {
     assertHardRegressionForIntensivas("src/app.jsx");
   });
