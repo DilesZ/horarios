@@ -4731,7 +4731,6 @@ const App = () => {
     return EMPLOYEES.filter(emp => emp.name.toLowerCase().includes(query));
   }, [employeeSearch]);
   const filteredEmployees = selectedEmp === "all" ? quickFilteredEmployees : quickFilteredEmployees.filter(e => e.id === parseInt(selectedEmp, 10));
-  const weekdaysCalendar = ["L", "M", "X", "J", "V"];
   const coverageDateBounds = useMemo(() => ({
     minDate: days[0]?.id || "",
     maxDate: days[days.length - 1]?.id || ""
@@ -4795,20 +4794,6 @@ const App = () => {
       }
     };
   }, [coverageEmployees.length, weeklyCoverage]);
-  const calendarMonths = useMemo(() => {
-    return daysByMonth.map(([monthName, monthDays]) => {
-      const weeksMap = {};
-      monthDays.forEach(day => {
-        weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
-        weeksMap[day.weekIndex][day.weekdayLetter] = day;
-      });
-      const weekIndexes = Object.keys(weeksMap).map(value => parseInt(value, 10)).sort((a, b) => a - b);
-      return {
-        monthName,
-        weeks: weekIndexes.map(index => weeksMap[index])
-      };
-    });
-  }, [daysByMonth]);
   const tableSpacing = tableDensity === "compact" ? {
     headerCell: "p-1.5",
     firstColHeader: "p-2.5",
@@ -4904,9 +4889,6 @@ const App = () => {
     className: "lg:col-span-4 bg-gray-50/50 border border-gray-100 rounded-2xl p-2 flex gap-1 shadow-sm"
   }, [{
     key: "matrix",
-    label: "Matriz"
-  }, {
-    key: "calendar",
     label: "Calendario"
   }, {
     key: "coverage",
@@ -5753,72 +5735,7 @@ const App = () => {
   }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: days.length + 1,
     className: "p-6 text-center text-sm text-gray-500"
-  }, "No hay integrantes que coincidan con el filtro actual.")))))) : viewMode === "calendar" ? /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4"
-  }, calendarMonths.map(month => /*#__PURE__*/React.createElement("div", {
-    key: month.monthName,
-    className: "rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("h4", {
-    className: "text-sm font-bold text-brand-blue"
-  }, month.monthName), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-gray-500"
-  }, filteredEmployees.length, " integrantes")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-5 border-b border-gray-200"
-  }, weekdaysCalendar.map(weekday => /*#__PURE__*/React.createElement("div", {
-    key: `${month.monthName}-${weekday}`,
-    className: "text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200"
-  }, WEEKDAY_FULL[weekday]))), /*#__PURE__*/React.createElement("div", null, month.weeks.map((week, weekIndex) => /*#__PURE__*/React.createElement("div", {
-    key: `${month.monthName}-week-${weekIndex}`,
-    className: "grid grid-cols-5 border-b last:border-b-0 border-gray-200"
-  }, weekdaysCalendar.map(weekday => {
-    const day = week[weekday];
-    if (!day) {
-      return /*#__PURE__*/React.createElement("div", {
-        key: `${month.monthName}-empty-${weekIndex}-${weekday}`,
-        className: "min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"
-      });
-    }
-    const hasAlert = stats.alerts.some(item => item.dayId === day.id);
-    const coverage = stats.dailyCoverage.find(item => item.dayId === day.id);
-    return /*#__PURE__*/React.createElement("div", {
-      key: day.id,
-      className: `min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-semibold text-gray-700"
-    }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`
-    }, coverage.present, "/6")), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-1"
-    }, filteredEmployees.map(emp => {
-      const typeKey = schedule[emp.id][day.id];
-      const style = TYPES[typeKey] || TYPES.O30;
-      const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
-      const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-      const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
-      const initials = emp.name.split(" ").map(part => part[0]).join("").toUpperCase().slice(0, 2);
-      return /*#__PURE__*/React.createElement("button", {
-        key: `${day.id}-${emp.id}`,
-        type: "button",
-        onClick: () => handleCellClick(emp, day),
-        className: `w-full text-left text-[10px] px-1.5 py-1 rounded flex items-center justify-between gap-1 overflow-hidden ${style.color} ${style.text} hover:brightness-110 transition-colors`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-1 truncate"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "font-semibold"
-      }, initials), " ", /*#__PURE__*/React.createElement("span", null, style.short)), typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
-        className: `shrink-0 flex items-center justify-center ${isForcedOffice ? 'text-amber-700 bg-white/60 rounded-[2px] p-[1px]' : 'opacity-80'}`,
-        title: isForcedOffice ? "Forzado oficina" : isWFH ? "Teletrabajo" : "En oficina"
-      }, isWFH ? /*#__PURE__*/React.createElement(IconHome, {
-        className: "w-3 h-3"
-      }) : /*#__PURE__*/React.createElement(IconOffice, {
-        className: `w-3 h-3 ${isForcedOffice ? 'text-amber-700' : ''}`
-      })));
-    })));
-  }))))))) : null, /*#__PURE__*/React.createElement("footer", {
+  }, "No hay integrantes que coincidan con el filtro actual.")))))) : null, /*#__PURE__*/React.createElement("footer", {
     className: "mt-8 text-center text-gray-500 text-sm"
   }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
     isOpen: !!selectedAlertDayId,

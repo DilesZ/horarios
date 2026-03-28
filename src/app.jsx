@@ -4072,7 +4072,6 @@ const App = () => {
   const filteredEmployees = selectedEmp === "all"
     ? quickFilteredEmployees
     : quickFilteredEmployees.filter((e) => e.id === parseInt(selectedEmp, 10));
-  const weekdaysCalendar = ["L", "M", "X", "J", "V"];
   const coverageDateBounds = useMemo(
     () => ({
       minDate: days[0]?.id || "",
@@ -4130,22 +4129,6 @@ const App = () => {
       },
     };
   }, [coverageEmployees.length, weeklyCoverage]);
-  const calendarMonths = useMemo(() => {
-    return daysByMonth.map(([monthName, monthDays]) => {
-      const weeksMap = {};
-      monthDays.forEach((day) => {
-        weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
-        weeksMap[day.weekIndex][day.weekdayLetter] = day;
-      });
-      const weekIndexes = Object.keys(weeksMap)
-        .map((value) => parseInt(value, 10))
-        .sort((a, b) => a - b);
-      return {
-        monthName,
-        weeks: weekIndexes.map((index) => weeksMap[index]),
-      };
-    });
-  }, [daysByMonth]);
 
   const tableSpacing = tableDensity === "compact"
     ? {
@@ -4246,8 +4229,7 @@ const App = () => {
           {/* Grupo Visualización */}
           <div className="lg:col-span-4 bg-gray-50/50 border border-gray-100 rounded-2xl p-2 flex gap-1 shadow-sm">
             {[
-              { key: "matrix", label: "Matriz" },
-              { key: "calendar", label: "Calendario" },
+              { key: "matrix", label: "Calendario" },
               { key: "coverage", label: "Cobertura" },
             ].map((option) => (
               <button
@@ -5168,80 +5150,6 @@ const App = () => {
             </table>
           </div>
         </>
-      ) : viewMode === "calendar" ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
-          {calendarMonths.map((month) => (
-            <div key={month.monthName} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-brand-blue">{month.monthName}</h4>
-                <span className="text-[11px] text-gray-500">{filteredEmployees.length} integrantes</span>
-              </div>
-              <div className="grid grid-cols-5 border-b border-gray-200">
-                {weekdaysCalendar.map((weekday) => (
-                  <div key={`${month.monthName}-${weekday}`} className="text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200">
-                    {WEEKDAY_FULL[weekday]}
-                  </div>
-                ))}
-              </div>
-              <div>
-                {month.weeks.map((week, weekIndex) => (
-                  <div key={`${month.monthName}-week-${weekIndex}`} className="grid grid-cols-5 border-b last:border-b-0 border-gray-200">
-                    {weekdaysCalendar.map((weekday) => {
-                      const day = week[weekday];
-                      if (!day) {
-                        return <div key={`${month.monthName}-empty-${weekIndex}-${weekday}`} className="min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"></div>;
-                      }
-                      const hasAlert = stats.alerts.some((item) => item.dayId === day.id);
-                      const coverage = stats.dailyCoverage.find((item) => item.dayId === day.id);
-                      return (
-                        <div key={day.id} className={`min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[11px] font-semibold text-gray-700">{day.label.split(" ")[1]}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
-                              {coverage.present}/6
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            {filteredEmployees.map((emp) => {
-                              const typeKey = schedule[emp.id][day.id];
-                              const style = TYPES[typeKey] || TYPES.O30;
-                              const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
-                              const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-                              const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
-                              const initials = emp.name
-                                .split(" ")
-                                .map((part) => part[0])
-                                .join("")
-                                .toUpperCase()
-                                .slice(0, 2);
-                              return (
-                                <button
-                                  key={`${day.id}-${emp.id}`}
-                                  type="button"
-                                  onClick={() => handleCellClick(emp, day)}
-                                  className={`w-full text-left text-[10px] px-1.5 py-1 rounded flex items-center justify-between gap-1 overflow-hidden ${style.color} ${style.text} hover:brightness-110 transition-colors`}
-                                >
-                                  <div className="flex items-center gap-1 truncate">
-                                    <span className="font-semibold">{initials}</span> <span>{style.short}</span>
-                                  </div>
-                                  {typeKey !== "V" && (
-                                    <div className={`shrink-0 flex items-center justify-center ${isForcedOffice ? 'text-amber-700 bg-white/60 rounded-[2px] p-[1px]' : 'opacity-80'}`} title={isForcedOffice ? "Forzado oficina" : (isWFH ? "Teletrabajo" : "En oficina")}>
-                                     {isWFH ? <IconHome className="w-3 h-3" /> : <IconOffice className={`w-3 h-3 ${isForcedOffice ? 'text-amber-700' : ''}`} />}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       ) : null}
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
