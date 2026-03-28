@@ -2016,6 +2016,7 @@ const generateSchedule = (year, vacationPlan) => {
     boostEmployeeIntensiveWeeks("Luis", 6);
     boostEmployeeIntensiveWeeks("Ariel", 6);
     recalcIntensiveWeeks();
+  }
 
   const strictAudit = enforceStrictWeeklyRules({
     employees: EMPLOYEES,
@@ -2943,9 +2944,8 @@ const App = () => {
         present++;
         if (type === "O30") intensiveCount++;
         if (type === "O42") shift18hCount++;
-        const daysOffice = emp.officeDays.split(",").map((d) => d.trim());
-        const isInOffice = daysOffice.includes(day.weekdayLetter);
-        if (type === "O42" && isInOffice) shift18hOfficeCount++;
+        const isInOffice = ["O40", "O42", "O30"].includes(type);
+        if (type === "O42") shift18hOfficeCount++;
         const hasFullSchedule = day.weekdayLetter === "V" ? (type === "O40") : (type === "O40" || type === "O42");
 
         if (isInOffice && hasFullSchedule) {
@@ -4015,7 +4015,7 @@ const App = () => {
               <line x1="9" y1="9" x2="15" y2="9"></line>
               <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
-          </div >
+          </div>
           <div>
             <p className="text-sm text-gray-500">Días con forzado oficina (O)</p>
             <p className="text-2xl font-bold text-gray-800">{stats.forcedOfficeDetails.length}</p>
@@ -4325,7 +4325,7 @@ const App = () => {
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
       <AlertDetailModal isOpen={!!selectedAlertDayId} onClose={() => setSelectedAlertDayId(null)} dayId={selectedAlertDayId} />
-    </div >
+     </div>
   );
 };
 
