@@ -887,20 +887,18 @@ const getExportErrorMessage = error => {
   return "Error inesperado durante la exportación.";
 };
 const generateSchedule = (year, vacationPlan) => {
-  const isWithinIntensiveWindow = dayId => {
-    const parts = dayId.split("-");
-    const m = parseInt(parts[1], 10);
-    const d = parseInt(parts[2], 10);
-    if (m === 6 && d >= 15) return true;
-    if (m === 7 || m === 8) return true;
-    if (m === 9 && d <= 18) return true;
-    return false;
-  };
-  const isIntensivePeriod = (dayId, empId) => {
-    if (!empId) return isWithinIntensiveWindow(dayId);
-    return isWithinIntensiveWindow(dayId);
-  };
   const days = buildDaysRange(year);
+
+  // Encontrar índices de semana intensiva (semanas que contienen 15/06 y 15/09)
+  const jun15 = days.find(d => d.id.includes("-06-15"));
+  const sep15 = days.find(d => d.id.includes("-09-15"));
+  const intensiveStartWeek = jun15 ? jun15.weekIndex : -1;
+  const intensiveEndWeek = sep15 ? sep15.weekIndex : -1;
+  const isIntensivePeriod = (dayId, empId) => {
+    const dayEntry = days.find(d => d.id === dayId);
+    if (!dayEntry) return false;
+    return dayEntry.weekIndex >= intensiveStartWeek && dayEntry.weekIndex <= intensiveEndWeek;
+  };
   const schedule = {};
   const vacWeeksByEmp = {};
   EMPLOYEES.forEach(emp => {
@@ -1042,45 +1040,34 @@ const generateSchedule = (year, vacationPlan) => {
     const weekDays = weeks[wi];
     const friday = weekDays.find(d => d.weekdayLetter === "V");
 
-    // Overrides específicos solicitados por usuario para 2026
-    if (year === 2026) {
-      // Semana 15-19 Junio (Week 2): Ariel (B) en oficina, Enrique (B) en remoto -> B hace O40 -> A hace O42 (LATE)
-      if (wi === 2) {
-        weekAssignments[wi] = "A_LATE";
-        return;
-      }
-      // Semana 22-26 Junio (Week 3): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
-      if (wi === 3) {
-        weekAssignments[wi] = "A_LATE";
-        return;
-      }
-      // Válvula de presión matemática para Grupo A (David, Luis, Enrique están bloqueados)
-      if (wi === 4) {
-        weekAssignments[wi] = "B_LATE";
-        return;
-      }
-      // Semana 20-24 Julio (Week 7): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
-      if (wi === 7) {
-        weekAssignments[wi] = "A_LATE";
-        return;
-      }
-      // Válvula de presión matemática para Grupo A
-      if (wi === 8) {
-        weekAssignments[wi] = "B_LATE";
-        return;
-      }
-      if (wi === 9) {
-        weekAssignments[wi] = "A_LATE"; // Ariel y Enrique (B) necesitan O30 aquí
-        return;
-      }
-      if (wi === 10) {
-        weekAssignments[wi] = "B_LATE";
-        return;
-      }
-      if (wi === 11) {
-        weekAssignments[wi] = "A_LATE"; // Ariel (B) necesita O30 aquí (Jose L,M,V no cubre solo Wed oficina)
-        return;
-      }
+    // Overrides específicos solicitados por usuario para 2026 (Adaptados para cualquier año)
+    // Semana de Junio: Ariel (B) en oficina, Enrique (B) en remoto -> B hace O40 -> A hace O42 (LATE)
+    // Buscamos la semana que contiene el día 19 de Junio (bloqueo de Enrique/Ariel)
+    const jun19 = weekDays.find(d => d.id === `${year}-06-19`);
+    if (jun19) {
+      weekAssignments[wi] = "A_LATE";
+      return;
+    }
+
+    // Semana de Julio: Enrique (B) con mayor carga forzada o bloqueos -> B hace O40 -> A hace O42 (LATE)
+    // Buscamos la semana que contiene el día 20-23 de Julio (bloqueo de Enrique a O42)
+    const jul22 = weekDays.find(d => d.id === `${year}-07-22`);
+    if (jul22) {
+      weekAssignments[wi] = "A_LATE";
+      return;
+    }
+
+    // Válvulas de presión matemática (Semanas específicas tras el bloque)
+    // Estas válvulas aseguran que la rotación se mantenga estable tras los parones
+    const jun26 = weekDays.find(d => d.id === `${year}-06-26`);
+    if (jun26) {
+      weekAssignments[wi] = "B_LATE";
+      return;
+    }
+    const jul31 = weekDays.find(d => d.id === `${year}-07-31`);
+    if (jul31) {
+      weekAssignments[wi] = "B_LATE";
+      return;
     }
     if (!friday) {
       // Fallback a rotación simple si no hay viernes
@@ -1544,7 +1531,7 @@ const generateSchedule = (year, vacationPlan) => {
         }
       }
     }
-    const criticalDays = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23"];
+    const criticalDays = [`${year}-07-20`, `${year}-07-21`, `${year}-07-22`, `${year}-07-23`];
     const kike = findEmp("Kike");
     if (kike) {
       criticalDays.forEach(dayId => {
@@ -1568,9 +1555,9 @@ const generateSchedule = (year, vacationPlan) => {
       });
       finalIntensiveWeeks[emp.id] = count;
     });
-    const enriqueDay19 = days.find(d => d.id === "2026-06-19");
+    const enriqueDay19 = days.find(d => d.id === `${year}-06-19`);
     const forbiddenWeekEnrique = enriqueDay19 && enrique ? enriqueDay19.weekIndex : null;
-    const luisDay24 = days.find(d => d.id === "2026-07-24");
+    const luisDay24 = days.find(d => d.id === `${year}-07-24`);
     const forbiddenWeekLuis = luisDay24 && luis ? luisDay24.weekIndex : null;
     const criticalKikeSet = new Set(criticalDays);
     const canTakeO30 = (emp, wi) => {
@@ -1585,8 +1572,8 @@ const generateSchedule = (year, vacationPlan) => {
       }
       // Check specific day constraints and O42
       for (const day of daysInWeek) {
-        if (emp.name === "Enrique" && day.id === "2026-06-19") return false;
-        if (emp.name === "Luis" && day.id === "2026-07-24") return false;
+        if (emp.name === "Enrique" && day.id === `${year}-06-19`) return false;
+        if (emp.name === "Luis" && day.id === `${year}-07-24`) return false;
         if (schedule[emp.id][day.id] === "O42") return false;
       }
       return true;
@@ -4982,17 +4969,15 @@ const App = () => {
   }, "Ocultar"))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    htmlFor: "planning-year",
-    className: "block text-xs text-gray-500 mb-1"
-  }, "A\xF1o de planificaci\xF3n"), /*#__PURE__*/React.createElement("input", {
-    id: "planning-year",
-    type: "number",
-    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue",
-    value: year,
-    min: "2024",
-    max: "2100",
-    onChange: e => handleYearChange(e.target.value)
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-gray-500 mb-2"
+  }, "A\xF1o de planificaci\xF3n"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, [2026, 2027, 2028, 2029, 2030].map(y => /*#__PURE__*/React.createElement("button", {
+    key: y,
+    type: "button",
+    onClick: () => handleYearChange(y),
+    className: `flex-1 min-w-[3.5rem] py-1.5 rounded-lg text-[11px] font-bold border transition-all ${year === y ? "bg-brand-blue text-white border-brand-blue shadow-sm shadow-brand-blue/20" : "bg-white text-gray-600 border-gray-200 hover:border-brand-blue hover:text-brand-blue"}`
+  }, y)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "vacation-employee",
     className: "block text-xs text-gray-500 mb-1"
   }, "Integrante"), /*#__PURE__*/React.createElement("select", {
