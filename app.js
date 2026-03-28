@@ -699,6 +699,7 @@ const generateSchedule = (year, vacationPlan) => {
       let group1Covering = 0;
       let group2Covering = 0;
       let hasO40InOfficeOnFriday = false;
+      let hasO42InOffice = false;
       EMPLOYEES.forEach(e => {
         const type = currentSchedule[e.id][day.id];
         if (type === 'V') return;
@@ -718,6 +719,9 @@ const generateSchedule = (year, vacationPlan) => {
               group2Covering++;
             }
           }
+          if (isInOffice && type === "O42") {
+            hasO42InOffice = true;
+          }
         } else {
           // Viernes
           const mockType = type || "O40";
@@ -729,6 +733,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (day.weekdayLetter !== "V") {
         if (!group1HasOffice && group2Covering === 0) valid = false;
         if (!group2HasOffice && group1Covering === 0) valid = false;
+        if (!hasO42InOffice) valid = false;
       } else {
         if (!hasO40InOfficeOnFriday) valid = false;
       }
@@ -838,8 +843,16 @@ const generateSchedule = (year, vacationPlan) => {
         weekAssignments[wi] = "B_LATE";
         return;
       }
+      if (wi === 9) {
+        weekAssignments[wi] = "A_LATE"; // Ariel y Enrique (B) necesitan O30 aquí
+        return;
+      }
       if (wi === 10) {
         weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      if (wi === 11) {
+        weekAssignments[wi] = "A_LATE"; // Ariel (B) necesita O30 aquí (Jose L,M,V no cubre solo Wed oficina)
         return;
       }
     }
@@ -864,16 +877,41 @@ const generateSchedule = (year, vacationPlan) => {
     };
     const scoreA = getScore("A");
     const scoreB = getScore("B");
-    if (scoreA > scoreB) {
+    const canCoverLJ = groupName => {
+      const groupMembers = EMPLOYEES.filter(e => e.group === groupName);
+      return weekDays.every(day => {
+        if (day.weekdayLetter === "V") return true;
+        return groupMembers.some(emp => {
+          // Si está de vacaciones ese día concreto, no cuenta
+          const vacs = vacationPlan[emp.name] || [];
+          if (vacs.includes(day.id)) return false;
+          const officeDays = emp.officeDays.split(",").map(d => d.trim());
+          return officeDays.includes(day.weekdayLetter);
+        });
+      });
+    };
+    const aCanCover = canCoverLJ("A");
+    const bCanCover = canCoverLJ("B");
+    if (scoreA > scoreB && bCanCover) {
       // A tiene más presencia en viernes -> A hace O40 -> B hace O42
       weekAssignments[wi] = "B_LATE";
-    } else if (scoreB > scoreA) {
+    } else if (scoreB > scoreA && aCanCover) {
       // B tiene más presencia en viernes -> B hace O40 -> A hace O42
       weekAssignments[wi] = "A_LATE";
+    } else if (aCanCover && !bCanCover) {
+      weekAssignments[wi] = "A_LATE";
+    } else if (bCanCover && !aCanCover) {
+      weekAssignments[wi] = "B_LATE";
     } else {
-      // Empate -> Rotación estándar basada en SHIFT_BASE_A_18H y paridad
+      // Ambos pueden (o ninguno puede) -> Rotación estándar basada en SHIFT_BASE_A_18H y paridad
       const defaultIsALate = SHIFT_BASE_A_18H ? wi % 2 === 0 : wi % 2 !== 0;
-      weekAssignments[wi] = defaultIsALate ? "A_LATE" : "B_LATE";
+      if (defaultIsALate && aCanCover) {
+        weekAssignments[wi] = "A_LATE";
+      } else if (!defaultIsALate && bCanCover) {
+        weekAssignments[wi] = "B_LATE";
+      } else {
+        weekAssignments[wi] = aCanCover ? "A_LATE" : bCanCover ? "B_LATE" : defaultIsALate ? "A_LATE" : "B_LATE";
+      }
     }
   });
   const getLateGroupForWeek = weekIndex => {
@@ -924,6 +962,9 @@ const generateSchedule = (year, vacationPlan) => {
     });
     const anchor = lateAvailable.length ? lateAvailable[0] : null;
     const allEligible = EMPLOYEES.filter(emp => !vacWeeksByEmp[emp.id].has(wi) && (!anchor || emp.id !== anchor.id)).sort((a, b) => {
+      const aP = a.name === "Enrique" || a.name === "Ariel" ? 0 : 1;
+      const bP = b.name === "Enrique" || b.name === "Ariel" ? 0 : 1;
+      if (aP !== bP) return aP - bP;
       const diff = intensiveWeeksByEmp[a.id] - intensiveWeeksByEmp[b.id];
       return diff !== 0 ? diff : a.id - b.id;
     });
@@ -1249,6 +1290,7 @@ const generateSchedule = (year, vacationPlan) => {
         const forbiddenWeek = day19 ? day19.weekIndex : null;
         const candidateWeeks = Object.keys(weeksList).map(wiStr => parseInt(wiStr, 10)).sort((a, b) => a - b).filter(wi => wi !== forbiddenWeek && !intensiveWeeksIndices.includes(wi) && !vacWeeksByEmp[enrique.id].has(wi) && weeksList[wi].every(day => isIntensivePeriod(day.id, enrique.id)));
         for (const wi of candidateWeeks) {
+          if (intensiveCount >= 6) break;
           const daysInWeek = weeksList[wi];
           let canFlip = true;
           daysInWeek.forEach(day => {
@@ -1271,7 +1313,8 @@ const generateSchedule = (year, vacationPlan) => {
               schedule[enrique.id][day.id] = "O30";
             }
           });
-          break;
+          intensiveCount++;
+          intensiveWeeksIndices.push(wi);
         }
       }
     }
@@ -1357,18 +1400,7 @@ const generateSchedule = (year, vacationPlan) => {
             return dailyO30 < 3; // Maximum 3 intensive shifts per day
           });
           if (canAssignStrict) {
-            const coverageOk = preservesOfficeCoverage(emp.id, daysInWeek, schedule);
-            let withinBudget = coverageOk;
-            if (!coverageOk) {
-              daysInWeek.forEach(d => {
-                if (schedule[emp.id][d.id] !== 'V') schedule[emp.id][d.id] = 'O30';
-              });
-              withinBudget = countForcedDays(schedule, days) <= MAX_FORCED_OFFICE_DAYS;
-              daysInWeek.forEach(d => {
-                if (schedule[emp.id][d.id] !== 'V') schedule[emp.id][d.id] = 'O40';
-              });
-            }
-            if (withinBudget) {
+            if (preservesOfficeCoverage(emp.id, daysInWeek, schedule)) {
               // Take free slot
               daysInWeek.forEach(day => {
                 if (schedule[emp.id][day.id] !== "V") {
@@ -1511,15 +1543,27 @@ const generateSchedule = (year, vacationPlan) => {
             const donors = occupants.filter(donor => donor.id !== emp.id && finalIntensiveWeeks[donor.id] > minimumTarget).sort((a, b) => finalIntensiveWeeks[b.id] - finalIntensiveWeeks[a.id]);
             if (donors.length > 0) {
               const donor = donors[0];
+              const snapshotDonor = {};
+              const snapshotEmp = {};
               daysInWeek.forEach(day => {
+                snapshotDonor[day.id] = schedule[donor.id][day.id];
+                snapshotEmp[day.id] = schedule[emp.id][day.id];
                 if (schedule[donor.id][day.id] !== "V") schedule[donor.id][day.id] = "O40";
                 if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
               });
-              finalIntensiveWeeks[donor.id] = Math.max(0, finalIntensiveWeeks[donor.id] - 1);
-              finalIntensiveWeeks[emp.id] += 1;
-              changed = true;
-              assigned = true;
-              break;
+              if (isValidCoverage(daysInWeek, schedule)) {
+                finalIntensiveWeeks[donor.id] = Math.max(0, finalIntensiveWeeks[donor.id] - 1);
+                finalIntensiveWeeks[emp.id] += 1;
+                changed = true;
+                assigned = true;
+                break;
+              } else {
+                // Revert
+                daysInWeek.forEach(day => {
+                  schedule[donor.id][day.id] = snapshotDonor[day.id];
+                  schedule[emp.id][day.id] = snapshotEmp[day.id];
+                });
+              }
             }
             const canAssignWithLimit = daysInWeek.every(day => {
               if (schedule[emp.id][day.id] === "V") return false;
@@ -1528,13 +1572,22 @@ const generateSchedule = (year, vacationPlan) => {
               return projectedO30 <= 3;
             });
             if (!canAssignWithLimit) continue;
+            const snapshotEmpOnly = {};
             daysInWeek.forEach(day => {
+              snapshotEmpOnly[day.id] = schedule[emp.id][day.id];
               if (schedule[emp.id][day.id] !== "V") schedule[emp.id][day.id] = "O30";
             });
-            finalIntensiveWeeks[emp.id] += 1;
-            changed = true;
-            assigned = true;
-            break;
+            if (isValidCoverage(daysInWeek, schedule)) {
+              finalIntensiveWeeks[emp.id] += 1;
+              changed = true;
+              assigned = true;
+              break;
+            } else {
+              // Revert
+              daysInWeek.forEach(day => {
+                schedule[emp.id][day.id] = snapshotEmpOnly[day.id];
+              });
+            }
           }
         }
       }
@@ -1641,13 +1694,14 @@ const generateSchedule = (year, vacationPlan) => {
             if (!canGuaranteeAfterCoverage(emp, wi)) continue;
             const weekDays = finalWeeksMap[wi];
             if (weekDays.every(day => schedule[emp.id][day.id] === "O30")) continue;
-            const canApply = weekDays.every(day => {
-              const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
-              const projected = schedule[emp.id][day.id] === "O30" ? o30Count : o30Count + 1;
-              if (projected > 3) return false;
-              if (day.weekdayLetter === "V") return true;
-              const o42Exists = EMPLOYEES.some(e => e.id !== emp.id && schedule[e.id][day.id] === "O42");
-              return o42Exists;
+            const snapshot = {};
+            weekDays.forEach(d => {
+              snapshot[d.id] = schedule[emp.id][d.id];
+              if (schedule[emp.id][d.id] !== "V") schedule[emp.id][d.id] = "O30";
+            });
+            const canApply = isValidCoverage(weekDays, schedule);
+            weekDays.forEach(d => {
+              schedule[emp.id][d.id] = snapshot[d.id];
             });
             if (!canApply) continue;
             weekDays.forEach(day => {
@@ -1774,8 +1828,7 @@ const generateSchedule = (year, vacationPlan) => {
               restore();
               continue;
             }
-            const coverageOk = preservesOfficeCoverage(emp.id, weekDays, schedule);
-            if (!coverageOk && countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS + 3) {
+            if (!preservesOfficeCoverage(emp.id, weekDays, schedule)) {
               restore();
               continue;
             }
@@ -1815,10 +1868,8 @@ const generateSchedule = (year, vacationPlan) => {
           });
           const canApply = weekDays.every(day => {
             const o30Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
-            if (o30Count > 3) return false;
-            if (day.weekdayLetter === "V") return true;
-            return EMPLOYEES.some(e => e.id !== emp.id && schedule[e.id][day.id] === "O42");
-          });
+            return o30Count <= 3;
+          }) && isValidCoverage(weekDays, schedule);
           if (!canApply) {
             weekDays.forEach(day => {
               schedule[emp.id][day.id] = before[day.id];
@@ -1833,371 +1884,150 @@ const generateSchedule = (year, vacationPlan) => {
       }
     };
     enforceMinimumAfterCoverage(6);
-    improveUnderTargetWithWeekSwaps(6, ["Luis", "Ariel"]);
+    improveUnderTargetWithWeekSwaps(6, ["Enrique", "Luis", "Ariel"]);
     boostEmployeeIntensiveWeeks("Luis", 6);
     boostEmployeeIntensiveWeeks("Ariel", 6);
     recalcIntensiveWeeks();
-  }
-  const strictAudit = enforceStrictWeeklyRules({
-    employees: EMPLOYEES,
-    days,
-    schedule,
-    getLateGroupForWeek
-  });
-  if (year === 2026) {
-    const weeksMap = buildWeeksMap(days);
-    const ariel = EMPLOYEES.find(emp => emp.name === "Ariel");
-    const luis = EMPLOYEES.find(emp => emp.name === "Luis");
-    const countWeeksByEmp = (currentSchedule, empId) => {
-      let count = 0;
-      Object.keys(weeksMap).forEach(wi => {
-        if (weeksMap[wi].every(day => currentSchedule[empId][day.id] === "O30")) count += 1;
-      });
-      return count;
-    };
-    const countWeeksMap = currentSchedule => {
-      const byEmp = {};
-      EMPLOYEES.forEach(emp => {
-        byEmp[emp.id] = countWeeksByEmp(currentSchedule, emp.id);
-      });
-      return byEmp;
-    };
-    const allO30InWindow = currentSchedule => {
-      return days.every(day => {
-        const inWindow = day.id >= "2026-06-15" && day.id <= "2026-09-18";
-        const dailyO30 = EMPLOYEES.filter(emp => currentSchedule[emp.id][day.id] === "O30");
-        if (dailyO30.length > 3) return false;
-        if (!inWindow && dailyO30.length > 0) return false;
-        return true;
-      });
-    };
-    if (ariel && luis) {
-      const currentCounts = countWeeksMap(strictAudit.schedule);
-      if ((currentCounts[ariel.id] || 0) < 6) {
-        const candidateWeeks = Object.keys(weeksMap).map(wi => parseInt(wi, 10)).sort((a, b) => a - b).filter(wi => {
-          const weekDays = weeksMap[wi];
-          if (!weekDays || weekDays.length === 0) return false;
-          if (!weekDays.every(day => day.id >= "2026-06-15" && day.id <= "2026-09-18")) return false;
-          if (weekDays.some(day => strictAudit.schedule[ariel.id][day.id] === "V")) return false;
-          if (weekDays.every(day => strictAudit.schedule[ariel.id][day.id] === "O30")) return false;
-          return true;
-        });
-        for (const wi of candidateWeeks) {
-          const weekDays = weeksMap[wi];
-          const trial = JSON.parse(JSON.stringify(strictAudit.schedule));
-          weekDays.forEach(day => {
-            trial[ariel.id][day.id] = "O30";
-          });
-          const trialCounts = countWeeksMap(trial);
-          weekDays.forEach(day => {
-            while (EMPLOYEES.filter(emp => trial[emp.id][day.id] === "O30").length > 3) {
-              const donorCandidates = EMPLOYEES.filter(emp => {
-                if (emp.id === ariel.id) return false;
-                if (trial[emp.id][day.id] !== "O30") return false;
-                if (emp.id === luis.id && (trialCounts[emp.id] || 0) <= 6) return false;
-                return true;
-              }).sort((a, b) => (trialCounts[b.id] || 0) - (trialCounts[a.id] || 0));
-              const donor = donorCandidates[0];
-              if (!donor) break;
-              trial[donor.id][day.id] = "O40";
-              trialCounts[donor.id] = countWeeksByEmp(trial, donor.id);
-            }
-          });
-          weekDays.filter(day => day.weekdayLetter !== "V").forEach(day => {
-            const hasOfficeO42 = EMPLOYEES.some(emp => {
-              if (trial[emp.id][day.id] !== "O42") return false;
-              const officeDays = emp.officeDays.split(",").map(d => d.trim());
-              return officeDays.includes(day.weekdayLetter);
-            });
-            if (hasOfficeO42) return;
-            const candidates = EMPLOYEES.filter(emp => {
-              if (emp.id === ariel.id) return false;
-              if (trial[emp.id][day.id] === "V") return false;
-              const officeDays = emp.officeDays.split(",").map(d => d.trim());
-              return officeDays.includes(day.weekdayLetter);
-            }).sort((a, b) => {
-              const aType = trial[a.id][day.id];
-              const bType = trial[b.id][day.id];
-              if (aType === "O40" && bType !== "O40") return -1;
-              if (bType === "O40" && aType !== "O40") return 1;
-              return (trialCounts[b.id] || 0) - (trialCounts[a.id] || 0);
-            });
-            const pick = candidates[0];
-            if (pick) {
-              weekDays.forEach(weekDay => {
-                if (trial[pick.id][weekDay.id] !== "V") trial[pick.id][weekDay.id] = "O42";
-              });
-              trialCounts[pick.id] = countWeeksByEmp(trial, pick.id);
-            }
-          });
-          const normalized = enforceStrictWeeklyRules({
-            employees: EMPLOYEES,
-            days,
-            schedule: trial,
-            getLateGroupForWeek
-          });
-          const normalizedCounts = countWeeksMap(normalized.schedule);
-          const validation = validateStrictWeeklyRules({
-            employees: EMPLOYEES,
-            days,
-            schedule: normalized.schedule
-          });
-          const noOneBelowFive = EMPLOYEES.every(emp => (normalizedCounts[emp.id] || 0) >= 5);
-          if (!validation.ok) continue;
-          if (!allO30InWindow(normalized.schedule)) continue;
-          if (!noOneBelowFive) continue;
-          if ((normalizedCounts[ariel.id] || 0) < 6) continue;
-          if ((normalizedCounts[luis.id] || 0) < 6) continue;
-          strictAudit.schedule = normalized.schedule;
-          strictAudit.violations = validation.violations;
-          strictAudit.summary = validation.summary;
-          break;
-        }
-      }
-    }
-  }
-  const ensureLuisSixWeeks = sched => {
-    const luis = EMPLOYEES.find(e => e.name === "Luis");
-    if (!luis) return sched;
-    const weeksMapLocal = buildWeeksMap(days);
-    const countWeeks = (s, empId) => {
-      let count = 0;
-      Object.keys(weeksMapLocal).forEach(wi => {
-        const weekDays = weeksMapLocal[wi];
-        if (weekDays.every(day => s[empId][day.id] === "O30")) count++;
-      });
-      return count;
-    };
-    const currentLuisWeeks = countWeeks(sched, luis.id);
-    if (currentLuisWeeks >= 6) return sched;
-    const intensiveCountsLocal = {};
-    EMPLOYEES.forEach(emp => {
-      intensiveCountsLocal[emp.id] = countWeeks(sched, emp.id);
+    const strictAudit = enforceStrictWeeklyRules({
+      employees: EMPLOYEES,
+      days,
+      schedule,
+      getLateGroupForWeek
     });
-    let improved = true;
-    let safety = 0;
-    while (improved && safety < 100 && intensiveCountsLocal[luis.id] < 6) {
-      improved = false;
-      safety++;
-      const donors = [...EMPLOYEES].filter(emp => emp.id !== luis.id && intensiveCountsLocal[emp.id] > 6).sort((a, b) => intensiveCountsLocal[b.id] - intensiveCountsLocal[a.id]);
-      if (donors.length === 0) {
-        break;
-      }
-      const donor = donors[0];
-      const donorWeeks = [];
-      Object.keys(weeksMapLocal).forEach(wi => {
-        const weekDays = weeksMapLocal[wi];
-        if (weekDays.every(day => sched[donor.id][day.id] === "O30")) {
-          donorWeeks.push({
-            wi: parseInt(wi),
-            days: weekDays
-          });
-        }
-      });
-      if (donorWeeks.length === 0) break;
-      for (const {
-        wi,
-        days: weekDays
-      } of donorWeeks) {
-        if (intensiveCountsLocal[luis.id] >= 6) break;
-        if (intensiveCountsLocal[donor.id] <= 6) break;
-        const hasO42InOffice = weekDays.some(day => {
-          if (day.weekdayLetter === "V") return false;
-          return EMPLOYEES.some(emp => {
-            if (sched[emp.id][day.id] !== "O42") return false;
-            const officeDays = emp.officeDays.split(",").map(d => d.trim());
-            return officeDays.includes(day.weekdayLetter);
-          });
+    if (year === 2026) {
+      const weeksMap = buildWeeksMap(days);
+      const ariel = EMPLOYEES.find(emp => emp.name === "Ariel");
+      const luis = EMPLOYEES.find(emp => emp.name === "Luis");
+      const countWeeksByEmp = (currentSchedule, empId) => {
+        let count = 0;
+        Object.keys(weeksMap).forEach(wi => {
+          if (weeksMap[wi].every(day => currentSchedule[empId][day.id] === "O30")) count += 1;
         });
-        if (!hasO42InOffice) {
-          continue;
-        }
-        sched[luis.id][weekDays[0].id] = "O30";
-        intensiveCountsLocal[luis.id]++;
-        intensiveCountsLocal[donor.id]--;
-        sched[donor.id][weekDays[0].id] = "O40";
-        improved = true;
-      }
-    }
-    return sched;
-  };
-  const weeksMapFinal = buildWeeksMap(days);
-  const calcIntensiveWeeksFinal = sched => {
-    const counts = {};
-    EMPLOYEES.forEach(emp => {
-      let count = 0;
-      Object.keys(weeksMapFinal).forEach(wi => {
-        const weekDays = weeksMapFinal[wi];
-        if (weekDays.every(day => sched[emp.id][day.id] === "O30")) count++;
-      });
-      counts[emp.id] = count;
-    });
-    return counts;
-  };
-  const intensiveCountsFinal = calcIntensiveWeeksFinal(strictAudit.schedule);
-  const sortByLateGroupPriority = (lateGroupMembers, countsMap) => (a, b) => {
-    const aInLateGroup = lateGroupMembers.includes(a.name);
-    const bInLateGroup = lateGroupMembers.includes(b.name);
-    if (aInLateGroup && !bInLateGroup) return -1;
-    if (!aInLateGroup && bInLateGroup) return 1;
-    const aAboveTarget = (countsMap[a.id] || 0) > 6;
-    const bAboveTarget = (countsMap[b.id] || 0) > 6;
-    if (aAboveTarget && !bAboveTarget) return -1;
-    if (!aAboveTarget && bAboveTarget) return 1;
-    return a.id - b.id;
-  };
-  const fillMissingScheduleEntries = currentSchedule => {
-    Object.values(weeksMapFinal).forEach(weekDays => {
-      EMPLOYEES.forEach(employee => {
-        const existingTypes = weekDays.map(day => currentSchedule[employee.id][day.id]).filter(Boolean);
-        if (existingTypes.length === weekDays.length) return;
-        const nonVacationTypes = existingTypes.filter(type => type !== "V");
-        const fallbackType = nonVacationTypes[0] || pickRegularWeekType({
-          employee,
-          weekIndex: weekDays[0].weekIndex,
-          weekDays,
-          schedule: currentSchedule,
-          getLateGroupForWeek
+        return count;
+      };
+      const countWeeksMap = currentSchedule => {
+        const byEmp = {};
+        EMPLOYEES.forEach(emp => {
+          byEmp[emp.id] = countWeeksByEmp(currentSchedule, emp.id);
         });
-        weekDays.forEach(day => {
-          if (!currentSchedule[employee.id][day.id]) {
-            currentSchedule[employee.id][day.id] = fallbackType;
+        return byEmp;
+      };
+      if (ariel && luis) {
+        const currentCounts = countWeeksMap(strictAudit.schedule);
+        if ((currentCounts[ariel.id] || 0) < 6) {
+          // Ariel fix logic... (keeping it simple)
+          const weeksLocal = buildWeeksMap(days);
+          const candidateWeeks = Object.keys(weeksLocal).map(Number).sort((a, b) => a - b).filter(wi => !vacWeeksByEmp[ariel.id].has(wi) && weeksLocal[wi].every(d => d.id >= "2026-06-15" && d.id <= "2026-09-18"));
+          for (const wi of candidateWeeks) {
+            if (countWeeksByEmp(strictAudit.schedule, ariel.id) >= 6) break;
+            const weekDays = weeksLocal[wi];
+            const snapshot = JSON.parse(JSON.stringify(strictAudit.schedule));
+            weekDays.forEach(d => {
+              strictAudit.schedule[ariel.id][d.id] = "O30";
+            });
+            if (!isValidCoverage(weekDays, strictAudit.schedule)) {
+              strictAudit.schedule = snapshot;
+            }
           }
-        });
-      });
-    });
-  };
-  const hasAlternativeOfficeO42 = (currentSchedule, day, employeeId) => EMPLOYEES.some(employee => {
-    if (employee.id === employeeId) return false;
-    if (currentSchedule[employee.id][day.id] !== "O42") return false;
-    const officeDays = employee.officeDays.split(",").map(d => d.trim());
-    return officeDays.includes(day.weekdayLetter);
-  });
-  const restoreProtectedIntensiveWeeks = (currentSchedule, employeeNames, minimumTarget) => {
-    let changed = true;
-    let safety = 0;
-    while (changed && safety < 60) {
-      changed = false;
-      safety += 1;
-      const counts = calcIntensiveWeeksFinal(currentSchedule);
-      for (const employeeName of employeeNames) {
-        const employee = EMPLOYEES.find(item => item.name === employeeName);
-        if (!employee || (counts[employee.id] || 0) >= minimumTarget) continue;
-        const weekIndexes = Object.keys(weeksMapFinal).map(key => parseInt(key, 10)).sort((a, b) => a - b);
-        for (const weekIndex of weekIndexes) {
-          const weekDays = weeksMapFinal[weekIndex];
-          if (!weekDays.every(day => isIntensivePeriod(day.id, employee.id))) continue;
-          if (weekDays.some(day => currentSchedule[employee.id][day.id] === "V")) continue;
-          if (weekDays.every(day => currentSchedule[employee.id][day.id] === "O30")) continue;
-          const canAssignWeek = weekDays.every(day => {
-            const currentType = currentSchedule[employee.id][day.id];
-            const currentO30 = EMPLOYEES.filter(item => currentSchedule[item.id][day.id] === "O30").length;
-            const projectedO30 = currentType === "O30" ? currentO30 : currentO30 + 1;
-            if (projectedO30 > 3) return false;
-            if (day.weekdayLetter === "V") return true;
-            return hasAlternativeOfficeO42(currentSchedule, day, employee.id);
-          });
-          if (!canAssignWeek) continue;
-          weekDays.forEach(day => {
-            currentSchedule[employee.id][day.id] = "O30";
-          });
-          changed = true;
-          break;
         }
       }
-    }
-  };
-  fillMissingScheduleEntries(strictAudit.schedule);
-  days.forEach(day => {
-    if (day.weekdayLetter === "V") return;
-    const currentO42Count = EMPLOYEES.filter(emp => strictAudit.schedule[emp.id][day.id] === "O42").length;
-    if (currentO42Count >= 3) return;
-    const hasO42InOffice = EMPLOYEES.some(emp => {
-      if (strictAudit.schedule[emp.id][day.id] !== "O42") return false;
-      const officeDays = emp.officeDays.split(",").map(d => d.trim());
-      return officeDays.includes(day.weekdayLetter);
-    });
-    if (!hasO42InOffice) {
-      const lateGroup = getLateGroupForWeek(day.weekIndex);
-      const lateGroupMembers = getShiftGroupMemberNames(lateGroup);
-      const o40Candidates = EMPLOYEES.filter(emp => {
-        if (strictAudit.schedule[emp.id][day.id] !== "O40") return false;
-        const officeDays = emp.officeDays.split(",").map(d => d.trim());
-        return officeDays.includes(day.weekdayLetter);
-      }).sort((a, b) => {
-        const aInLateGroup = lateGroupMembers.includes(a.name);
-        const bInLateGroup = lateGroupMembers.includes(b.name);
-        if (aInLateGroup && !bInLateGroup) return -1;
-        if (!aInLateGroup && bInLateGroup) return 1;
-        return a.id - b.id;
-      });
-      if (o40Candidates.length > 0) {
-        const pick = o40Candidates[0];
-        strictAudit.schedule[pick.id][day.id] = "O42";
-      } else if (currentO42Count < 3) {
-        const priorityEmployees = ["Luis", "Ariel"];
-        const sortCandidates = sortByLateGroupPriority(lateGroupMembers, intensiveCountsFinal);
-        const o30Candidates = EMPLOYEES.filter(emp => {
-          if (strictAudit.schedule[emp.id][day.id] !== "O30") return false;
-          const officeDays = emp.officeDays.split(",").map(d => d.trim());
-          if (!officeDays.includes(day.weekdayLetter)) return false;
-          if (priorityEmployees.includes(emp.name) && (intensiveCountsFinal[emp.id] || 0) <= 6) return false;
-          return true;
-        }).sort(sortCandidates);
-        const fallbackO30Candidates = EMPLOYEES.filter(emp => {
-          if (strictAudit.schedule[emp.id][day.id] !== "O30") return false;
-          const officeDays = emp.officeDays.split(",").map(d => d.trim());
-          return officeDays.includes(day.weekdayLetter);
-        }).sort(sortCandidates);
-        const pick = o30Candidates[0] || fallbackO30Candidates[0];
-        if (pick) {
-          intensiveCountsFinal[pick.id] = Math.max(0, (intensiveCountsFinal[pick.id] || 0) - 1);
-          strictAudit.schedule[pick.id][day.id] = "O42";
-        }
-      }
-    }
-  });
-  restoreProtectedIntensiveWeeks(strictAudit.schedule, ["Luis", "Ariel"], 6);
-  const finalEnforce = enforceStrictWeeklyRules({
-    employees: EMPLOYEES,
-    days,
-    schedule: strictAudit.schedule,
-    getLateGroupForWeek
-  });
-  strictAudit.schedule = finalEnforce.schedule;
 
-  // Garantía de cobertura viernes: al menos 1 persona con O40 en cada viernes
-  days.filter(d => d.weekdayLetter === "V").forEach(day => {
-    const sch = strictAudit.schedule;
-    const hasO40 = EMPLOYEES.some(emp => sch[emp.id][day.id] === "O40");
-    if (!hasO40) {
-      const weekDays = days.filter(d => d.weekIndex === day.weekIndex);
-      const monThu = weekDays.filter(d => d.weekdayLetter !== "V");
-
-      // Buscar candidatos O42 cuya conversión a O40 no rompa cobertura Mon-Thu
-      const o42All = EMPLOYEES.filter(emp => sch[emp.id][day.id] === "O42");
-      const safeCandidate = o42All.find(candidate => {
-        // ¿Si convertimos a este candidato, cada L-J sigue teniendo al menos otro O42 en oficina?
-        return monThu.every(md => {
-          const othersO42 = EMPLOYEES.some(emp => {
-            if (emp.id === candidate.id) return false;
-            if (sch[emp.id][md.id] !== "O42") return false;
+      // Universal Hardening
+      const finalWeeks = buildWeeksMap(days);
+      Object.keys(finalWeeks).forEach(wiStr => {
+        const wi = parseInt(wiStr, 10);
+        const weekDays = finalWeeks[wi];
+        const monThu = weekDays.filter(d => d.weekdayLetter !== "V");
+        monThu.forEach(day => {
+          const hasOfficeO42 = EMPLOYEES.some(emp => {
+            if (strictAudit.schedule[emp.id][day.id] !== "O42") return false;
             const od = emp.officeDays.split(",").map(x => x.trim());
-            return od.includes(md.weekdayLetter);
+            return od.includes(day.weekdayLetter);
           });
-          return othersO42;
-        });
-      });
-      if (safeCandidate) {
-        // Convertir toda la semana para no mezclar O40/O42
-        weekDays.forEach(wd => {
-          if (sch[safeCandidate.id][wd.id] === "O42") {
-            sch[safeCandidate.id][wd.id] = "O40";
+          if (!hasOfficeO42) {
+            const lateGroup = getLateGroupForWeek(wi);
+            const pick = EMPLOYEES.filter(emp => {
+              if (strictAudit.schedule[emp.id][day.id] === "V" || strictAudit.schedule[emp.id][day.id] === "O30") return false;
+              const od = emp.officeDays.split(",").map(x => x.trim());
+              return od.includes(day.weekdayLetter);
+            }).sort((a, b) => a.group === lateGroup ? -1 : 1)[0];
+            if (pick) {
+              weekDays.forEach(wd => {
+                if (strictAudit.schedule[pick.id][wd.id] !== "V" && strictAudit.schedule[pick.id][wd.id] !== "O30") strictAudit.schedule[pick.id][wd.id] = "O42";
+              });
+            }
           }
         });
+      });
+      function ensureMinSixWeeksAllFinal(sched) {
+        const weeksL = buildWeeksMap(days);
+        const countW = (s, id) => {
+          let c = 0;
+          Object.keys(weeksL).forEach(wi => {
+            if (weeksL[wi].every(d => s[id][d.id] === "O30")) c++;
+          });
+          return c;
+        };
+        let improved = true;
+        while (improved) {
+          improved = false;
+          const counts = {};
+          EMPLOYEES.forEach(e => counts[e.id] = countW(sched, e.id));
+          const under = EMPLOYEES.filter(e => counts[e.id] < 6);
+          if (under.length === 0) break;
+          for (const emp of under) {
+            const wIdxs = Object.keys(weeksL).map(Number).sort((a, b) => a - b);
+            for (const wi of wIdxs) {
+              const wDays = weeksL[wi];
+              if (!wDays.every(d => isIntensivePeriod(d.id, emp.id))) continue;
+              if (wDays.some(d => sched[emp.id][d.id] === "V" || sched[emp.id][d.id] === "O30")) continue;
+              const snap = JSON.parse(JSON.stringify(sched));
+              wDays.forEach(d => {
+                sched[emp.id][d.id] = "O30";
+              });
+              let ok = true;
+              for (const d of wDays) {
+                const o30s = EMPLOYEES.filter(e => sched[e.id][d.id] === "O30");
+                if (o30s.length > 3) {
+                  const donor = o30s.filter(e => e.id !== emp.id).sort((a, b) => counts[b.id] - counts[a.id])[0];
+                  if (donor && counts[donor.id] > 6) {
+                    sched[donor.id][d.id] = "O40";
+                  } else {
+                    ok = false;
+                    break;
+                  }
+                }
+              }
+            }
+            if (ok) {
+              const n = enforceStrictWeeklyRules({
+                employees: EMPLOYEES,
+                days,
+                schedule: sched,
+                getLateGroupForWeek
+              });
+              if (countW(n.schedule, emp.id) > counts[emp.id]) {
+                EMPLOYEES.forEach(e => {
+                  days.forEach(day => {
+                    sched[e.id][day.id] = n.schedule[e.id][day.id];
+                  });
+                });
+                improved = true;
+                break;
+              }
+            }
+            EMPLOYEES.forEach(e => {
+              days.forEach(day => {
+                sched[e.id][day.id] = snap[e.id][day.id];
+              });
+            });
+          }
+          if (improved) break;
+        }
       }
     }
-  });
+    ensureMinSixWeeksAllFinal(strictAudit.schedule);
+  }
   return {
     schedule: strictAudit.schedule,
     days,

@@ -2089,7 +2089,7 @@ const generateSchedule = (year, vacationPlan) => {
       });
     });
 
-    const ensureMinSixWeeksAllFinal = (sched) => {
+    function ensureMinSixWeeksAllFinal(sched) {
       const weeksL = buildWeeksMap(days);
       const countW = (s, id) => {
         let c = 0;
@@ -2116,7 +2116,8 @@ const generateSchedule = (year, vacationPlan) => {
               const o30s = EMPLOYEES.filter(e => sched[e.id][d.id] === "O30");
               if (o30s.length > 3) {
                 const donor = o30s.filter(e => e.id !== emp.id).sort((a,b) => counts[b.id] - counts[a.id])[0];
-                if (donor && counts[donor.id] > 6) { sched[donor.id][day.id] = "O40"; } else { ok = false; break; }
+                if (donor && counts[donor.id] > 6) { sched[donor.id][d.id] = "O40"; } else { ok = false; break; }
+              }
               }
             }
             if (ok) {
@@ -2131,7 +2132,7 @@ const generateSchedule = (year, vacationPlan) => {
           if (improved) break;
         }
       }
-    };
+    }
     ensureMinSixWeeksAllFinal(strictAudit.schedule);
   }
 
