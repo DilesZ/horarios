@@ -2829,6 +2829,327 @@ const buildChartDataRows = ({ employees, intensiveWeeksByEmp, forcedOfficeDetail
   return rows;
 };
 
+const WeekDetailModal = ({ isOpen, onClose, emp, day, typeKey }) => {
+  if (!isOpen || !emp || !day) return null;
+  const typeInfo = TYPES[typeKey];
+  const horarioSalida =
+    typeKey === "O42"
+      ? "18:00 (Viernes 14:00)"
+      : typeKey === "O40"
+        ? "17:00"
+        : typeKey === "O30" || typeKey === "T30"
+          ? "14:00 (Intensiva)"
+          : "N/A";
+   const diasOficina = emp.officeDays;
+   return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div className="mb-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-1">
+            {emp.name} <span className="text-gray-500 text-sm font-normal">({emp.role})</span>
+          </h3>
+          <p className="text-brand-blue font-medium">Fecha {day.label}</p>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Estado Actual</p>
+            <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${typeInfo.color}`}></div>
+              <span className="text-lg font-semibold text-gray-800">{typeInfo.label}</span>
+            </div>
+          </div>
+          {typeKey !== "V" && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500 mb-1">Horario Salida</p>
+                  <p className={`text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`}>{horarioSalida}</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500 mb-1">Grupo Turno</p>
+                  <p className="text-lg font-bold text-gray-700">Grupo {emp.group}</p>
+                </div>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500 mb-1">Días en Oficina (Fijos)</p>
+                <p className="text-gray-800 font-medium">{diasOficina}</p>
+              </div>
+            </>
+          )}
+          {typeKey === "V" && (
+            <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 text-center">
+              <p className="text-rose-600">🌴 Disfrutando de vacaciones</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AlertDetailModal = ({ isOpen, onClose, dayId, stats, days }) => {
+  if (!isOpen || !dayId) return null;
+  const alert = stats.alerts.find(a => a.dayId === dayId);
+  if (!alert) return null;
+  const day = days.find(d => d.id === dayId);
+  
+  const hasCritical = alert.reasons.some(r => r.severity === "critical");
+  const hasWarning = alert.reasons.some(r => r.severity === "warning");
+  const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
+  const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+      <div className={`bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`}>
+        <div className={`${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`}>
+          <div className="flex items-center gap-3">
+            <span className={`text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
+              {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
+            </span>
+            <span className="text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm">
+              {alert.present}/6 disponibles
+            </span>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto">
+          {alert.reasons.map((reason, idx) => {
+            const severityStyles = {
+              critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
+              warning: { bg: "bg-amber-50", border: "border-amber-200", titleColor: "text-amber-700", iconColor: "text-amber-500", detailColor: "text-amber-600" },
+              info: { bg: "bg-blue-50", border: "border-blue-100", titleColor: "text-blue-700", iconColor: "text-blue-500", detailColor: "text-blue-600" }
+            };
+            const s = severityStyles[reason.severity] || severityStyles.info;
+            const iconMap = {
+              people: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>,
+              clock: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+              alert: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
+              group: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+              check: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            };
+            return (
+              <div key={idx} className={`${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`}>
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`}>
+                    {iconMap[reason.icon] || iconMap.alert}
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-bold ${s.titleColor}`}>{reason.title}</h4>
+                    <p className={`text-sm mt-1 leading-relaxed ${s.detailColor}`}>{reason.detail}</p>
+                    {reason.context && <p className="text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5">{reason.context}</p>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+const ForcedOfficeListModal = ({ open, onClose, stats, days }) => {
+  if (!open) return null;
+
+  // Agrupar conteo por empleado
+  const countByEmp = {};
+  stats.forcedOfficeDetails.forEach(item => {
+    countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
+  });
+
+  const entries = stats.forcedOfficeDetails
+    .map((it) => {
+      const day = days.find((d) => d.id === it.dayId);
+      const emp = EMPLOYEES.find((e) => e.id === it.empId);
+      return { day, emp, reason: it.reason };
+    })
+    .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+
+   return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <div className="mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Listado de O forzadas</h3>
+          <p className="text-gray-500 text-sm mb-4">Motivo por el que deben asistir a la oficina</p>
+
+          {/* Resumen por integrante */}
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+            <h4 className="text-sm font-bold text-brand-blue mb-2">Resumen por Integrante:</h4>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(countByEmp).length === 0 && <span className="text-xs text-gray-500">Sin registros.</span>}
+              {Object.entries(countByEmp).map(([empId, count]) => {
+                const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
+                return (
+                  <span key={empId} className="px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm">
+                    {emp.name}: {count}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-auto max-h-[50vh]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="p-2 border-b border-gray-200 text-gray-600">Fecha</th>
+                <th className="p-2 border-b border-gray-200 text-gray-600">Día</th>
+                <th className="p-2 border-b border-gray-200 text-gray-600">Integrante</th>
+                <th className="p-2 border-b border-gray-200 text-gray-600">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-500">No hay O forzadas en el periodo.</td></tr>}
+              {entries.map((row, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="p-2 border-b border-gray-200 text-gray-800">{row.day.label}</td>
+                  <td className="p-2 border-b border-gray-200 text-gray-500">{WEEKDAY_FULL[row.day.weekdayLetter]}</td>
+                  <td className="p-2 border-b border-gray-200 text-gray-800">{row.emp.name}</td>
+                  <td className="p-2 border-b border-gray-200 text-gray-600">{row.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const ExportModal = ({
+  isOpen, onClose,
+  exportFormat, setExportFormat,
+  exportStylePreset, setExportStylePreset,
+  exportIncludeFormulas, setExportIncludeFormulas,
+  exportIncludeChartData, setExportIncludeChartData,
+  exportProtectSheet, setExportProtectSheet,
+  exportPassword, setExportPassword,
+  exportInProgress, exportProgress, exportStatus, exportError, exportLogs,
+  exportToExcel
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+      <div className="bg-white border border-emerald-100 rounded-2xl shadow-2xl max-w-2xl w-full p-8 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500"></div>
+        <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Configuración de Exportación</h3>
+          <p className="text-gray-500">Personaliza y descarga tu planificación en formato Excel o CSV.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="export-format" className="block text-sm font-semibold text-gray-700 mb-2">Formato de Archivo</label>
+              <select id="export-format" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
+                <option value="xlsx">Excel Moderno (.xlsx)</option>
+                <option value="xls">Excel Antiguo (.xls)</option>
+                <option value="csv">Valores separados por coma (.csv)</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="export-style" className="block text-sm font-semibold text-gray-700 mb-2">Estilo Visual</label>
+              <select id="export-style" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportStylePreset} onChange={(e) => setExportStylePreset(e.target.value)}>
+                <option value="corporativo">Corporativo (Azul)</option>
+                <option value="neutro">Neutro (Gris)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm font-semibold text-gray-700 mb-2">Opciones adicionales</p>
+            <div className="space-y-3">
+              {[
+                { id: "export-formulas", label: "Incluir fórmulas de cálculo", checked: exportIncludeFormulas, onChange: e => setExportIncludeFormulas(e.target.checked) },
+                { id: "export-chart-data", label: "Generar datos para gráficos", checked: exportIncludeChartData, onChange: e => setExportIncludeChartData(e.target.checked) },
+                { id: "export-protect", label: "Proteger hoja de cálculo", checked: exportProtectSheet, onChange: e => setExportProtectSheet(e.target.checked) }
+              ].map((opt) => (
+                <label key={opt.id} className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all">
+                  <input id={opt.id} type="checkbox" className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" checked={opt.checked} onChange={opt.onChange} />
+                  <span className="text-sm text-gray-700 font-medium">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {exportProtectSheet && (
+          <div className="mb-8 animate-in fade-in slide-in-from-top-2">
+            <label htmlFor="export-password" className="block text-sm font-semibold text-gray-700 mb-2">Contraseña de Protección (Opcional)</label>
+            <input id="export-password" type="password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} placeholder="Contraseña personalizada" />
+          </div>
+        )}
+
+        <div className="space-y-4 pt-6 border-t border-gray-100">
+          <button
+            onClick={exportToExcel}
+            disabled={exportInProgress}
+            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-emerald-200 transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
+          >
+            {exportInProgress ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Exportando...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Descargar Planificación
+              </>
+            )}
+          </button>
+
+          {exportInProgress || exportStatus || exportError ? (
+            <div className="space-y-2 animate-in fade-in duration-500">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full transition-all duration-500 ${exportError ? "bg-rose-500" : "bg-emerald-500"}`} style={{ width: `${Math.max(5, Math.min(100, exportProgress))}%` }}></div>
+              </div>
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
+                <span className={exportError ? "text-rose-600" : "text-emerald-700"}>{exportError || exportStatus}</span>
+                <span className="text-gray-500">{Math.round(exportProgress)}%</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {exportLogs.length > 0 && (
+          <div className="mt-8 bg-gray-900 rounded-xl p-4 max-h-40 overflow-auto font-mono text-[10px] space-y-1 scrollbar-thin scrollbar-thumb-gray-700">
+            {exportLogs.map((entry, idx) => (
+              <div key={`${entry.ts}-${idx}`} className={`${entry.level === "error" ? "text-rose-400" : entry.level === "warning" ? "text-amber-400" : "text-emerald-400/80"}`}>
+                <span className="text-gray-500">[{entry.ts.slice(11, 19)}]</span> {entry.message}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return readAuthSession();
@@ -2999,316 +3320,8 @@ const App = () => {
     setMode("dashboard");
   };
 
-  const WeekDetailModal = ({ isOpen, onClose, emp, day, typeKey }) => {
-    if (!isOpen || !emp || !day) return null;
-    const typeInfo = TYPES[typeKey];
-    const horarioSalida =
-      typeKey === "O42"
-        ? "18:00 (Viernes 14:00)"
-        : typeKey === "O40"
-          ? "17:00"
-          : typeKey === "O30" || typeKey === "T30"
-            ? "14:00 (Intensiva)"
-            : "N/A";
-     const diasOficina = emp.officeDays;
-     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative">
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {emp.name} <span className="text-gray-500 text-sm font-normal">({emp.role})</span>
-            </h3>
-            <p className="text-brand-blue font-medium">Fecha {day.label}</p>
-          </div>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Estado Actual</p>
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${typeInfo.color}`}></div>
-                <span className="text-lg font-semibold text-gray-800">{typeInfo.label}</span>
-              </div>
-            </div>
-            {typeKey !== "V" && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-3 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Horario Salida</p>
-                    <p className={`text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`}>{horarioSalida}</p>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Grupo Turno</p>
-                    <p className="text-lg font-bold text-gray-700">Grupo {emp.group}</p>
-                  </div>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <p className="text-xs text-gray-500 mb-1">Días en Oficina (Fijos)</p>
-                  <p className="text-gray-800 font-medium">{diasOficina}</p>
-                </div>
-              </>
-            )}
-            {typeKey === "V" && (
-              <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 text-center">
-                <p className="text-rose-600">🌴 Disfrutando de vacaciones</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const AlertDetailModal = ({ isOpen, onClose, dayId }) => {
-    if (!isOpen || !dayId) return null;
-    const alert = stats.alerts.find(a => a.dayId === dayId);
-    if (!alert) return null;
-    const day = days.find(d => d.id === dayId);
-    
-    const hasCritical = alert.reasons.some(r => r.severity === "critical");
-    const hasWarning = alert.reasons.some(r => r.severity === "warning");
-    const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
-    const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
-
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className={`bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`}>
-          <div className={`${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`}>
-            <div className="flex items-center gap-3">
-              <span className={`text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
-                {WEEKDAY_FULL[day.weekdayLetter]} {day.label}
-              </span>
-              <span className="text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm">
-                {alert.present}/6 disponibles
-              </span>
-            </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
-          <div className="p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto">
-            {alert.reasons.map((reason, idx) => {
-              const severityStyles = {
-                critical: { bg: "bg-rose-50", border: "border-rose-200", titleColor: "text-rose-700", iconColor: "text-rose-500", detailColor: "text-rose-600" },
-                warning: { bg: "bg-amber-50", border: "border-amber-200", titleColor: "text-amber-700", iconColor: "text-amber-500", detailColor: "text-amber-600" },
-                info: { bg: "bg-blue-50", border: "border-blue-100", titleColor: "text-blue-700", iconColor: "text-blue-500", detailColor: "text-blue-600" }
-              };
-              const s = severityStyles[reason.severity] || severityStyles.info;
-              const iconMap = {
-                people: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>,
-                clock: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
-                alert: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
-                group: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-                check: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              };
-              return (
-                <div key={idx} className={`${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`}>
-                      {iconMap[reason.icon] || iconMap.alert}
-                    </div>
-                    <div>
-                      <h4 className={`text-sm font-bold ${s.titleColor}`}>{reason.title}</h4>
-                      <p className={`text-sm mt-1 leading-relaxed ${s.detailColor}`}>{reason.detail}</p>
-                      {reason.context && <p className="text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5">{reason.context}</p>}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-  const ForcedOfficeListModal = ({ open, onClose }) => {
-    if (!open) return null;
-
-    // Agrupar conteo por empleado
-    const countByEmp = {};
-    stats.forcedOfficeDetails.forEach(item => {
-      countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
-    });
-
-    const entries = stats.forcedOfficeDetails
-      .map((it) => {
-        const day = days.find((d) => d.id === it.dayId);
-        const emp = EMPLOYEES.find((e) => e.id === it.empId);
-        return { day, emp, reason: it.reason };
-      })
-      .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
-
-     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative">
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Listado de O forzadas</h3>
-            <p className="text-gray-500 text-sm mb-4">Motivo por el que deben asistir a la oficina</p>
-
-            {/* Resumen por integrante */}
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
-              <h4 className="text-sm font-bold text-brand-blue mb-2">Resumen por Integrante:</h4>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(countByEmp).length === 0 && <span className="text-xs text-gray-500">Sin registros.</span>}
-                {Object.entries(countByEmp).map(([empId, count]) => {
-                  const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
-                  return (
-                    <span key={empId} className="px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm">
-                      {emp.name}: {count}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-auto max-h-[50vh]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="p-2 border-b border-gray-200 text-gray-600">Fecha</th>
-                  <th className="p-2 border-b border-gray-200 text-gray-600">Día</th>
-                  <th className="p-2 border-b border-gray-200 text-gray-600">Integrante</th>
-                  <th className="p-2 border-b border-gray-200 text-gray-600">Motivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-500">No hay O forzadas en el periodo.</td></tr>}
-                {entries.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50">
-                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.day.label}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-500">{WEEKDAY_FULL[row.day.weekdayLetter]}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.emp.name}</td>
-                    <td className="p-2 border-b border-gray-200 text-gray-600">{row.reason}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
 
-  const ExportModal = ({ isOpen, onClose }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className="bg-white border border-emerald-100 rounded-2xl shadow-2xl max-w-2xl w-full p-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500"></div>
-          <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Configuración de Exportación</h3>
-            <p className="text-gray-500">Personaliza y descarga tu planificación en formato Excel o CSV.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="export-format" className="block text-sm font-semibold text-gray-700 mb-2">Formato de Archivo</label>
-                <select id="export-format" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
-                  <option value="xlsx">Excel Moderno (.xlsx)</option>
-                  <option value="xls">Excel Antiguo (.xls)</option>
-                  <option value="csv">Valores separados por coma (.csv)</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="export-style" className="block text-sm font-semibold text-gray-700 mb-2">Estilo Visual</label>
-                <select id="export-style" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportStylePreset} onChange={(e) => setExportStylePreset(e.target.value)}>
-                  <option value="corporativo">Corporativo (Azul)</option>
-                  <option value="neutro">Neutro (Gris)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-gray-700 mb-2">Opciones adicionales</p>
-              <div className="space-y-3">
-                {[
-                  { id: "export-formulas", label: "Incluir fórmulas de cálculo", checked: exportIncludeFormulas, onChange: e => setExportIncludeFormulas(e.target.checked) },
-                  { id: "export-chart-data", label: "Generar datos para gráficos", checked: exportIncludeChartData, onChange: e => setExportIncludeChartData(e.target.checked) },
-                  { id: "export-protect", label: "Proteger hoja de cálculo", checked: exportProtectSheet, onChange: e => setExportProtectSheet(e.target.checked) }
-                ].map((opt) => (
-                  <label key={opt.id} className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all">
-                    <input id={opt.id} type="checkbox" className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" checked={opt.checked} onChange={opt.onChange} />
-                    <span className="text-sm text-gray-700 font-medium">{opt.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {exportProtectSheet && (
-            <div className="mb-8 animate-in fade-in slide-in-from-top-2">
-              <label htmlFor="export-password" className="block text-sm font-semibold text-gray-700 mb-2">Contraseña de Protección (Opcional)</label>
-              <input id="export-password" type="password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} placeholder="Contraseña personalizada" />
-            </div>
-          )}
-
-          <div className="space-y-4 pt-6 border-t border-gray-100">
-            <button
-              onClick={exportToExcel}
-              disabled={exportInProgress}
-              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-emerald-200 transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
-            >
-              {exportInProgress ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Exportando...
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                  Descargar Planificación
-                </>
-              )}
-            </button>
-
-            {exportInProgress || exportStatus || exportError ? (
-              <div className="space-y-2 animate-in fade-in duration-500">
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-500 ${exportError ? "bg-rose-500" : "bg-emerald-500"}`} style={{ width: `${Math.max(5, Math.min(100, exportProgress))}%` }}></div>
-                </div>
-                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
-                  <span className={exportError ? "text-rose-600" : "text-emerald-700"}>{exportError || exportStatus}</span>
-                  <span className="text-gray-500">{Math.round(exportProgress)}%</span>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          {exportLogs.length > 0 && (
-            <div className="mt-8 bg-gray-900 rounded-xl p-4 max-h-40 overflow-auto font-mono text-[10px] space-y-1 scrollbar-thin scrollbar-thumb-gray-700">
-              {exportLogs.map((entry, idx) => (
-                <div key={`${entry.ts}-${idx}`} className={`${entry.level === "error" ? "text-rose-400" : entry.level === "warning" ? "text-amber-400" : "text-emerald-400/80"}`}>
-                  <span className="text-gray-500">[{entry.ts.slice(11, 19)}]</span> {entry.message}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const stats = useMemo(() => {
     const forcedOfficeSet = {};
@@ -4157,8 +4170,34 @@ const App = () => {
   return (
     <div className="min-h-screen bg-white p-3 sm:p-6 text-brand-dark">
       <WeekDetailModal {...modalData} onClose={() => setModalData({ ...modalData, isOpen: false })} />
-      <ForcedOfficeListModal open={oListOpen} onClose={() => setOListOpen(false)} />
-      <ExportModal isOpen={exportModalOpen} onClose={() => setExportModalOpen(false)} />
+      <ForcedOfficeListModal 
+        open={oListOpen} 
+        onClose={() => setOListOpen(false)} 
+        stats={stats} 
+        days={days} 
+      />
+      <ExportModal 
+        isOpen={exportModalOpen} 
+        onClose={() => setExportModalOpen(false)} 
+        exportFormat={exportFormat}
+        setExportFormat={setExportFormat}
+        exportStylePreset={exportStylePreset}
+        setExportStylePreset={setExportStylePreset}
+        exportIncludeFormulas={exportIncludeFormulas}
+        setExportIncludeFormulas={setExportIncludeFormulas}
+        exportIncludeChartData={exportIncludeChartData}
+        setExportIncludeChartData={setExportIncludeChartData}
+        exportProtectSheet={exportProtectSheet}
+        setExportProtectSheet={setExportProtectSheet}
+        exportPassword={exportPassword}
+        setExportPassword={setExportPassword}
+        exportInProgress={exportInProgress}
+        exportProgress={exportProgress}
+        exportStatus={exportStatus}
+        exportError={exportError}
+        exportLogs={exportLogs}
+        exportToExcel={exportToExcel}
+      />
       
       <header className="mb-8 border-b border-gray-100 pb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -5207,7 +5246,13 @@ const App = () => {
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>
-      <AlertDetailModal isOpen={!!selectedAlertDayId} onClose={() => setSelectedAlertDayId(null)} dayId={selectedAlertDayId} />
+      <AlertDetailModal 
+        isOpen={!!selectedAlertDayId} 
+        onClose={() => setSelectedAlertDayId(null)} 
+        dayId={selectedAlertDayId} 
+        stats={stats} 
+        days={days} 
+      />
      </div>
   );
 };

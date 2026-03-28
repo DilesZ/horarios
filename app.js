@@ -2841,6 +2841,612 @@ const buildChartDataRows = ({
   });
   return rows;
 };
+const WeekDetailModal = ({
+  isOpen,
+  onClose,
+  emp,
+  day,
+  typeKey
+}) => {
+  if (!isOpen || !emp || !day) return null;
+  const typeInfo = TYPES[typeKey];
+  const horarioSalida = typeKey === "O42" ? "18:00 (Viernes 14:00)" : typeKey === "O40" ? "17:00" : typeKey === "O30" || typeKey === "T30" ? "14:00 (Intensiva)" : "N/A";
+  const diasOficina = emp.officeDays;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+    onClick: e => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        onClose();
+      }
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+  }, /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-xl font-bold text-gray-900 mb-1"
+  }, emp.name, " ", /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-500 text-sm font-normal"
+  }, "(", emp.role, ")")), /*#__PURE__*/React.createElement("p", {
+    className: "text-brand-blue font-medium"
+  }, "Fecha ", day.label)), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gray-50 p-4 rounded-lg border border-gray-100"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
+  }, "Estado Actual"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `w-3 h-3 rounded-full ${typeInfo.color}`
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-lg font-semibold text-gray-800"
+  }, typeInfo.label))), typeKey !== "V" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-3 rounded-lg border border-gray-200"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mb-1"
+  }, "Horario Salida"), /*#__PURE__*/React.createElement("p", {
+    className: `text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`
+  }, horarioSalida)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-3 rounded-lg border border-gray-200"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mb-1"
+  }, "Grupo Turno"), /*#__PURE__*/React.createElement("p", {
+    className: "text-lg font-bold text-gray-700"
+  }, "Grupo ", emp.group))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-3 rounded-lg border border-gray-200"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mb-1"
+  }, "D\xEDas en Oficina (Fijos)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-gray-800 font-medium"
+  }, diasOficina))), typeKey === "V" && /*#__PURE__*/React.createElement("div", {
+    className: "bg-rose-50 p-4 rounded-lg border border-rose-200 text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-rose-600"
+  }, "\uD83C\uDF34 Disfrutando de vacaciones")))));
+};
+const AlertDetailModal = ({
+  isOpen,
+  onClose,
+  dayId,
+  stats,
+  days
+}) => {
+  if (!isOpen || !dayId) return null;
+  const alert = stats.alerts.find(a => a.dayId === dayId);
+  if (!alert) return null;
+  const day = days.find(d => d.id === dayId);
+  const hasCritical = alert.reasons.some(r => r.severity === "critical");
+  const hasWarning = alert.reasons.some(r => r.severity === "warning");
+  const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
+  const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+    onClick: e => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        onClose();
+      }
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`
+  }, WEEKDAY_FULL[day.weekdayLetter], " ", day.label), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm"
+  }, alert.present, "/6 disponibles")), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
+  }, /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto"
+  }, alert.reasons.map((reason, idx) => {
+    const severityStyles = {
+      critical: {
+        bg: "bg-rose-50",
+        border: "border-rose-200",
+        titleColor: "text-rose-700",
+        iconColor: "text-rose-500",
+        detailColor: "text-rose-600"
+      },
+      warning: {
+        bg: "bg-amber-50",
+        border: "border-amber-200",
+        titleColor: "text-amber-700",
+        iconColor: "text-amber-500",
+        detailColor: "text-amber-600"
+      },
+      info: {
+        bg: "bg-blue-50",
+        border: "border-blue-100",
+        titleColor: "text-blue-700",
+        iconColor: "text-blue-500",
+        detailColor: "text-blue-600"
+      }
+    };
+    const s = severityStyles[reason.severity] || severityStyles.info;
+    const iconMap = {
+      people: /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "9",
+        cy: "7",
+        r: "4"
+      })),
+      clock: /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "10"
+      }), /*#__PURE__*/React.createElement("polyline", {
+        points: "12 6 12 12 16 14"
+      })),
+      alert: /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "9",
+        x2: "12",
+        y2: "13"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "17",
+        x2: "12.01",
+        y2: "17"
+      })),
+      group: /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "9",
+        cy: "7",
+        r: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M23 21v-2a4 4 0 0 0-3-3.87"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M16 3.13a4 4 0 0 1 0 7.75"
+      })),
+      check: /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
+      }), /*#__PURE__*/React.createElement("polyline", {
+        points: "22 4 12 14.01 9 11.01"
+      }))
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      className: `${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`
+    }, iconMap[reason.icon] || iconMap.alert), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+      className: `text-sm font-bold ${s.titleColor}`
+    }, reason.title), /*#__PURE__*/React.createElement("p", {
+      className: `text-sm mt-1 leading-relaxed ${s.detailColor}`
+    }, reason.detail), reason.context && /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5"
+    }, reason.context))));
+  }))));
+};
+const ForcedOfficeListModal = ({
+  open,
+  onClose,
+  stats,
+  days
+}) => {
+  if (!open) return null;
+
+  // Agrupar conteo por empleado
+  const countByEmp = {};
+  stats.forcedOfficeDetails.forEach(item => {
+    countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
+  });
+  const entries = stats.forcedOfficeDetails.map(it => {
+    const day = days.find(d => d.id === it.dayId);
+    const emp = EMPLOYEES.find(e => e.id === it.empId);
+    return {
+      day,
+      emp,
+      reason: it.reason
+    };
+  }).sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+    onClick: e => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        onClose();
+      }
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+  }, /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-xl font-bold text-gray-900"
+  }, "Listado de O forzadas"), /*#__PURE__*/React.createElement("p", {
+    className: "text-gray-500 text-sm mb-4"
+  }, "Motivo por el que deben asistir a la oficina"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "text-sm font-bold text-brand-blue mb-2"
+  }, "Resumen por Integrante:"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, Object.keys(countByEmp).length === 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-gray-500"
+  }, "Sin registros."), Object.entries(countByEmp).map(([empId, count]) => {
+    const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
+    return /*#__PURE__*/React.createElement("span", {
+      key: empId,
+      className: "px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm"
+    }, emp.name, ": ", count);
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-auto max-h-[50vh]"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-left border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, "Fecha"), /*#__PURE__*/React.createElement("th", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, "D\xEDa"), /*#__PURE__*/React.createElement("th", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, "Integrante"), /*#__PURE__*/React.createElement("th", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, "Motivo"))), /*#__PURE__*/React.createElement("tbody", null, entries.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: "4",
+    className: "p-4 text-center text-gray-500"
+  }, "No hay O forzadas en el periodo.")), entries.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
+    key: idx,
+    className: "hover:bg-gray-50"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-800"
+  }, row.day.label), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-500"
+  }, WEEKDAY_FULL[row.day.weekdayLetter]), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-800"
+  }, row.emp.name), /*#__PURE__*/React.createElement("td", {
+    className: "p-2 border-b border-gray-200 text-gray-600"
+  }, row.reason))))))));
+};
+const ExportModal = ({
+  isOpen,
+  onClose,
+  exportFormat,
+  setExportFormat,
+  exportStylePreset,
+  setExportStylePreset,
+  exportIncludeFormulas,
+  setExportIncludeFormulas,
+  exportIncludeChartData,
+  setExportIncludeChartData,
+  exportProtectSheet,
+  setExportProtectSheet,
+  exportPassword,
+  setExportPassword,
+  exportInProgress,
+  exportProgress,
+  exportStatus,
+  exportError,
+  exportLogs,
+  exportToExcel
+}) => {
+  if (!isOpen) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4",
+    onClick: e => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        onClose();
+      }
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-emerald-100 rounded-2xl shadow-2xl max-w-2xl w-full p-8 relative overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute top-0 left-0 w-full h-1.5 bg-emerald-500"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+  }, /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-8"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-2xl font-bold text-gray-900 mb-2"
+  }, "Configuraci\xF3n de Exportaci\xF3n"), /*#__PURE__*/React.createElement("p", {
+    className: "text-gray-500"
+  }, "Personaliza y descarga tu planificaci\xF3n en formato Excel o CSV.")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-2 gap-8 mb-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    htmlFor: "export-format",
+    className: "block text-sm font-semibold text-gray-700 mb-2"
+  }, "Formato de Archivo"), /*#__PURE__*/React.createElement("select", {
+    id: "export-format",
+    className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
+    value: exportFormat,
+    onChange: e => setExportFormat(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "xlsx"
+  }, "Excel Moderno (.xlsx)"), /*#__PURE__*/React.createElement("option", {
+    value: "xls"
+  }, "Excel Antiguo (.xls)"), /*#__PURE__*/React.createElement("option", {
+    value: "csv"
+  }, "Valores separados por coma (.csv)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    htmlFor: "export-style",
+    className: "block text-sm font-semibold text-gray-700 mb-2"
+  }, "Estilo Visual"), /*#__PURE__*/React.createElement("select", {
+    id: "export-style",
+    className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
+    value: exportStylePreset,
+    onChange: e => setExportStylePreset(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "corporativo"
+  }, "Corporativo (Azul)"), /*#__PURE__*/React.createElement("option", {
+    value: "neutro"
+  }, "Neutro (Gris)")))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm font-semibold text-gray-700 mb-2"
+  }, "Opciones adicionales"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, [{
+    id: "export-formulas",
+    label: "Incluir fórmulas de cálculo",
+    checked: exportIncludeFormulas,
+    onChange: e => setExportIncludeFormulas(e.target.checked)
+  }, {
+    id: "export-chart-data",
+    label: "Generar datos para gráficos",
+    checked: exportIncludeChartData,
+    onChange: e => setExportIncludeChartData(e.target.checked)
+  }, {
+    id: "export-protect",
+    label: "Proteger hoja de cálculo",
+    checked: exportProtectSheet,
+    onChange: e => setExportProtectSheet(e.target.checked)
+  }].map(opt => /*#__PURE__*/React.createElement("label", {
+    key: opt.id,
+    className: "flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+  }, /*#__PURE__*/React.createElement("input", {
+    id: opt.id,
+    type: "checkbox",
+    className: "w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500",
+    checked: opt.checked,
+    onChange: opt.onChange
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm text-gray-700 font-medium"
+  }, opt.label)))))), exportProtectSheet && /*#__PURE__*/React.createElement("div", {
+    className: "mb-8 animate-in fade-in slide-in-from-top-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    htmlFor: "export-password",
+    className: "block text-sm font-semibold text-gray-700 mb-2"
+  }, "Contrase\xF1a de Protecci\xF3n (Opcional)"), /*#__PURE__*/React.createElement("input", {
+    id: "export-password",
+    type: "password",
+    className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
+    value: exportPassword,
+    onChange: e => setExportPassword(e.target.value),
+    placeholder: "Contrase\xF1a personalizada"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4 pt-6 border-t border-gray-100"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: exportToExcel,
+    disabled: exportInProgress,
+    className: `w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-emerald-200 transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
+  }, exportInProgress ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("svg", {
+    className: "animate-spin h-5 w-5 text-white",
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24"
+  }, /*#__PURE__*/React.createElement("circle", {
+    className: "opacity-25",
+    cx: "12",
+    cy: "12",
+    r: "10",
+    stroke: "currentColor",
+    strokeWidth: "4"
+  }), /*#__PURE__*/React.createElement("path", {
+    className: "opacity-75",
+    fill: "currentColor",
+    d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+  })), "Exportando...") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "7 10 12 15 17 10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "15",
+    x2: "12",
+    y2: "3"
+  })), "Descargar Planificaci\xF3n")), exportInProgress || exportStatus || exportError ? /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 animate-in fade-in duration-500"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-gray-100 rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `h-full transition-all duration-500 ${exportError ? "bg-rose-500" : "bg-emerald-500"}`,
+    style: {
+      width: `${Math.max(5, Math.min(100, exportProgress))}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-xs font-semibold uppercase tracking-wider"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: exportError ? "text-rose-600" : "text-emerald-700"
+  }, exportError || exportStatus), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-500"
+  }, Math.round(exportProgress), "%"))) : null), exportLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-8 bg-gray-900 rounded-xl p-4 max-h-40 overflow-auto font-mono text-[10px] space-y-1 scrollbar-thin scrollbar-thumb-gray-700"
+  }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
+    key: `${entry.ts}-${idx}`,
+    className: `${entry.level === "error" ? "text-rose-400" : entry.level === "warning" ? "text-amber-400" : "text-emerald-400/80"}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-500"
+  }, "[", entry.ts.slice(11, 19), "]"), " ", entry.message)))));
+};
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return readAuthSession();
@@ -2995,590 +3601,6 @@ const App = () => {
   const handleSelectDashboardYear = y => {
     setActiveDashboardYear(y);
     setMode("dashboard");
-  };
-  const WeekDetailModal = ({
-    isOpen,
-    onClose,
-    emp,
-    day,
-    typeKey
-  }) => {
-    if (!isOpen || !emp || !day) return null;
-    const typeInfo = TYPES[typeKey];
-    const horarioSalida = typeKey === "O42" ? "18:00 (Viernes 14:00)" : typeKey === "O40" ? "17:00" : typeKey === "O30" || typeKey === "T30" ? "14:00 (Intensiva)" : "N/A";
-    const diasOficina = emp.officeDays;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: e => {
-        if (e.target === e.currentTarget) onClose();
-      },
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "24",
-      height: "24",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mb-6"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-xl font-bold text-gray-900 mb-1"
-    }, emp.name, " ", /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-500 text-sm font-normal"
-    }, "(", emp.role, ")")), /*#__PURE__*/React.createElement("p", {
-      className: "text-brand-blue font-medium"
-    }, "Fecha ", day.label)), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-gray-50 p-4 rounded-lg border border-gray-100"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
-    }, "Estado Actual"), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-3 h-3 rounded-full ${typeInfo.color}`
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-semibold text-gray-800"
-    }, typeInfo.label))), typeKey !== "V" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "Horario Salida"), /*#__PURE__*/React.createElement("p", {
-      className: `text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`
-    }, horarioSalida)), /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "Grupo Turno"), /*#__PURE__*/React.createElement("p", {
-      className: "text-lg font-bold text-gray-700"
-    }, "Grupo ", emp.group))), /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "D\xEDas en Oficina (Fijos)"), /*#__PURE__*/React.createElement("p", {
-      className: "text-gray-800 font-medium"
-    }, diasOficina))), typeKey === "V" && /*#__PURE__*/React.createElement("div", {
-      className: "bg-rose-50 p-4 rounded-lg border border-rose-200 text-center"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-rose-600"
-    }, "\uD83C\uDF34 Disfrutando de vacaciones")))));
-  };
-  const AlertDetailModal = ({
-    isOpen,
-    onClose,
-    dayId
-  }) => {
-    if (!isOpen || !dayId) return null;
-    const alert = stats.alerts.find(a => a.dayId === dayId);
-    if (!alert) return null;
-    const day = days.find(d => d.id === dayId);
-    const hasCritical = alert.reasons.some(r => r.severity === "critical");
-    const hasWarning = alert.reasons.some(r => r.severity === "warning");
-    const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
-    const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: e => {
-        if (e.target === e.currentTarget) onClose();
-      },
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`
-    }, WEEKDAY_FULL[day.weekdayLetter], " ", day.label), /*#__PURE__*/React.createElement("span", {
-      className: "text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm"
-    }, alert.present, "/6 disponibles")), /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto"
-    }, alert.reasons.map((reason, idx) => {
-      const severityStyles = {
-        critical: {
-          bg: "bg-rose-50",
-          border: "border-rose-200",
-          titleColor: "text-rose-700",
-          iconColor: "text-rose-500",
-          detailColor: "text-rose-600"
-        },
-        warning: {
-          bg: "bg-amber-50",
-          border: "border-amber-200",
-          titleColor: "text-amber-700",
-          iconColor: "text-amber-500",
-          detailColor: "text-amber-600"
-        },
-        info: {
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          titleColor: "text-blue-700",
-          iconColor: "text-blue-500",
-          detailColor: "text-blue-600"
-        }
-      };
-      const s = severityStyles[reason.severity] || severityStyles.info;
-      const iconMap = {
-        people: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-        }), /*#__PURE__*/React.createElement("circle", {
-          cx: "9",
-          cy: "7",
-          r: "4"
-        })),
-        clock: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("circle", {
-          cx: "12",
-          cy: "12",
-          r: "10"
-        }), /*#__PURE__*/React.createElement("polyline", {
-          points: "12 6 12 12 16 14"
-        })),
-        alert: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-        }), /*#__PURE__*/React.createElement("line", {
-          x1: "12",
-          y1: "9",
-          x2: "12",
-          y2: "13"
-        }), /*#__PURE__*/React.createElement("line", {
-          x1: "12",
-          y1: "17",
-          x2: "12.01",
-          y2: "17"
-        })),
-        group: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-        }), /*#__PURE__*/React.createElement("circle", {
-          cx: "9",
-          cy: "7",
-          r: "4"
-        }), /*#__PURE__*/React.createElement("path", {
-          d: "M23 21v-2a4 4 0 0 0-3-3.87"
-        }), /*#__PURE__*/React.createElement("path", {
-          d: "M16 3.13a4 4 0 0 1 0 7.75"
-        })),
-        check: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
-        }), /*#__PURE__*/React.createElement("polyline", {
-          points: "22 4 12 14.01 9 11.01"
-        }))
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        key: idx,
-        className: `${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start gap-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`
-      }, iconMap[reason.icon] || iconMap.alert), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-        className: `text-sm font-bold ${s.titleColor}`
-      }, reason.title), /*#__PURE__*/React.createElement("p", {
-        className: `text-sm mt-1 leading-relaxed ${s.detailColor}`
-      }, reason.detail), reason.context && /*#__PURE__*/React.createElement("p", {
-        className: "text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5"
-      }, reason.context))));
-    }))));
-  };
-  const ForcedOfficeListModal = ({
-    open,
-    onClose
-  }) => {
-    if (!open) return null;
-
-    // Agrupar conteo por empleado
-    const countByEmp = {};
-    stats.forcedOfficeDetails.forEach(item => {
-      countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
-    });
-    const entries = stats.forcedOfficeDetails.map(it => {
-      const day = days.find(d => d.id === it.dayId);
-      const emp = EMPLOYEES.find(e => e.id === it.empId);
-      return {
-        day,
-        emp,
-        reason: it.reason
-      };
-    }).sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: e => {
-        if (e.target === e.currentTarget) onClose();
-      },
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "24",
-      height: "24",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mb-6"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-xl font-bold text-gray-900"
-    }, "Listado de O forzadas"), /*#__PURE__*/React.createElement("p", {
-      className: "text-gray-500 text-sm mb-4"
-    }, "Motivo por el que deben asistir a la oficina"), /*#__PURE__*/React.createElement("div", {
-      className: "bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"
-    }, /*#__PURE__*/React.createElement("h4", {
-      className: "text-sm font-bold text-brand-blue mb-2"
-    }, "Resumen por Integrante:"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap gap-2"
-    }, Object.keys(countByEmp).length === 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-xs text-gray-500"
-    }, "Sin registros."), Object.entries(countByEmp).map(([empId, count]) => {
-      const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
-      return /*#__PURE__*/React.createElement("span", {
-        key: empId,
-        className: "px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm"
-      }, emp.name, ": ", count);
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "overflow-auto max-h-[50vh]"
-    }, /*#__PURE__*/React.createElement("table", {
-      className: "w-full text-left border-collapse"
-    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Fecha"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "D\xEDa"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Integrante"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Motivo"))), /*#__PURE__*/React.createElement("tbody", null, entries.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-      colSpan: "4",
-      className: "p-4 text-center text-gray-500"
-    }, "No hay O forzadas en el periodo.")), entries.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
-      key: idx,
-      className: "hover:bg-gray-50"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-800"
-    }, row.day.label), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-500"
-    }, WEEKDAY_FULL[row.day.weekdayLetter]), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-800"
-    }, row.emp.name), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, row.reason))))))));
-  };
-  const ExportModal = ({
-    isOpen,
-    onClose
-  }) => {
-    if (!isOpen) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4",
-      onClick: e => {
-        if (e.target === e.currentTarget) onClose();
-      },
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-emerald-100 rounded-2xl shadow-2xl max-w-2xl w-full p-8 relative overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-0 left-0 w-full h-1.5 bg-emerald-500"
-    }), /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mb-8"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-2xl font-bold text-gray-900 mb-2"
-    }, "Configuraci\xF3n de Exportaci\xF3n"), /*#__PURE__*/React.createElement("p", {
-      className: "text-gray-500"
-    }, "Personaliza y descarga tu planificaci\xF3n en formato Excel o CSV.")), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-1 md:grid-cols-2 gap-8 mb-8"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "space-y-6"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      htmlFor: "export-format",
-      className: "block text-sm font-semibold text-gray-700 mb-2"
-    }, "Formato de Archivo"), /*#__PURE__*/React.createElement("select", {
-      id: "export-format",
-      className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
-      value: exportFormat,
-      onChange: e => setExportFormat(e.target.value)
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "xlsx"
-    }, "Excel Moderno (.xlsx)"), /*#__PURE__*/React.createElement("option", {
-      value: "xls"
-    }, "Excel Antiguo (.xls)"), /*#__PURE__*/React.createElement("option", {
-      value: "csv"
-    }, "Valores separados por coma (.csv)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      htmlFor: "export-style",
-      className: "block text-sm font-semibold text-gray-700 mb-2"
-    }, "Estilo Visual"), /*#__PURE__*/React.createElement("select", {
-      id: "export-style",
-      className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
-      value: exportStylePreset,
-      onChange: e => setExportStylePreset(e.target.value)
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "corporativo"
-    }, "Corporativo (Azul)"), /*#__PURE__*/React.createElement("option", {
-      value: "neutro"
-    }, "Neutro (Gris)")))), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-4"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-sm font-semibold text-gray-700 mb-2"
-    }, "Opciones adicionales"), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-3"
-    }, [{
-      id: "export-formulas",
-      label: "Incluir fórmulas de cálculo",
-      checked: exportIncludeFormulas,
-      onChange: e => setExportIncludeFormulas(e.target.checked)
-    }, {
-      id: "export-chart-data",
-      label: "Generar datos para gráficos",
-      checked: exportIncludeChartData,
-      onChange: e => setExportIncludeChartData(e.target.checked)
-    }, {
-      id: "export-protect",
-      label: "Proteger hoja de cálculo",
-      checked: exportProtectSheet,
-      onChange: e => setExportProtectSheet(e.target.checked)
-    }].map(opt => /*#__PURE__*/React.createElement("label", {
-      key: opt.id,
-      className: "flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all"
-    }, /*#__PURE__*/React.createElement("input", {
-      id: opt.id,
-      type: "checkbox",
-      className: "w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500",
-      checked: opt.checked,
-      onChange: opt.onChange
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-sm text-gray-700 font-medium"
-    }, opt.label)))))), exportProtectSheet && /*#__PURE__*/React.createElement("div", {
-      className: "mb-8 animate-in fade-in slide-in-from-top-2"
-    }, /*#__PURE__*/React.createElement("label", {
-      htmlFor: "export-password",
-      className: "block text-sm font-semibold text-gray-700 mb-2"
-    }, "Contrase\xF1a de Protecci\xF3n (Opcional)"), /*#__PURE__*/React.createElement("input", {
-      id: "export-password",
-      type: "password",
-      className: "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all",
-      value: exportPassword,
-      onChange: e => setExportPassword(e.target.value),
-      placeholder: "Contrase\xF1a personalizada"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-4 pt-6 border-t border-gray-100"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: exportToExcel,
-      disabled: exportInProgress,
-      className: `w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-emerald-200 transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
-    }, exportInProgress ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("svg", {
-      className: "animate-spin h-5 w-5 text-white",
-      xmlns: "http://www.w3.org/2000/svg",
-      fill: "none",
-      viewBox: "0 0 24 24"
-    }, /*#__PURE__*/React.createElement("circle", {
-      className: "opacity-25",
-      cx: "12",
-      cy: "12",
-      r: "10",
-      stroke: "currentColor",
-      strokeWidth: "4"
-    }), /*#__PURE__*/React.createElement("path", {
-      className: "opacity-75",
-      fill: "currentColor",
-      d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-    })), "Exportando...") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("path", {
-      d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-    }), /*#__PURE__*/React.createElement("polyline", {
-      points: "7 10 12 15 17 10"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "12",
-      y1: "15",
-      x2: "12",
-      y2: "3"
-    })), "Descargar Planificaci\xF3n")), exportInProgress || exportStatus || exportError ? /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2 animate-in fade-in duration-500"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-2 bg-gray-100 rounded-full overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `h-full transition-all duration-500 ${exportError ? "bg-rose-500" : "bg-emerald-500"}`,
-      style: {
-        width: `${Math.max(5, Math.min(100, exportProgress))}%`
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between text-xs font-semibold uppercase tracking-wider"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: exportError ? "text-rose-600" : "text-emerald-700"
-    }, exportError || exportStatus), /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-500"
-    }, Math.round(exportProgress), "%"))) : null), exportLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "mt-8 bg-gray-900 rounded-xl p-4 max-h-40 overflow-auto font-mono text-[10px] space-y-1 scrollbar-thin scrollbar-thumb-gray-700"
-    }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
-      key: `${entry.ts}-${idx}`,
-      className: `${entry.level === "error" ? "text-rose-400" : entry.level === "warning" ? "text-amber-400" : "text-emerald-400/80"}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-500"
-    }, "[", entry.ts.slice(11, 19), "]"), " ", entry.message)))));
   };
   const stats = useMemo(() => {
     const forcedOfficeSet = {};
@@ -4814,10 +4836,30 @@ const App = () => {
     })
   })), /*#__PURE__*/React.createElement(ForcedOfficeListModal, {
     open: oListOpen,
-    onClose: () => setOListOpen(false)
+    onClose: () => setOListOpen(false),
+    stats: stats,
+    days: days
   }), /*#__PURE__*/React.createElement(ExportModal, {
     isOpen: exportModalOpen,
-    onClose: () => setExportModalOpen(false)
+    onClose: () => setExportModalOpen(false),
+    exportFormat: exportFormat,
+    setExportFormat: setExportFormat,
+    exportStylePreset: exportStylePreset,
+    setExportStylePreset: setExportStylePreset,
+    exportIncludeFormulas: exportIncludeFormulas,
+    setExportIncludeFormulas: setExportIncludeFormulas,
+    exportIncludeChartData: exportIncludeChartData,
+    setExportIncludeChartData: setExportIncludeChartData,
+    exportProtectSheet: exportProtectSheet,
+    setExportProtectSheet: setExportProtectSheet,
+    exportPassword: exportPassword,
+    setExportPassword: setExportPassword,
+    exportInProgress: exportInProgress,
+    exportProgress: exportProgress,
+    exportStatus: exportStatus,
+    exportError: exportError,
+    exportLogs: exportLogs,
+    exportToExcel: exportToExcel
   }), /*#__PURE__*/React.createElement("header", {
     className: "mb-8 border-b border-gray-100 pb-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -5781,7 +5823,9 @@ const App = () => {
   }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
     isOpen: !!selectedAlertDayId,
     onClose: () => setSelectedAlertDayId(null),
-    dayId: selectedAlertDayId
+    dayId: selectedAlertDayId,
+    stats: stats,
+    days: days
   }));
 };
 const root = ReactDOM.createRoot(document.getElementById("root"));
