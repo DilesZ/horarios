@@ -3125,6 +3125,82 @@ const App = () => {
       </div>
     );
   };
+  const ForcedOfficeListModal = ({ open, onClose }) => {
+    if (!open) return null;
+
+    // Agrupar conteo por empleado
+    const countByEmp = {};
+    stats.forcedOfficeDetails.forEach(item => {
+      countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
+    });
+
+    const entries = stats.forcedOfficeDetails
+      .map((it) => {
+        const day = days.find((d) => d.id === it.dayId);
+        const emp = EMPLOYEES.find((e) => e.id === it.empId);
+        return { day, emp, reason: it.reason };
+      })
+      .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+
+     return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Listado de O forzadas</h3>
+            <p className="text-gray-500 text-sm mb-4">Motivo por el que deben asistir a la oficina</p>
+
+            {/* Resumen por integrante */}
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+              <h4 className="text-sm font-bold text-brand-blue mb-2">Resumen por Integrante:</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(countByEmp).length === 0 && <span className="text-xs text-gray-500">Sin registros.</span>}
+                {Object.entries(countByEmp).map(([empId, count]) => {
+                  const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
+                  return (
+                    <span key={empId} className="px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm">
+                      {emp.name}: {count}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-auto max-h-[50vh]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Fecha</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Día</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Integrante</th>
+                  <th className="p-2 border-b border-gray-200 text-gray-600">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-500">No hay O forzadas en el periodo.</td></tr>}
+                {entries.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.day.label}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-500">{WEEKDAY_FULL[row.day.weekdayLetter]}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-800">{row.emp.name}</td>
+                    <td className="p-2 border-b border-gray-200 text-gray-600">{row.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
 
   const ExportModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -4074,6 +4150,9 @@ const App = () => {
         slotHeight: "h-10",
       };
 
+  if (!isLoggedIn) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-white p-3 sm:p-6 text-brand-dark">
