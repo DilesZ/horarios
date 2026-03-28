@@ -4,12 +4,12 @@ const { useState, useMemo, useEffect } = React;
 /* global XLSX */
 
 const EMPLOYEES = [
-  { id: 1, name: "Kike", role: "SysAdmin", officeDays: "X, J, V", group: "A" },
-  { id: 2, name: "Jose", role: "DevOps", officeDays: "L, M, V", group: "B" },
-  { id: 3, name: "Enrique", role: "Manager", officeDays: "X, J", group: "B" },
-  { id: 4, name: "David", role: "Backend", officeDays: "J, V", group: "A" },
-  { id: 5, name: "Luis", role: "Frontend", officeDays: "L, M", group: "A" },
-  { id: 6, name: "Ariel", role: "FullStack", officeDays: "L, M, X", group: "B" },
+  { id: 1, name: "Kike", role: "SysAdmin", department: "Infraestructura", officeDays: "X, J, V", group: "A" },
+  { id: 2, name: "Jose", role: "DevOps", department: "Infraestructura", officeDays: "L, M, V", group: "B" },
+  { id: 3, name: "Enrique", role: "Manager", department: "Gestión", officeDays: "X, J", group: "B" },
+  { id: 4, name: "David", role: "Backend", department: "Desarrollo", officeDays: "J, V", group: "A" },
+  { id: 5, name: "Luis", role: "Frontend", department: "Desarrollo", officeDays: "L, M", group: "A" },
+  { id: 6, name: "Ariel", role: "FullStack", department: "Desarrollo", officeDays: "L, M, X", group: "B" },
 ];
 
 const MONTH_NAMES = [
@@ -54,6 +54,46 @@ const TYPES = {
   T30: { label: "Teletrabajo 30h", color: "bg-cyan-700", text: "text-white", short: "T30" },
   V: { label: "Vacaciones", color: "bg-rose-700", text: "text-white", short: "VAC" },
 };
+
+const COVERAGE_BANDS = {
+  "14": {
+    key: "14",
+    label: "Hasta las 14h",
+    short: "14h",
+    color: "bg-emerald-500",
+    soft: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+  },
+  "17": {
+    key: "17",
+    label: "Hasta las 17h",
+    short: "17h",
+    color: "bg-sky-500",
+    soft: "bg-sky-50",
+    text: "text-sky-700",
+    border: "border-sky-200",
+  },
+  "18": {
+    key: "18",
+    label: "Hasta las 18h",
+    short: "18h",
+    color: "bg-violet-500",
+    soft: "bg-violet-50",
+    text: "text-violet-700",
+    border: "border-violet-200",
+  },
+};
+const COVERAGE_BAND_ORDER = ["14", "17", "18"];
+const COVERAGE_TIMELINE_WIDTH = { "14": 60, "17": 90, "18": 100 };
+const COVERAGE_VISUALIZATION_OPTIONS = [
+  { value: "stacked", label: "Barras superpuestas" },
+  { value: "timeline", label: "Líneas temporales" },
+  { value: "heatmap", label: "Heatmap" },
+  { value: "table", label: "Tabla cromática" },
+  { value: "calendar", label: "Calendario semanal" },
+  { value: "gantt", label: "Gantt simplificado" },
+];
 
 const DEFAULT_VACATION_PLAN_2026 = {
   Kike: [
@@ -202,6 +242,149 @@ const clearAuthSession = () => {
   window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
 };
 
+const getCoverageBandForShift = (typeKey, weekdayLetter) => {
+  if (!typeKey || typeKey === "V") return null;
+  if (typeKey === "O42") return weekdayLetter === "V" ? "14" : "18";
+  if (typeKey === "O40") return "17";
+  if (typeKey === "O30" || typeKey === "T30") return "14";
+  return null;
+};
+
+const isEmployeeInOfficeForDay = ({ employee, day, typeKey, forcedOfficeSet }) => {
+  if (!typeKey || typeKey === "V") return false;
+  const officeDays = employee.officeDays.split(",").map((value) => value.trim());
+  const isForcedOffice = !!forcedOfficeSet?.[day.id]?.has(employee.id);
+  return officeDays.includes(day.weekdayLetter) || isForcedOffice;
+};
+
+const buildCoverageDayEntry = ({ day, employees, schedule, forcedOfficeSet, shiftFilter = "all" }) => {
+  const assignmentsByBand = {
+    "14": [],
+    "17": [],
+    "18": [],
+  };
+  employees.forEach((employee) => {
+    const typeKey = schedule?.[employee.id]?.[day.id];
+    const bandKey = getCoverageBandForShift(typeKey, day.weekdayLetter);
+    if (!bandKey) return;
+    if (shiftFilter !== "all" && bandKey !== shiftFilter) return;
+    const isInOffice = isEmployeeInOfficeForDay({ employee, day, typeKey, forcedOfficeSet });
+    const isForcedOffice = !!forcedOfficeSet?.[day.id]?.has(employee.id);
+    assignmentsByBand[bandKey].push({
+      id: employee.id,
+      name: employee.name,
+      role: employee.role,
+      department: employee.department,
+      group: employee.group,
+      typeKey,
+      isInOffice,
+      isForcedOffice,
+    });
+  });
+  const counts = COVERAGE_BAND_ORDER.reduce((accumulator, bandKey) => {
+    accumulator[bandKey] = assignmentsByBand[bandKey].length;
+    return accumulator;
+  }, {});
+  const activeCounts = {
+    "14": counts["14"] + counts["17"] + counts["18"],
+    "17": counts["17"] + counts["18"],
+    "18": counts["18"],
+  };
+  const timeline = [
+    {
+      key: "14",
+      label: "08:00–14:00",
+      count: activeCounts["14"],
+      bands: ["14", "17", "18"],
+    },
+    {
+      key: "17",
+      label: "14:00–17:00",
+      count: activeCounts["17"],
+      bands: ["17", "18"],
+    },
+    {
+      key: "18",
+      label: "17:00–18:00",
+      count: activeCounts["18"],
+      bands: ["18"],
+    },
+  ];
+  const ganttBars = COVERAGE_BAND_ORDER.map((bandKey) => ({
+    key: bandKey,
+    width: counts[bandKey] > 0 ? COVERAGE_TIMELINE_WIDTH[bandKey] : 0,
+    count: counts[bandKey],
+    meta: COVERAGE_BANDS[bandKey],
+    employees: assignmentsByBand[bandKey],
+  })).filter((bar) => bar.count > 0);
+  const totalAssignments = counts["14"] + counts["17"] + counts["18"];
+  return {
+    dayId: day.id,
+    dayLabel: `${WEEKDAY_FULL[day.weekdayLetter]} ${day.label}`,
+    dateNumber: day.label.split(" ")[1],
+    weekdayLetter: day.weekdayLetter,
+    weekdayName: WEEKDAY_FULL[day.weekdayLetter],
+    weekIndex: day.weekIndex,
+    month: day.month,
+    counts,
+    activeCounts,
+    assignmentsByBand,
+    totalAssignments,
+    timeline,
+    ganttBars,
+    maxCount: Math.max(activeCounts["14"], activeCounts["17"], activeCounts["18"], 1),
+  };
+};
+
+const buildWeeklyCoverageViewModel = ({
+  days,
+  employees,
+  schedule,
+  forcedOfficeSet,
+  shiftFilter = "all",
+}) => {
+  const weeksMap = buildWeeksMap(days);
+  return Object.keys(weeksMap)
+    .map((weekIndexValue) => parseInt(weekIndexValue, 10))
+    .sort((left, right) => left - right)
+    .map((weekIndex) => {
+      const weekDays = weeksMap[weekIndex];
+      const entries = weekDays.map((day) =>
+        buildCoverageDayEntry({
+          day,
+          employees,
+          schedule,
+          forcedOfficeSet,
+          shiftFilter,
+        })
+      );
+      const totals = { "14": 0, "17": 0, "18": 0 };
+      const activeTotals = { "14": 0, "17": 0, "18": 0 };
+      entries.forEach((entry) => {
+        COVERAGE_BAND_ORDER.forEach((bandKey) => {
+          totals[bandKey] += entry.counts[bandKey];
+          activeTotals[bandKey] += entry.activeCounts[bandKey];
+        });
+      });
+      const totalAssignments = entries.reduce((sum, entry) => sum + entry.totalAssignments, 0);
+      return {
+        weekIndex,
+        weekLabel: `Semana ${weekIndex + 1}`,
+        periodLabel: `${weekDays[0].label} – ${weekDays[weekDays.length - 1].label}`,
+        month: weekDays[Math.floor(weekDays.length / 2)].month,
+        days: entries,
+        totals,
+        activeTotals,
+        totalAssignments,
+        avgActiveCounts: {
+          "14": entries.length > 0 ? activeTotals["14"] / entries.length : 0,
+          "17": entries.length > 0 ? activeTotals["17"] / entries.length : 0,
+          "18": entries.length > 0 ? activeTotals["18"] / entries.length : 0,
+        },
+      };
+    });
+};
+
 const buildWeeksMap = (days) => {
   const weeksMap = {};
   days.forEach((day) => {
@@ -209,11 +392,6 @@ const buildWeeksMap = (days) => {
     weeksMap[day.weekIndex].push(day);
   });
   return weeksMap;
-};
-
-const getLateGroupForWeekGlobal = (weekIndex) => {
-  const defaultIsALate = SHIFT_BASE_A_18H ? weekIndex % 2 === 0 : weekIndex % 2 !== 0;
-  return defaultIsALate ? "A" : "B";
 };
 
 const buildWeeklyViolation = ({ rule, employee, weekIndex, weekDays, types, detail }) => ({
@@ -2082,7 +2260,7 @@ const generateSchedule = (year, vacationPlan) => {
               if (sched[emp.id][day.id] === "V" || sched[emp.id][day.id] === "O30") return false;
               const od = emp.officeDays.split(",").map(x => x.trim());
               return od.includes(day.weekdayLetter);
-            }).sort((a,b) => (a.group === lateGroup ? -1 : 1))[0];
+            }).sort((candidate) => (candidate.group === lateGroup ? -1 : 1))[0];
             if (pick) {
               weekDays.forEach(wd => { if (sched[pick.id][wd.id] !== "V" && sched[pick.id][wd.id] !== "O30") sched[pick.id][wd.id] = "O42"; });
             }
@@ -2180,8 +2358,9 @@ const LoginForm = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Usuario</label>
+            <label htmlFor="login-username" className="block text-sm font-medium text-gray-700 mb-1.5">Usuario</label>
             <input
+              id="login-username"
               type="text"
               required
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold"
@@ -2191,8 +2370,9 @@ const LoginForm = ({ onLogin }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña</label>
             <input
+              id="login-password"
               type="password"
               required
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold"
@@ -2360,7 +2540,7 @@ const buildVacacionesSheet = ({ employees, days, schedule }) => {
   return aoa;
 };
 
-const buildAlertasSheet = ({ alerts, days, employees, schedule }) => {
+const buildAlertasSheet = ({ alerts, days }) => {
   const headers = ["Fecha", "Día semana", "Mes", "Semana", "Severidad", "Categoría", "Título alerta", "Detalle", "Contexto adicional", "Disponibles"];
   const aoa = [headers];
   if (alerts.length === 0) {
@@ -2380,7 +2560,7 @@ const buildAlertasSheet = ({ alerts, days, employees, schedule }) => {
   return aoa;
 };
 
-const buildDatosGraficosSheet = ({ employees, days, schedule, intensiveWeeksByEmp, forcedOfficeDetails, dailyCoverage }) => {
+const buildDatosGraficosSheet = ({ employees, days, schedule, forcedOfficeDetails, dailyCoverage }) => {
   const months = [];
   const monthSet = new Set();
   days.forEach(d => { if (!monthSet.has(d.month)) { monthSet.add(d.month); months.push(d.month); } });
@@ -2472,12 +2652,30 @@ const buildDatosGraficosSheet = ({ employees, days, schedule, intensiveWeeksByEm
   });
 
   aoa.push([]); aoa.push([]);
+  aoa.push(["TABLA 5 — Dataset resumido para gráficos de comparación"]);
+  aoa.push(["Gráfico sugerido: Barras agrupadas — Semanas intensivas vs días forzados"]);
+  aoa.push([]);
+  buildChartDataRows({
+    employees,
+    intensiveWeeksByEmp: employees.reduce((accumulator, employee) => {
+      let intensiveWeeks = 0;
+      Object.values(weeksMap).forEach((weekDays) => {
+        if (weekDays.every((day) => schedule[employee.id][day.id] === "O30")) intensiveWeeks++;
+      });
+      accumulator[employee.id] = intensiveWeeks;
+      return accumulator;
+    }, {}),
+    forcedOfficeDetails,
+  }).forEach((row) => aoa.push(row));
+
+  aoa.push([]); aoa.push([]);
   aoa.push(["─── INSTRUCCIONES PARA CREAR GRÁFICOS EN EXCEL ───"]);
   aoa.push(["TABLA 1 → Seleccionar el rango de datos → Insertar → Gráfico de Columnas Agrupadas"]);
   aoa.push(["         Eje horizontal: Meses de verano, Series: un integrante por serie"]);
   aoa.push(["TABLA 2 → Seleccionar Integrante + H.O30 + H.O40 + H.O42 → Insertar → Barras apiladas"]);
   aoa.push(["TABLA 3 → Seleccionar Semana + columnas % → Insertar → Barras apiladas al 100%"]);
   aoa.push(["TABLA 4 → Seleccionar Fecha + Disponibles → Insertar → Gráfico de Líneas"]);
+  aoa.push(["TABLA 5 → Seleccionar Integrante + Semanas intensivas + Días forzados → Insertar → Barras agrupadas"]);
 
   return aoa;
 };
@@ -2492,6 +2690,40 @@ const IconOffice = ({ className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
   </svg>
+);
+
+const CoverageLegend = () => (
+  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-bold text-gray-800">Leyenda de cobertura</h3>
+        <p className="text-xs text-gray-500">Las bandas reflejan la hora final del turno visible en cada día.</p>
+      </div>
+      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
+        14h · 17h · 18h
+      </span>
+    </div>
+    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {COVERAGE_BAND_ORDER.map((bandKey) => {
+        const meta = COVERAGE_BANDS[bandKey];
+        return (
+          <div key={bandKey} className={`rounded-lg border ${meta.border} ${meta.soft} px-3 py-2`}>
+            <div className="flex items-center gap-2">
+              <div className={`h-3 w-3 rounded-full ${meta.color}`}></div>
+              <span className={`text-sm font-semibold ${meta.text}`}>{meta.label}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-gray-500">
+              {bandKey === "14"
+                ? "Intensiva, viernes 42h y teletrabajo 30h."
+                : bandKey === "17"
+                  ? "Cobertura operativa estándar."
+                  : "Cobertura extendida de tarde."}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  </div>
 );
 
 const buildChartDataRows = ({ employees, intensiveWeeksByEmp, forcedOfficeDetails }) => {
@@ -2545,7 +2777,7 @@ const App = () => {
   const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
   const [selectedEmp, setSelectedEmp] = useState("all");
   const [employeeSearch, setEmployeeSearch] = useState("");
-  const [tableDensity, setTableDensity] = useState("comfortable");
+  const [tableDensity] = useState("comfortable");
   const [hoveredEmpId, setHoveredEmpId] = useState(null);
   const [hoveredDayId, setHoveredDayId] = useState(null);
   const [modalData, setModalData] = useState({ isOpen: false, emp: null, day: null, typeKey: null });
@@ -2578,7 +2810,11 @@ const App = () => {
   const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
   const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
   const [viewMode, setViewMode] = useState("matrix");
-  const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
+  const [coverageVisualization, setCoverageVisualization] = useState("stacked");
+  const [coverageStartDate, setCoverageStartDate] = useState("");
+  const [coverageEndDate, setCoverageEndDate] = useState("");
+  const [coverageDepartment, setCoverageDepartment] = useState("all");
+  const [coverageShiftFilter, setCoverageShiftFilter] = useState("all");
 
    useEffect(() => {
      try {
@@ -2706,8 +2942,8 @@ const App = () => {
             : "N/A";
      const diasOficina = emp.officeDays;
      return (
-       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative">
           <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -2769,8 +3005,8 @@ const App = () => {
     const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
 
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className={`bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`} onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+        <div className={`bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`}>
           <div className={`${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`}>
             <div className="flex items-center gap-3">
               <span className={`text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`}>
@@ -2838,8 +3074,8 @@ const App = () => {
       .sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
 
      return (
-       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onClose(); } }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative">
           <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3543,7 +3779,7 @@ const App = () => {
         await waitTick();
 
         // ── Hoja 6: Alertas ──────────────────────────────────────────
-        const aoaAlertas = buildAlertasSheet({ alerts: stats.alerts, days, employees: EMPLOYEES, schedule });
+        const aoaAlertas = buildAlertasSheet({ alerts: stats.alerts, days });
         const wsAlertas = XLSX.utils.aoa_to_sheet(aoaAlertas);
         applyRowStyle(wsAlertas, 0, aoaAlertas[0].length, auxHeaderStyle);
         // Color rows by severity
@@ -3569,7 +3805,6 @@ const App = () => {
         if (exportIncludeChartData) {
           const aoaGraficos = buildDatosGraficosSheet({
             employees: EMPLOYEES, days, schedule,
-            intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
             forcedOfficeDetails: stats.forcedOfficeDetails,
             dailyCoverage: stats.dailyCoverage,
           });
@@ -3647,6 +3882,71 @@ const App = () => {
     ? quickFilteredEmployees
     : quickFilteredEmployees.filter((e) => e.id === parseInt(selectedEmp, 10));
   const weekdaysCalendar = ["L", "M", "X", "J", "V"];
+  const coverageDateBounds = useMemo(
+    () => ({
+      minDate: days[0]?.id || "",
+      maxDate: days[days.length - 1]?.id || "",
+    }),
+    [days]
+  );
+  const normalizedCoverageDates = useMemo(() => {
+    const start = coverageStartDate || coverageDateBounds.minDate;
+    const end = coverageEndDate || coverageDateBounds.maxDate;
+    if (!start || !end) {
+      return { startDate: start, endDate: end };
+    }
+    return start <= end ? { startDate: start, endDate: end } : { startDate: end, endDate: start };
+  }, [coverageDateBounds.maxDate, coverageDateBounds.minDate, coverageEndDate, coverageStartDate]);
+  const coverageDepartments = useMemo(
+    () => [...new Set(EMPLOYEES.map((employee) => employee.department))].sort((left, right) => left.localeCompare(right)),
+    []
+  );
+  const coverageEmployees = useMemo(() => {
+    return filteredEmployees.filter(
+      (employee) => coverageDepartment === "all" || employee.department === coverageDepartment
+    );
+  }, [coverageDepartment, filteredEmployees]);
+  const coverageDays = useMemo(() => {
+    return days.filter(
+      (day) =>
+        (!normalizedCoverageDates.startDate || day.id >= normalizedCoverageDates.startDate) &&
+        (!normalizedCoverageDates.endDate || day.id <= normalizedCoverageDates.endDate)
+    );
+  }, [days, normalizedCoverageDates.endDate, normalizedCoverageDates.startDate]);
+  const weeklyCoverage = useMemo(
+    () =>
+      buildWeeklyCoverageViewModel({
+        days: coverageDays,
+        employees: coverageEmployees,
+        schedule,
+        forcedOfficeSet: stats.forcedOfficeSet,
+        shiftFilter: coverageShiftFilter,
+      }),
+    [coverageDays, coverageEmployees, coverageShiftFilter, schedule, stats.forcedOfficeSet]
+  );
+  const coverageSummary = useMemo(() => {
+    const dayEntries = weeklyCoverage.flatMap((week) => week.days);
+    const totals = { "14": 0, "17": 0, "18": 0 };
+    const activeTotals = { "14": 0, "17": 0, "18": 0 };
+    dayEntries.forEach((entry) => {
+      COVERAGE_BAND_ORDER.forEach((bandKey) => {
+        totals[bandKey] += entry.counts[bandKey];
+        activeTotals[bandKey] += entry.activeCounts[bandKey];
+      });
+    });
+    const dayCount = dayEntries.length || 1;
+    return {
+      weeks: weeklyCoverage.length,
+      days: dayEntries.length,
+      employees: coverageEmployees.length,
+      totals,
+      avgActiveCounts: {
+        "14": activeTotals["14"] / dayCount,
+        "17": activeTotals["17"] / dayCount,
+        "18": activeTotals["18"] / dayCount,
+      },
+    };
+  }, [coverageEmployees.length, weeklyCoverage]);
   const calendarMonths = useMemo(() => {
     return daysByMonth.map(([monthName, monthDays]) => {
       const weeksMap = {};
@@ -3750,12 +4050,26 @@ const App = () => {
             </svg>
             {exportPanelExpanded ? "Cerrar exportación" : "Exportar"}
           </button>
-          <button
-            onClick={() => setViewMode((prev) => (prev === "matrix" ? "calendar" : "matrix"))}
-            className={`text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${viewMode === "calendar" ? "bg-fuchsia-700" : "bg-fuchsia-600 hover:bg-fuchsia-700"}`}
-          >
-            {viewMode === "calendar" ? "Vista matriz" : "Vista calendario"}
-          </button>
+          <div className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white p-1 shadow-sm">
+            {[
+              { key: "matrix", label: "Matriz" },
+              { key: "calendar", label: "Calendario" },
+              { key: "coverage", label: "Cobertura" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setViewMode(option.key)}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  viewMode === option.key
+                    ? "bg-fuchsia-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={handleResetPlan}
             className="bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
@@ -3789,41 +4103,41 @@ const App = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Formato</label>
-            <select className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
+            <label htmlFor="export-format" className="block text-xs text-gray-500 mb-1">Formato</label>
+            <select id="export-format" className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
               <option value="xlsx">.xlsx</option>
               <option value="xls">.xls</option>
               <option value="csv">.csv</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Estilo</label>
-            <select className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportStylePreset} onChange={(e) => setExportStylePreset(e.target.value)}>
+            <label htmlFor="export-style" className="block text-xs text-gray-500 mb-1">Estilo</label>
+            <select id="export-style" className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportStylePreset} onChange={(e) => setExportStylePreset(e.target.value)}>
               <option value="corporativo">Corporativo</option>
               <option value="neutro">Neutro</option>
             </select>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-xs text-gray-700">
-              <input type="checkbox" checked={exportIncludeFormulas} onChange={(e) => setExportIncludeFormulas(e.target.checked)} />
-              Fórmulas Excel
-            </label>
+            <div className="flex items-center gap-2 text-xs text-gray-700">
+              <input id="export-formulas" type="checkbox" checked={exportIncludeFormulas} onChange={(e) => setExportIncludeFormulas(e.target.checked)} />
+              <label htmlFor="export-formulas">Fórmulas Excel</label>
+            </div>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-xs text-gray-700">
-              <input type="checkbox" checked={exportIncludeChartData} onChange={(e) => setExportIncludeChartData(e.target.checked)} />
-              Datos para gráficos
-            </label>
+            <div className="flex items-center gap-2 text-xs text-gray-700">
+              <input id="export-chart-data" type="checkbox" checked={exportIncludeChartData} onChange={(e) => setExportIncludeChartData(e.target.checked)} />
+              <label htmlFor="export-chart-data">Datos para gráficos</label>
+            </div>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-xs text-gray-700">
-              <input type="checkbox" checked={exportProtectSheet} onChange={(e) => setExportProtectSheet(e.target.checked)} />
-              Proteger hoja
-            </label>
+            <div className="flex items-center gap-2 text-xs text-gray-700">
+              <input id="export-protect" type="checkbox" checked={exportProtectSheet} onChange={(e) => setExportProtectSheet(e.target.checked)} />
+              <label htmlFor="export-protect">Proteger hoja</label>
+            </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
-            <input type="password" className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} disabled={!exportProtectSheet} placeholder="Opcional" />
+            <label htmlFor="export-password" className="block text-xs text-gray-500 mb-1">Contraseña</label>
+            <input id="export-password" type="password" className="w-full border border-gray-300 rounded px-2 py-1 text-sm" value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} disabled={!exportProtectSheet} placeholder="Opcional" />
           </div>
         </div>
         <div className="flex justify-end">
@@ -3919,8 +4233,9 @@ const App = () => {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Año de planificación</label>
+                  <label htmlFor="planning-year" className="block text-xs text-gray-500 mb-1">Año de planificación</label>
                   <input
+                    id="planning-year"
                     type="number"
                     className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue"
                     value={year}
@@ -3930,8 +4245,9 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Integrante</label>
+                  <label htmlFor="vacation-employee" className="block text-xs text-gray-500 mb-1">Integrante</label>
                   <select
+                    id="vacation-employee"
                     className="w-full bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue"
                     value={selectedVacationEmpName}
                     onChange={(e) => setSelectedVacationEmpName(e.target.value)}
@@ -4142,6 +4458,490 @@ const App = () => {
         )
       }
 
+      {viewMode === "coverage" && (
+        <div className="mb-6 space-y-6">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Vista semanal de cobertura</h3>
+                  <p className="text-sm text-gray-500">
+                    Resume la cobertura diaria por fin de jornada para detectar rápidamente tramos hasta las 14h, 17h y 18h.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="text-gray-500">Semanas</div>
+                    <div className="text-lg font-bold text-gray-800">{coverageSummary.weeks}</div>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="text-gray-500">Días</div>
+                    <div className="text-lg font-bold text-gray-800">{coverageSummary.days}</div>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="text-gray-500">Integrantes</div>
+                    <div className="text-lg font-bold text-gray-800">{coverageSummary.employees}</div>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="text-gray-500">Vista</div>
+                    <div className="text-sm font-bold text-gray-800">
+                      {COVERAGE_VISUALIZATION_OPTIONS.find((option) => option.value === coverageVisualization)?.label}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div>
+                  <label htmlFor="coverage-visualization" className="mb-1 block text-xs font-semibold text-gray-500">Modo visual</label>
+                  <select
+                    id="coverage-visualization"
+                    value={coverageVisualization}
+                    onChange={(event) => setCoverageVisualization(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
+                  >
+                    {COVERAGE_VISUALIZATION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="coverage-start-date" className="mb-1 block text-xs font-semibold text-gray-500">Fecha inicio</label>
+                  <input
+                    id="coverage-start-date"
+                    type="date"
+                    value={coverageStartDate}
+                    min={coverageDateBounds.minDate}
+                    max={coverageDateBounds.maxDate}
+                    onChange={(event) => setCoverageStartDate(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="coverage-end-date" className="mb-1 block text-xs font-semibold text-gray-500">Fecha fin</label>
+                  <input
+                    id="coverage-end-date"
+                    type="date"
+                    value={coverageEndDate}
+                    min={coverageDateBounds.minDate}
+                    max={coverageDateBounds.maxDate}
+                    onChange={(event) => setCoverageEndDate(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="coverage-department" className="mb-1 block text-xs font-semibold text-gray-500">Departamento</label>
+                  <select
+                    id="coverage-department"
+                    value={coverageDepartment}
+                    onChange={(event) => setCoverageDepartment(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
+                  >
+                    <option value="all">Todos</option>
+                    {coverageDepartments.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="coverage-shift-filter" className="mb-1 block text-xs font-semibold text-gray-500">Tipo de jornada</label>
+                  <select
+                    id="coverage-shift-filter"
+                    value={coverageShiftFilter}
+                    onChange={(event) => setCoverageShiftFilter(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
+                  >
+                    <option value="all">Todos los tramos</option>
+                    {COVERAGE_BAND_ORDER.map((bandKey) => (
+                      <option key={bandKey} value={bandKey}>
+                        {COVERAGE_BANDS[bandKey].label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoverageStartDate("");
+                    setCoverageEndDate("");
+                    setCoverageDepartment("all");
+                    setCoverageShiftFilter("all");
+                  }}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  Limpiar filtros
+                </button>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600">
+                  Rango: {normalizedCoverageDates.startDate || "—"} → {normalizedCoverageDates.endDate || "—"}
+                </span>
+                <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] text-violet-700">
+                  Promedio hasta 18h: {coverageSummary.avgActiveCounts["18"].toFixed(1)}
+                </span>
+                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
+                  Promedio hasta 17h: {coverageSummary.avgActiveCounts["17"].toFixed(1)}
+                </span>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] text-emerald-700">
+                  Promedio hasta 14h: {coverageSummary.avgActiveCounts["14"].toFixed(1)}
+                </span>
+              </div>
+            </div>
+            <CoverageLegend />
+          </div>
+
+          {weeklyCoverage.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
+              No hay datos de cobertura para los filtros seleccionados.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {weeklyCoverage.map((week) => (
+                <div key={week.weekIndex} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-brand-blue">
+                          {week.weekLabel} · {week.periodLabel}
+                        </h4>
+                        <p className="text-xs text-gray-500">{week.month}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {COVERAGE_BAND_ORDER.map((bandKey) => (
+                          <span
+                            key={`${week.weekIndex}-${bandKey}`}
+                            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${COVERAGE_BANDS[bandKey].border} ${COVERAGE_BANDS[bandKey].soft} ${COVERAGE_BANDS[bandKey].text}`}
+                          >
+                            <span className={`h-2.5 w-2.5 rounded-full ${COVERAGE_BANDS[bandKey].color}`}></span>
+                            {COVERAGE_BANDS[bandKey].short}: {week.totals[bandKey]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {coverageVisualization === "stacked" && (
+                    <div className="space-y-3 p-4">
+                      {week.days.map((dayEntry) => (
+                        <div
+                          key={dayEntry.dayId}
+                          className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-white p-3 lg:grid-cols-[200px_minmax(0,1fr)_260px]"
+                        >
+                          <div>
+                            <div className="text-sm font-semibold text-gray-800">{dayEntry.dayLabel}</div>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {COVERAGE_BAND_ORDER.map((bandKey) => (
+                                <span
+                                  key={`${dayEntry.dayId}-chip-${bandKey}`}
+                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COVERAGE_BANDS[bandKey].soft} ${COVERAGE_BANDS[bandKey].text}`}
+                                >
+                                  {COVERAGE_BANDS[bandKey].short}: {dayEntry.counts[bandKey]}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="relative h-24 rounded-xl border border-gray-200 bg-slate-50 px-3 py-2">
+                              <div className="absolute inset-x-3 top-1 flex justify-between text-[10px] font-medium text-gray-400">
+                                <span>08:00</span>
+                                <span>14:00</span>
+                                <span>17:00</span>
+                                <span>18:00</span>
+                              </div>
+                              <div className="absolute inset-x-3 bottom-3 top-7 space-y-2">
+                                {["18", "17", "14"].map((bandKey) => {
+                                  const meta = COVERAGE_BANDS[bandKey];
+                                  return (
+                                    <div key={`${dayEntry.dayId}-bar-${bandKey}`} className="flex items-center gap-2">
+                                      <span className={`w-10 text-[11px] font-semibold ${meta.text}`}>{meta.short}</span>
+                                      <div className="relative h-4 flex-1 rounded-full bg-gray-100">
+                                        <div
+                                          className={`h-4 rounded-full ${meta.color} opacity-80`}
+                                          style={{ width: `${dayEntry.counts[bandKey] > 0 ? COVERAGE_TIMELINE_WIDTH[bandKey] : 0}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="w-7 text-right text-[11px] font-semibold text-gray-600">
+                                        {dayEntry.counts[bandKey]}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {dayEntry.timeline.map((segment) => (
+                                <div key={`${dayEntry.dayId}-${segment.key}`} className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                                    {segment.label}
+                                  </div>
+                                  <div className="mt-1 text-lg font-bold text-gray-800">{segment.count}</div>
+                                  <div className="text-[10px] text-gray-500">activos</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {COVERAGE_BAND_ORDER.map((bandKey) => (
+                              <div key={`${dayEntry.dayId}-names-${bandKey}`} className={`rounded-lg border ${COVERAGE_BANDS[bandKey].border} p-2`}>
+                                <div className={`text-[11px] font-bold ${COVERAGE_BANDS[bandKey].text}`}>
+                                  {COVERAGE_BANDS[bandKey].label}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {dayEntry.assignmentsByBand[bandKey].length === 0 ? (
+                                    <span className="text-[11px] text-gray-400">Sin asignaciones</span>
+                                  ) : (
+                                    dayEntry.assignmentsByBand[bandKey].map((assignment) => (
+                                      <span
+                                        key={`${dayEntry.dayId}-${bandKey}-${assignment.id}`}
+                                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${COVERAGE_BANDS[bandKey].soft} ${COVERAGE_BANDS[bandKey].text}`}
+                                      >
+                                        {assignment.name}
+                                        <span className="text-[10px] text-gray-500">
+                                          {assignment.isForcedOffice
+                                            ? "OF"
+                                            : assignment.isInOffice
+                                              ? "OFI"
+                                              : "TT"}
+                                        </span>
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {coverageVisualization === "timeline" && (
+                    <div className="space-y-3 p-4">
+                      {week.days.map((dayEntry) => (
+                        <div key={dayEntry.dayId} className="rounded-lg border border-gray-100 p-3">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-sm font-semibold text-gray-800">{dayEntry.dayLabel}</div>
+                            <div className="text-xs text-gray-500">{dayEntry.totalAssignments} personas visibles</div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                            {dayEntry.timeline.map((segment) => (
+                              <div key={`${dayEntry.dayId}-timeline-${segment.key}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-gray-500">{segment.label}</span>
+                                  <span className="text-lg font-bold text-gray-800">{segment.count}</span>
+                                </div>
+                                <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-gray-200">
+                                  {segment.bands.map((bandKey) => (
+                                    <div
+                                      key={`${dayEntry.dayId}-${segment.key}-${bandKey}`}
+                                      className={COVERAGE_BANDS[bandKey].color}
+                                      style={{
+                                        width: `${segment.count > 0 ? (dayEntry.counts[bandKey] / segment.count) * 100 : 0}%`,
+                                      }}
+                                    ></div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {coverageVisualization === "heatmap" && (
+                    <div className="overflow-x-auto p-4">
+                      <table className="w-full min-w-[720px] border-collapse text-sm">
+                        <thead>
+                          <tr>
+                            <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              Día
+                            </th>
+                            {["14", "17", "18"].map((bandKey) => (
+                              <th
+                                key={`${week.weekIndex}-heat-head-${bandKey}`}
+                                className="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                              >
+                                Activos {COVERAGE_BANDS[bandKey].short}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {week.days.map((dayEntry) => (
+                            <tr key={`${dayEntry.dayId}-heat-row`}>
+                              <td className="border-b border-gray-100 px-3 py-2 font-medium text-gray-700">{dayEntry.dayLabel}</td>
+                              {["14", "17", "18"].map((bandKey) => {
+                                const intensity = dayEntry.maxCount > 0 ? dayEntry.activeCounts[bandKey] / dayEntry.maxCount : 0;
+                                return (
+                                  <td key={`${dayEntry.dayId}-heat-${bandKey}`} className="border-b border-gray-100 px-3 py-2">
+                                    <div
+                                      className={`rounded-lg px-3 py-3 text-sm font-bold ${COVERAGE_BANDS[bandKey].text}`}
+                                      style={{
+                                        backgroundColor:
+                                          bandKey === "14"
+                                            ? `rgba(16, 185, 129, ${0.12 + intensity * 0.45})`
+                                            : bandKey === "17"
+                                              ? `rgba(14, 165, 233, ${0.12 + intensity * 0.45})`
+                                              : `rgba(139, 92, 246, ${0.12 + intensity * 0.45})`,
+                                      }}
+                                    >
+                                      {dayEntry.activeCounts[bandKey]}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {coverageVisualization === "table" && (
+                    <div className="overflow-x-auto p-4">
+                      <table className="w-full min-w-[820px] border-collapse text-sm">
+                        <thead>
+                          <tr>
+                            <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              Día
+                            </th>
+                            {COVERAGE_BAND_ORDER.map((bandKey) => (
+                              <th
+                                key={`${week.weekIndex}-table-${bandKey}`}
+                                className="border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                              >
+                                {COVERAGE_BANDS[bandKey].label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {week.days.map((dayEntry) => (
+                            <tr key={`${dayEntry.dayId}-table-row`}>
+                              <td className="border-b border-gray-100 px-3 py-2 font-medium text-gray-700">{dayEntry.dayLabel}</td>
+                              {COVERAGE_BAND_ORDER.map((bandKey) => (
+                                <td key={`${dayEntry.dayId}-table-cell-${bandKey}`} className="border-b border-gray-100 px-3 py-2 align-top">
+                                  <div className={`min-h-[68px] rounded-lg border ${COVERAGE_BANDS[bandKey].border} ${COVERAGE_BANDS[bandKey].soft} p-2`}>
+                                    <div className={`text-xs font-bold ${COVERAGE_BANDS[bandKey].text}`}>
+                                      {dayEntry.counts[bandKey]} personas
+                                    </div>
+                                    <div className="mt-2 space-y-1">
+                                      {dayEntry.assignmentsByBand[bandKey].length === 0 ? (
+                                        <div className="text-[11px] text-gray-400">Sin cobertura</div>
+                                      ) : (
+                                        dayEntry.assignmentsByBand[bandKey].map((assignment) => (
+                                          <div key={`${dayEntry.dayId}-${bandKey}-table-name-${assignment.id}`} className="text-[11px] text-gray-700">
+                                            {assignment.name} · {assignment.role}
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {coverageVisualization === "calendar" && (
+                    <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-5">
+                      {week.days.map((dayEntry) => (
+                        <div key={`${dayEntry.dayId}-calendar`} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-xs uppercase tracking-wide text-gray-400">{dayEntry.weekdayName}</div>
+                              <div className="text-lg font-bold text-gray-800">{dayEntry.dateNumber}</div>
+                            </div>
+                            <div className="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600">
+                              {dayEntry.totalAssignments} visibles
+                            </div>
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            {COVERAGE_BAND_ORDER.map((bandKey) => (
+                              <div key={`${dayEntry.dayId}-calendar-band-${bandKey}`} className={`rounded-lg border ${COVERAGE_BANDS[bandKey].border} p-2`}>
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-xs font-bold ${COVERAGE_BANDS[bandKey].text}`}>
+                                    {COVERAGE_BANDS[bandKey].short}
+                                  </span>
+                                  <span className="text-xs text-gray-500">{dayEntry.counts[bandKey]}</span>
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {dayEntry.assignmentsByBand[bandKey].length === 0 ? (
+                                    <span className="text-[11px] text-gray-400">—</span>
+                                  ) : (
+                                    dayEntry.assignmentsByBand[bandKey].map((assignment) => (
+                                      <span
+                                        key={`${dayEntry.dayId}-calendar-name-${bandKey}-${assignment.id}`}
+                                        className={`rounded-full px-2 py-0.5 text-[11px] ${COVERAGE_BANDS[bandKey].soft} ${COVERAGE_BANDS[bandKey].text}`}
+                                      >
+                                        {assignment.name}
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {coverageVisualization === "gantt" && (
+                    <div className="space-y-3 p-4">
+                      {week.days.map((dayEntry) => (
+                        <div key={`${dayEntry.dayId}-gantt`} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 p-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+                          <div>
+                            <div className="text-sm font-semibold text-gray-800">{dayEntry.dayLabel}</div>
+                            <div className="mt-1 text-xs text-gray-500">
+                              Cobertura activa 18h: {dayEntry.activeCounts["18"]} · 17h: {dayEntry.activeCounts["17"]} · 14h: {dayEntry.activeCounts["14"]}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-gray-200 bg-slate-50 px-3 py-3">
+                            <div className="mb-3 flex justify-between text-[10px] font-medium text-gray-400">
+                              <span>08:00</span>
+                              <span>14:00</span>
+                              <span>17:00</span>
+                              <span>18:00</span>
+                            </div>
+                            <div className="space-y-2">
+                              {dayEntry.ganttBars.length === 0 ? (
+                                <div className="text-sm text-gray-400">Sin asignaciones para este filtro.</div>
+                              ) : (
+                                dayEntry.ganttBars.map((bar) => (
+                                  <div key={`${dayEntry.dayId}-gantt-bar-${bar.key}`} className="flex items-center gap-2">
+                                    <div className={`w-10 text-xs font-semibold ${bar.meta.text}`}>{bar.meta.short}</div>
+                                    <div className="h-6 flex-1 rounded-full bg-gray-100">
+                                      <div
+                                        className={`flex h-6 items-center justify-end rounded-full pr-2 text-xs font-bold text-white ${bar.meta.color}`}
+                                        style={{ width: `${bar.width}%` }}
+                                      >
+                                        {bar.count}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {viewMode === "matrix" ? (
         <>
           <div
@@ -4169,7 +4969,8 @@ const App = () => {
                         }`}
                       >
                         {hasAlert && (
-                          <div
+                          <button
+                            type="button"
                             className="absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors"
                             title="Día con alertas (Click para ver)"
                             onClick={(e) => {
@@ -4178,7 +4979,7 @@ const App = () => {
                             }}
                           >
                             !
-                          </div>
+                          </button>
                         )}
                         <div className="text-[11px] text-brand-blue font-semibold">{WEEKDAY_FULL[day.weekdayLetter]}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{day.month.substring(0, 3)}</div>
@@ -4263,7 +5064,7 @@ const App = () => {
             </table>
           </div>
         </>
-      ) : (
+      ) : viewMode === "calendar" ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
           {calendarMonths.map((month) => (
             <div key={month.monthName} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -4337,7 +5138,7 @@ const App = () => {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
       <footer className="mt-8 text-center text-gray-500 text-sm">
         <p>Creado por David Ramos (Dept. Sistemas)</p>
       </footer>

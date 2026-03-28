@@ -18,7 +18,7 @@ const loadSchedulingCore = (entryFile = "src/app.jsx") => {
         configFile: false,
       }).code
     : core;
-  const wrapped = `${executableCore}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows, validateStrictWeeklyRules };`;
+  const wrapped = `${executableCore}\n;globalThis.__SCHEDULING__ = { generateSchedule, EMPLOYEES, DEFAULT_VACATION_PLAN_2026, buildEquityAudit, EQUITY_MIN_INTENSIVE_WEEKS, EQUITY_IDEAL_INTENSIVE_WEEKS, validateExportPayload, buildExportRows, buildChartDataRows, validateStrictWeeklyRules, buildWeeklyCoverageViewModel, buildCoverageDayEntry, getCoverageBandForShift, COVERAGE_VISUALIZATION_OPTIONS, COVERAGE_BANDS };`;
   const sandbox = {
     console,
     globalThis: {},
@@ -85,6 +85,97 @@ describe("Cobertura presencial 17:00-18:00", () => {
         return schedule[emp.id][day.id] === "O42" && isInOffice(emp, day.weekdayLetter);
       });
       expect(hasOfficeO42).toBe(true);
+    });
+  });
+});
+
+describe("Vista semanal de cobertura", () => {
+  test("expone los modos de visualización solicitados para la nueva vista", () => {
+    const { COVERAGE_VISUALIZATION_OPTIONS } = loadSchedulingCore("src/app.jsx");
+    expect(COVERAGE_VISUALIZATION_OPTIONS.map((option) => option.value)).toEqual([
+      "stacked",
+      "timeline",
+      "heatmap",
+      "table",
+      "calendar",
+      "gantt",
+    ]);
+  });
+
+  test("clasifica correctamente 14h, 17h y 18h según tipo y día", () => {
+    const { getCoverageBandForShift } = loadSchedulingCore("src/app.jsx");
+    expect(getCoverageBandForShift("O30", "L")).toBe("14");
+    expect(getCoverageBandForShift("T30", "J")).toBe("14");
+    expect(getCoverageBandForShift("O40", "M")).toBe("17");
+    expect(getCoverageBandForShift("O42", "J")).toBe("18");
+    expect(getCoverageBandForShift("O42", "V")).toBe("14");
+    expect(getCoverageBandForShift("V", "L")).toBe(null);
+  });
+
+  test("genera semanas con conteos y personas visibles por banda horaria", () => {
+    const {
+      generateSchedule,
+      EMPLOYEES,
+      DEFAULT_VACATION_PLAN_2026,
+      buildWeeklyCoverageViewModel,
+      buildCoverageDayEntry,
+    } = loadSchedulingCore("src/app.jsx");
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const forcedOfficeSet = {};
+    const weekModel = buildWeeklyCoverageViewModel({
+      days,
+      employees: EMPLOYEES,
+      schedule,
+      forcedOfficeSet,
+      shiftFilter: "all",
+    });
+
+    expect(weekModel.length).toBeGreaterThan(0);
+    const mondayToThursdayEntry = weekModel
+      .flatMap((week) => week.days)
+      .find((entry) => entry.weekdayLetter !== "V");
+    expect(mondayToThursdayEntry.activeCounts["14"]).toBeGreaterThanOrEqual(mondayToThursdayEntry.activeCounts["17"]);
+    expect(mondayToThursdayEntry.activeCounts["17"]).toBeGreaterThanOrEqual(mondayToThursdayEntry.activeCounts["18"]);
+
+    const friday = days.find((day) => day.weekdayLetter === "V");
+    const fridayEntry = buildCoverageDayEntry({
+      day: friday,
+      employees: EMPLOYEES,
+      schedule,
+      forcedOfficeSet,
+      shiftFilter: "all",
+    });
+    expect(fridayEntry.counts["18"]).toBe(0);
+    expect(fridayEntry.counts["14"]).toBeGreaterThan(0);
+  });
+
+  test("permite filtrar por departamento y por tipo de jornada visible", () => {
+    const {
+      generateSchedule,
+      EMPLOYEES,
+      DEFAULT_VACATION_PLAN_2026,
+      buildWeeklyCoverageViewModel,
+      COVERAGE_BANDS,
+    } = loadSchedulingCore("src/app.jsx");
+    const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
+    const desarrolloEmployees = EMPLOYEES.filter((employee) => employee.department === "Desarrollo");
+    const filteredWeeks = buildWeeklyCoverageViewModel({
+      days,
+      employees: desarrolloEmployees,
+      schedule,
+      forcedOfficeSet: {},
+      shiftFilter: "18",
+    });
+    const entries = filteredWeeks.flatMap((week) => week.days);
+
+    expect(entries.length).toBeGreaterThan(0);
+    entries.forEach((entry) => {
+      expect(entry.counts["14"]).toBe(0);
+      expect(entry.counts["17"]).toBe(0);
+      entry.assignmentsByBand["18"].forEach((assignment) => {
+        expect(assignment.department).toBe("Desarrollo");
+        expect(COVERAGE_BANDS["18"].label).toBe("Hasta las 18h");
+      });
     });
   });
 });
