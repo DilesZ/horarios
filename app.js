@@ -60,7 +60,6 @@ const WEEKDAY_FULL = {
   J: "Jueves",
   V: "Viernes"
 };
-const PUBLIC_HOLIDAYS = ["2026-06-24"];
 const buildDaysRange = year => {
   const start = new Date(year, 5, 1);
   const end = new Date(year, 8, 30);
@@ -74,14 +73,12 @@ const buildDaysRange = year => {
     const month = MONTH_NAMES[d.getMonth()];
     const label = `${month.substring(0, 3)} ${String(d.getDate()).padStart(2, "0")}`;
     const weekdayLetter = WEEKDAY_LETTER[day];
-    const isHoliday = PUBLIC_HOLIDAYS.includes(id);
     days.push({
       id,
       label,
       month,
       weekdayLetter,
-      weekIndex,
-      isHoliday
+      weekIndex
     });
   }
   return days;
@@ -116,12 +113,6 @@ const TYPES = {
     color: "bg-rose-700",
     text: "text-white",
     short: "VAC"
-  },
-  F: {
-    label: "Festivo",
-    color: "bg-amber-100",
-    text: "text-amber-800",
-    short: "FES"
   }
 };
 const COVERAGE_BANDS = {
@@ -243,7 +234,7 @@ const clearAuthSession = () => {
   window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
 };
 const getCoverageBandForShift = (typeKey, weekdayLetter) => {
-  if (!typeKey || typeKey === "V" || typeKey === "F") return null;
+  if (!typeKey || typeKey === "V") return null;
   if (typeKey === "O42") return weekdayLetter === "V" ? "14" : "18";
   if (typeKey === "O40") return "17";
   if (typeKey === "O30" || typeKey === "T30") return "14";
@@ -898,15 +889,15 @@ const getExportErrorMessage = error => {
 const generateSchedule = (year, vacationPlan) => {
   const days = buildDaysRange(year);
 
-  // Encontrar índices de semana intensiva (semanas que contienen 15/06 y 15/09)
-  const jun15 = days.find(d => d.id.includes("-06-15"));
-  const sep15 = days.find(d => d.id.includes("-09-15"));
-  const intensiveStartWeek = jun15 ? jun15.weekIndex : -1;
-  const intensiveEndWeek = sep15 ? sep15.weekIndex : -1;
-  const isIntensivePeriod = (dayId, empId) => {
-    const dayEntry = days.find(d => d.id === dayId);
-    if (!dayEntry) return false;
-    return dayEntry.weekIndex >= intensiveStartWeek && dayEntry.weekIndex <= intensiveEndWeek;
+  // Jornada intensiva: semanas completas que contienen 15/06 y 15/09
+  const intensiveStartDay = days.find(d => d.id.includes("-06-15")) || days.find(d => d.id.includes("-06-"));
+  const intensiveEndDay = days.find(d => d.id.includes("-09-15")) || days.find(d => d.id.includes("-09-"));
+  const intensiveStartWeek = intensiveStartDay ? intensiveStartDay.weekIndex : -1;
+  const intensiveEndWeek = intensiveEndDay ? intensiveEndDay.weekIndex : -1;
+  const isIntensivePeriod = dayId => {
+    const day = days.find(d => d.id === dayId);
+    if (!day) return false;
+    return day.weekIndex >= intensiveStartWeek && day.weekIndex <= intensiveEndWeek;
   };
   const schedule = {};
   const vacWeeksByEmp = {};
@@ -926,7 +917,6 @@ const generateSchedule = (year, vacationPlan) => {
   });
   const isValidCoverage = (daysInWeek, currentSchedule) => {
     return daysInWeek.every(day => {
-      if (day.isHoliday) return true;
       let valid = true;
       let group1HasOffice = false;
       let group2HasOffice = false;
@@ -990,7 +980,6 @@ const generateSchedule = (year, vacationPlan) => {
   const countForcedDays = (currentSchedule, allDays) => {
     let count = 0;
     for (const day of allDays) {
-      if (day.isHoliday) continue;
       let group1HasOffice = false,
         group2HasOffice = false;
       let group1Covering = 0,
@@ -1051,34 +1040,46 @@ const generateSchedule = (year, vacationPlan) => {
     const weekDays = weeks[wi];
     const friday = weekDays.find(d => d.weekdayLetter === "V");
 
-    // Overrides específicos solicitados por usuario para 2026 (Adaptados para cualquier año)
-    // Semana de Junio: Ariel (B) en oficina, Enrique (B) en remoto -> B hace O40 -> A hace O42 (LATE)
-    // Buscamos la semana que contiene el día 19 de Junio (bloqueo de Enrique/Ariel)
-    const jun19 = weekDays.find(d => d.id === `${year}-06-19`);
-    if (jun19) {
-      weekAssignments[wi] = "A_LATE";
-      return;
-    }
-
-    // Semana de Julio: Enrique (B) con mayor carga forzada o bloqueos -> B hace O40 -> A hace O42 (LATE)
-    // Buscamos la semana que contiene el día 20-23 de Julio (bloqueo de Enrique a O42)
-    const jul22 = weekDays.find(d => d.id === `${year}-07-22`);
-    if (jul22) {
-      weekAssignments[wi] = "A_LATE";
-      return;
-    }
-
-    // Válvulas de presión matemática (Semanas específicas tras el bloque)
-    // Estas válvulas aseguran que la rotación se mantenga estable tras los parones
-    const jun26 = weekDays.find(d => d.id === `${year}-06-26`);
-    if (jun26) {
-      weekAssignments[wi] = "B_LATE";
-      return;
-    }
-    const jul31 = weekDays.find(d => d.id === `${year}-07-31`);
-    if (jul31) {
-      weekAssignments[wi] = "B_LATE";
-      return;
+    // Overrides específicos solicitados por usuario para 2026
+    // Overrides específicos solicitados por usuario (basados en 2026 pero aplicables si existen)
+    if (true) {
+      // Semana 15-19 Junio (Week 2 aprox): Ariel (B) en oficina, Enrique (B) en remoto -> B hace O40 -> A hace O42 (LATE)
+      if (wi === 2) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Semana 22-26 Junio (Week 3 aprox): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
+      if (wi === 3) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Válvula de presión matemática para Grupo A
+      if (wi === 4) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      // Semana 20-24 Julio (Week 7 aprox): Enrique (B) a 40h -> B hace O40 -> A hace O42 (LATE)
+      if (wi === 7) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      // Válvula de presión matemática para Grupo A
+      if (wi === 8) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      if (wi === 9) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
+      if (wi === 10) {
+        weekAssignments[wi] = "B_LATE";
+        return;
+      }
+      if (wi === 11) {
+        weekAssignments[wi] = "A_LATE";
+        return;
+      }
     }
     if (!friday) {
       // Fallback a rotación simple si no hay viernes
@@ -1148,10 +1149,6 @@ const generateSchedule = (year, vacationPlan) => {
   EMPLOYEES.forEach(emp => {
     schedule[emp.id] = {};
     days.forEach(day => {
-      if (day.isHoliday) {
-        schedule[emp.id][day.id] = "F";
-        return;
-      }
       const vacationsForEmp = vacationPlan[emp.name] || [];
       if (vacationsForEmp.includes(day.id)) {
         schedule[emp.id][day.id] = "V";
@@ -1214,7 +1211,6 @@ const generateSchedule = (year, vacationPlan) => {
         if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
           selected.push(emp);
           weekDays.forEach(day => {
-            if (day.isHoliday) return;
             if (schedule[emp.id][day.id] !== "V") {
               schedule[emp.id][day.id] = "O30";
             }
@@ -1225,7 +1221,6 @@ const generateSchedule = (year, vacationPlan) => {
     }
     if (anchor) {
       weekDays.forEach(day => {
-        if (day.isHoliday) return;
         if (schedule[anchor.id][day.id] !== "V") {
           schedule[anchor.id][day.id] = "O42";
         }
@@ -1236,7 +1231,6 @@ const generateSchedule = (year, vacationPlan) => {
       if (anchor && emp.id === anchor.id) return;
       if (selected.includes(emp)) return;
       weekDays.forEach(day => {
-        if (day.isHoliday) return;
         if (schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O30") {
           return;
         }
@@ -1256,7 +1250,6 @@ const generateSchedule = (year, vacationPlan) => {
       });
     });
     weekDays.forEach(day => {
-      if (day.isHoliday) return;
       if (day.weekdayLetter === "V") return;
       const lateGroupMembers = getShiftGroupMemberNames(lateGroup);
       const hasO42 = EMPLOYEES.some(emp => schedule[emp.id][day.id] === "O42");
@@ -1277,7 +1270,7 @@ const generateSchedule = (year, vacationPlan) => {
         return officeDays.includes(day.weekdayLetter);
       });
       const currentO42Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O42").length;
-      if (!hasO42InOffice && currentO42Count < 3 && !day.isHoliday) {
+      if (!hasO42InOffice && currentO42Count < 3) {
         const candidates = EMPLOYEES.filter(emp => {
           if (schedule[emp.id][day.id] === "V") return false;
           const officeDays = emp.officeDays.split(",").map(d => d.trim());
@@ -1300,7 +1293,7 @@ const generateSchedule = (year, vacationPlan) => {
       }
     });
     weekDays.forEach(day => {
-      if (day.weekdayLetter !== "V" || day.isHoliday) return;
+      if (day.weekdayLetter !== "V") return;
       const hasO40InOffice = EMPLOYEES.some(e => {
         if (schedule[e.id][day.id] !== "O40") return false;
         return e.officeDays.includes("V");
@@ -1351,7 +1344,7 @@ const generateSchedule = (year, vacationPlan) => {
         const isInOffice = empOfficeDays.includes(day.weekdayLetter);
         const currentIntensiveCount = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
         if (currentIntensiveCount >= 3) continue;
-        if (!isInOffice && !day.isHoliday) {
+        if (!isInOffice) {
           schedule[emp.id][day.id] = "O30";
           if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
             schedule[emp.id][day.id] = "O40";
@@ -1369,7 +1362,7 @@ const generateSchedule = (year, vacationPlan) => {
           const otherOfficeDays = other.officeDays.split(",").map(d => d.trim());
           return otherOfficeDays.includes(day.weekdayLetter);
         });
-        if (otherGroupHasO40 && !day.isHoliday) {
+        if (otherGroupHasO40) {
           schedule[emp.id][day.id] = "O30";
           if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
             schedule[emp.id][day.id] = "O40";
@@ -1480,7 +1473,6 @@ const generateSchedule = (year, vacationPlan) => {
           if (forced > MAX_FORCED_OFFICE_DAYS) return;
         }
         daysInWeek.forEach(day => {
-          if (day.isHoliday) return;
           schedule[emp.id][day.id] = "O30";
         });
         currentIntensiveWeeks[emp.id] += 1;
@@ -1542,7 +1534,6 @@ const generateSchedule = (year, vacationPlan) => {
             continue;
           }
           daysInWeek.forEach(day => {
-            if (day.isHoliday) return;
             if (schedule[enrique.id][day.id] !== "V") {
               schedule[enrique.id][day.id] = "O30";
             }
@@ -1556,8 +1547,8 @@ const generateSchedule = (year, vacationPlan) => {
     const kike = findEmp("Kike");
     if (kike) {
       criticalDays.forEach(dayId => {
-        const dayEntry = days.find(d => d.id === dayId);
-        if (dayEntry?.isHoliday) return;
+        const dayObj = days.find(d => d.id === dayId);
+        if (!dayObj) return;
         const current = schedule[kike.id][dayId];
         if (!current || current === "V") return;
         schedule[kike.id][dayId] = "O42";
@@ -3538,13 +3529,13 @@ const App = () => {
     return Object.entries(map);
   }, [days]);
   const handleYearChange = value => {
-    const nextYear = parseInt(value, 10);
+    const nextYear = typeof value === "string" ? parseInt(value, 10) : value;
     if (isNaN(nextYear)) return;
     let basePlan;
     if (nextYear === 2026) {
       basePlan = DEFAULT_VACATION_PLAN_2026;
     } else if (acceptedDashboards[nextYear]) {
-      basePlan = acceptedDashboards[nextYear].vacationPlan || {};
+      basePlan = acceptedDashboards[nextYear].vacationPlan || createEmptyVacationPlan();
     } else {
       basePlan = createEmptyVacationPlan();
     }
@@ -4992,6 +4983,7 @@ const App = () => {
   }, "Ocultar"))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    htmlFor: "planning-year",
     className: "block text-xs text-gray-500 mb-2"
   }, "A\xF1o de planificaci\xF3n"), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-1.5"
@@ -4999,7 +4991,7 @@ const App = () => {
     key: y,
     type: "button",
     onClick: () => handleYearChange(y),
-    className: `flex-1 min-w-[3.5rem] py-1.5 rounded-lg text-[11px] font-bold border transition-all ${year === y ? "bg-brand-blue text-white border-brand-blue shadow-sm shadow-brand-blue/20" : "bg-white text-gray-600 border-gray-200 hover:border-brand-blue hover:text-brand-blue"}`
+    className: `flex-1 min-w-[50px] py-2 rounded-lg text-xs font-bold transition-all border ${year === y ? "bg-brand-blue text-white border-brand-blue shadow-md shadow-brand-blue/20" : "bg-white text-gray-600 border-gray-200 hover:border-brand-blue/30 hover:bg-gray-50"}`
   }, y)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "vacation-employee",
     className: "block text-xs text-gray-500 mb-1"
