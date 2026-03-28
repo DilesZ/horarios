@@ -12,42 +12,36 @@ const EMPLOYEES = [{
   id: 1,
   name: "Kike",
   role: "SysAdmin",
-  department: "Infraestructura",
   officeDays: "X, J, V",
   group: "A"
 }, {
   id: 2,
   name: "Jose",
   role: "DevOps",
-  department: "Infraestructura",
   officeDays: "L, M, V",
   group: "B"
 }, {
   id: 3,
   name: "Enrique",
   role: "Manager",
-  department: "Gestión",
   officeDays: "X, J",
   group: "B"
 }, {
   id: 4,
   name: "David",
   role: "Backend",
-  department: "Desarrollo",
   officeDays: "J, V",
   group: "A"
 }, {
   id: 5,
   name: "Luis",
   role: "Frontend",
-  department: "Desarrollo",
   officeDays: "L, M",
   group: "A"
 }, {
   id: 6,
   name: "Ariel",
   role: "FullStack",
-  department: "Desarrollo",
   officeDays: "L, M, X",
   group: "B"
 }];
@@ -285,7 +279,6 @@ const buildCoverageDayEntry = ({
       id: employee.id,
       name: employee.name,
       role: employee.role,
-      department: employee.department,
       group: employee.group,
       typeKey,
       isInOffice,
@@ -2916,7 +2909,6 @@ const App = () => {
   const [coverageVisualization, setCoverageVisualization] = useState("stacked");
   const [coverageStartDate, setCoverageStartDate] = useState("");
   const [coverageEndDate, setCoverageEndDate] = useState("");
-  const [coverageDepartment, setCoverageDepartment] = useState("all");
   const [coverageShiftFilter, setCoverageShiftFilter] = useState("all");
   useEffect(() => {
     try {
@@ -4560,10 +4552,7 @@ const App = () => {
       endDate: start
     };
   }, [coverageDateBounds.maxDate, coverageDateBounds.minDate, coverageEndDate, coverageStartDate]);
-  const coverageDepartments = useMemo(() => [...new Set(EMPLOYEES.map(employee => employee.department))].sort((left, right) => left.localeCompare(right)), []);
-  const coverageEmployees = useMemo(() => {
-    return filteredEmployees.filter(employee => coverageDepartment === "all" || employee.department === coverageDepartment);
-  }, [coverageDepartment, filteredEmployees]);
+  const coverageEmployees = useMemo(() => filteredEmployees, [filteredEmployees]);
   const coverageDays = useMemo(() => {
     return days.filter(day => (!normalizedCoverageDates.startDate || day.id >= normalizedCoverageDates.startDate) && (!normalizedCoverageDates.endDate || day.id <= normalizedCoverageDates.endDate));
   }, [days, normalizedCoverageDates.endDate, normalizedCoverageDates.startDate]);
@@ -5275,7 +5264,7 @@ const App = () => {
   }, "Vista"), /*#__PURE__*/React.createElement("div", {
     className: "text-sm font-bold text-gray-800"
   }, COVERAGE_VISUALIZATION_OPTIONS.find(option => option.value === coverageVisualization)?.label)))), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5"
+    className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "coverage-visualization",
     className: "mb-1 block text-xs font-semibold text-gray-500"
@@ -5310,19 +5299,6 @@ const App = () => {
     onChange: event => setCoverageEndDate(event.target.value),
     className: "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    htmlFor: "coverage-department",
-    className: "mb-1 block text-xs font-semibold text-gray-500"
-  }, "Departamento"), /*#__PURE__*/React.createElement("select", {
-    id: "coverage-department",
-    value: coverageDepartment,
-    onChange: event => setCoverageDepartment(event.target.value),
-    className: "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-brand-blue focus:outline-none"
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "all"
-  }, "Todos"), coverageDepartments.map(department => /*#__PURE__*/React.createElement("option", {
-    key: department,
-    value: department
-  }, department)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "coverage-shift-filter",
     className: "mb-1 block text-xs font-semibold text-gray-500"
   }, "Tipo de jornada"), /*#__PURE__*/React.createElement("select", {
@@ -5342,7 +5318,6 @@ const App = () => {
     onClick: () => {
       setCoverageStartDate("");
       setCoverageEndDate("");
-      setCoverageDepartment("all");
       setCoverageShiftFilter("all");
     },
     className: "rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"

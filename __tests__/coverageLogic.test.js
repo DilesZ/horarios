@@ -149,7 +149,7 @@ describe("Vista semanal de cobertura", () => {
     expect(fridayEntry.counts["14"]).toBeGreaterThan(0);
   });
 
-  test("permite filtrar por departamento y por tipo de jornada visible", () => {
+  test("permite filtrar por subconjunto de empleados y por tipo de jornada visible", () => {
     const {
       generateSchedule,
       EMPLOYEES,
@@ -158,10 +158,10 @@ describe("Vista semanal de cobertura", () => {
       COVERAGE_BANDS,
     } = loadSchedulingCore("src/app.jsx");
     const { schedule, days } = generateSchedule(2026, DEFAULT_VACATION_PLAN_2026);
-    const desarrolloEmployees = EMPLOYEES.filter((employee) => employee.department === "Desarrollo");
+    const subsetEmployees = EMPLOYEES.filter((employee) => ["David", "Luis", "Ariel"].includes(employee.name));
     const filteredWeeks = buildWeeklyCoverageViewModel({
       days,
-      employees: desarrolloEmployees,
+      employees: subsetEmployees,
       schedule,
       forcedOfficeSet: {},
       shiftFilter: "18",
@@ -173,7 +173,7 @@ describe("Vista semanal de cobertura", () => {
       expect(entry.counts["14"]).toBe(0);
       expect(entry.counts["17"]).toBe(0);
       entry.assignmentsByBand["18"].forEach((assignment) => {
-        expect(assignment.department).toBe("Desarrollo");
+        expect(["David", "Luis", "Ariel"]).toContain(assignment.name);
         expect(COVERAGE_BANDS["18"].label).toBe("Hasta las 18h");
       });
     });
