@@ -2064,31 +2064,32 @@ const generateSchedule = (year, vacationPlan) => {
       }
     }
 
-    // Universal Hardening
-    const finalWeeks = buildWeeksMap(days);
-    Object.keys(finalWeeks).forEach(wiStr => {
-      const wi = parseInt(wiStr, 10);
-      const weekDays = finalWeeks[wi];
-      const monThu = weekDays.filter(d => d.weekdayLetter !== "V");
-      monThu.forEach(day => {
-        const hasOfficeO42 = EMPLOYEES.some(emp => {
-          if (strictAudit.schedule[emp.id][day.id] !== "O42") return false;
-          const od = emp.officeDays.split(",").map(x => x.trim());
-          return od.includes(day.weekdayLetter);
-        });
-        if (!hasOfficeO42) {
-          const lateGroup = getLateGroupForWeek(wi);
-          const pick = EMPLOYEES.filter(emp => {
-            if (strictAudit.schedule[emp.id][day.id] === "V" || strictAudit.schedule[emp.id][day.id] === "O30") return false;
+    function applyUniversalHardening(sched) {
+      const finalWeeks = buildWeeksMap(days);
+      Object.keys(finalWeeks).forEach(wiStr => {
+        const wi = parseInt(wiStr, 10);
+        const weekDays = finalWeeks[wi];
+        const monThu = weekDays.filter(d => d.weekdayLetter !== "V");
+        monThu.forEach(day => {
+          const hasOfficeO42 = EMPLOYEES.some(emp => {
+            if (sched[emp.id][day.id] !== "O42") return false;
             const od = emp.officeDays.split(",").map(x => x.trim());
             return od.includes(day.weekdayLetter);
-          }).sort((a,b) => (a.group === lateGroup ? -1 : 1))[0];
-          if (pick) {
-            weekDays.forEach(wd => { if (strictAudit.schedule[pick.id][wd.id] !== "V" && strictAudit.schedule[pick.id][wd.id] !== "O30") strictAudit.schedule[pick.id][wd.id] = "O42"; });
+          });
+          if (!hasOfficeO42) {
+            const lateGroup = getLateGroupForWeek(wi);
+            const pick = EMPLOYEES.filter(emp => {
+              if (sched[emp.id][day.id] === "V" || sched[emp.id][day.id] === "O30") return false;
+              const od = emp.officeDays.split(",").map(x => x.trim());
+              return od.includes(day.weekdayLetter);
+            }).sort((a,b) => (a.group === lateGroup ? -1 : 1))[0];
+            if (pick) {
+              weekDays.forEach(wd => { if (sched[pick.id][wd.id] !== "V" && sched[pick.id][wd.id] !== "O30") sched[pick.id][wd.id] = "O42"; });
+            }
           }
-        }
+        });
       });
-    });
+    }
 
     function ensureMinSixWeeksAllFinal(sched) {
       const weeksL = buildWeeksMap(days);
@@ -2138,6 +2139,7 @@ const generateSchedule = (year, vacationPlan) => {
       }
     }
     ensureMinSixWeeksAllFinal(strictAudit.schedule);
+    applyUniversalHardening(strictAudit.schedule);
   }
 
   return {
@@ -3020,7 +3022,12 @@ const App = () => {
 
             if (o40InOffice.length > 0) {
               const candidate = pickLowestForcedCandidate(o40InOffice);
-              schedule[candidate.id][day.id] = "O42";
+              const wDays = days.filter(d => d.weekIndex === day.weekIndex);
+              wDays.forEach(wd => {
+                if (schedule[candidate.id][wd.id] !== "V" && schedule[candidate.id][wd.id] !== "O30") {
+                  schedule[candidate.id][wd.id] = "O42";
+                }
+              });
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
               forcedOfficeSet[day.id].add(candidate.id);
               forcedOfficeDetails.push({
@@ -3059,7 +3066,12 @@ const App = () => {
               pickLowestForcedCandidate(nonLate) ||
               pickLowestForcedCandidate(o40NotOffice);
             if (candidate) {
-              schedule[candidate.id][day.id] = "O40";
+              const wDays = days.filter(d => d.weekIndex === day.weekIndex);
+              wDays.forEach(wd => {
+                if (schedule[candidate.id][wd.id] !== "V" && schedule[candidate.id][wd.id] !== "O30") {
+                  schedule[candidate.id][wd.id] = "O40";
+                }
+              });
               
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
               forcedOfficeSet[day.id].add(candidate.id);
@@ -3086,7 +3098,12 @@ const App = () => {
             });
             const candidate = pickLowestForcedCandidate(o42InOffice) || pickLowestForcedCandidate(o42NotOffice);
             if (candidate) {
-              schedule[candidate.id][day.id] = "O40";
+              const wDays = days.filter(d => d.weekIndex === day.weekIndex);
+              wDays.forEach(wd => {
+                if (schedule[candidate.id][wd.id] !== "V" && schedule[candidate.id][wd.id] !== "O30") {
+                  schedule[candidate.id][wd.id] = "O40";
+                }
+              });
               forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
               forcedOfficeSet[day.id].add(candidate.id);
               forcedOfficeDetails.push({
