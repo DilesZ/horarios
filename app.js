@@ -1985,7 +1985,7 @@ const generateSchedule = (year, vacationPlan) => {
               wDays.forEach(d => {
                 sched[emp.id][d.id] = "O30";
               });
-              let ok = true;
+              var ok = true;
               for (const d of wDays) {
                 const o30s = EMPLOYEES.filter(e => sched[e.id][d.id] === "O30");
                 if (o30s.length > 3) {
@@ -1998,2741 +1998,107 @@ const generateSchedule = (year, vacationPlan) => {
                   }
                 }
               }
-            }
-            if (ok) {
-              const n = enforceStrictWeeklyRules({
-                employees: EMPLOYEES,
-                days,
-                schedule: sched,
-                getLateGroupForWeek
-              });
-              if (countW(n.schedule, emp.id) > counts[emp.id]) {
-                EMPLOYEES.forEach(e => {
-                  days.forEach(day => {
-                    sched[e.id][day.id] = n.schedule[e.id][day.id];
-                  });
+              if (ok) {
+                const n = enforceStrictWeeklyRules({
+                  employees: EMPLOYEES,
+                  days,
+                  schedule: sched,
+                  getLateGroupForWeek
                 });
-                improved = true;
-                break;
+                if (countW(n.schedule, emp.id) > counts[emp.id]) {
+                  EMPLOYEES.forEach(e => {
+                    days.forEach(day => {
+                      sched[e.id][day.id] = n.schedule[e.id][day.id];
+                    });
+                  });
+                  improved = true;
+                  break;
+                }
               }
-            }
-            EMPLOYEES.forEach(e => {
-              days.forEach(day => {
-                sched[e.id][day.id] = snap[e.id][day.id];
+              EMPLOYEES.forEach(e => {
+                days.forEach(day => {
+                  sched[e.id][day.id] = snap[e.id][day.id];
+                });
               });
-            });
-          }
-          if (improved) break;
-        }
-      }
-    }
-    ensureMinSixWeeksAllFinal(strictAudit.schedule);
-  }
-  return {
-    schedule: strictAudit.schedule,
-    days,
-    strictAudit: {
-      violations: strictAudit.violations,
-      corrections: strictAudit.corrections,
-      summary: strictAudit.summary
-    }
-  };
-};
-const LoginForm = ({
-  onLogin
-}) => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const handleSubmit = e => {
-    e.preventDefault();
-    if (username === "Sistemas" && password === "Inicio2026") {
-      onLogin();
-    } else {
-      setError("Usuario o contraseña incorrectos");
-    }
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    className: "min-h-screen bg-slate-50 flex items-center justify-center p-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-center mb-8"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mb-4"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: "logo.png",
-    alt: "Logo",
-    className: "w-48 mx-auto object-contain"
-  })), /*#__PURE__*/React.createElement("h2", {
-    className: "text-2xl font-bold text-gray-900"
-  }, "Acceso Restringido"), /*#__PURE__*/React.createElement("p", {
-    className: "text-gray-500 mt-2"
-  }, "Introduce tus credenciales para continuar")), /*#__PURE__*/React.createElement("form", {
-    onSubmit: handleSubmit,
-    className: "space-y-6"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-sm font-medium text-gray-700 mb-1.5"
-  }, "Usuario"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    required: true,
-    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
-    placeholder: "Nombre de usuario",
-    value: username,
-    onChange: e => setUsername(e.target.value)
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-sm font-medium text-gray-700 mb-1.5"
-  }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    required: true,
-    className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
-    placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
-    value: password,
-    onChange: e => setPassword(e.target.value)
-  })), error && /*#__PURE__*/React.createElement("div", {
-    className: "bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "16",
-    height: "16",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("circle", {
-    cx: "12",
-    cy: "12",
-    r: "10"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "12",
-    y1: "8",
-    x2: "12",
-    y2: "12"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "12",
-    y1: "16",
-    x2: "12.01",
-    y2: "16"
-  })), error), /*#__PURE__*/React.createElement("button", {
-    type: "submit",
-    className: "w-full bg-brand-blue hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-blue/20 transform transition-all active:scale-[0.98]"
-  }, "Iniciar Sesi\xF3n")), /*#__PURE__*/React.createElement("p", {
-    className: "mt-8 text-center text-xs text-gray-400"
-  }, "Dept. Sistemas \xA9 2026")));
-};
-
-// ═══════════════════════════════════════════════════════════
-// FUNCIONES AUXILIARES PARA HOJAS EXCEL
-// ═══════════════════════════════════════════════════════════
-
-const buildResumenMensualSheet = ({
-  employees,
-  days,
-  schedule
-}) => {
-  const months = [];
-  const monthSet = new Set();
-  days.forEach(d => {
-    if (!monthSet.has(d.month)) {
-      monthSet.add(d.month);
-      months.push(d.month);
-    }
-  });
-  const types = ["O30", "O40", "O42", "V"];
-  const typeLabels = {
-    O30: "30h",
-    O40: "40h",
-    O42: "42h",
-    V: "VAC"
-  };
-  const hoursPerType = {
-    O30: 6,
-    O40: 8,
-    O42: 9,
-    V: 0
-  };
-  const row0 = ["Integrante", "Rol", "Grupo"];
-  const row1 = ["", "", ""];
-  months.forEach(m => {
-    types.forEach(t => {
-      row0.push(m.substring(0, 3));
-      row1.push(typeLabels[t]);
-    });
-    row0.push(m.substring(0, 3));
-    row1.push("Horas");
-  });
-  row0.push("TOTAL");
-  row1.push("Horas");
-  row0.push("Días O30");
-  row1.push("");
-  row0.push("Sem. Intens.");
-  row1.push("");
-  const aoa = [row0, row1];
-  employees.forEach(emp => {
-    const row = [emp.name, emp.role, `Grupo ${emp.group}`];
-    let totalHours = 0;
-    let totalO30 = 0;
-    months.forEach(m => {
-      const mDays = days.filter(d => d.month === m);
-      const cnt = {
-        O30: 0,
-        O40: 0,
-        O42: 0,
-        V: 0
-      };
-      mDays.forEach(day => {
-        const t = schedule[emp.id][day.id];
-        if (cnt[t] !== undefined) cnt[t]++;
-      });
-      types.forEach(t => row.push(cnt[t]));
-      const mHours = types.reduce((s, t) => s + cnt[t] * hoursPerType[t], 0);
-      row.push(mHours);
-      totalHours += mHours;
-      totalO30 += cnt.O30;
-    });
-    row.push(totalHours);
-    row.push(totalO30);
-    // Intensive weeks count
-    const weeksMap = {};
-    days.forEach(d => {
-      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-      weeksMap[d.weekIndex].push(d);
-    });
-    let intensiveWeeks = 0;
-    Object.values(weeksMap).forEach(wDays => {
-      if (wDays.every(d => schedule[emp.id][d.id] === "O30")) intensiveWeeks++;
-    });
-    row.push(intensiveWeeks);
-    aoa.push(row);
-  });
-  return aoa;
-};
-const buildVistaSemanasSheet = ({
-  employees,
-  days,
-  schedule
-}) => {
-  const weeksMap = {};
-  days.forEach(d => {
-    weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-    weeksMap[d.weekIndex].push(d);
-  });
-  const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
-  const headers = ["Semana", "Período", "Mes", "Integrante", "Rol", "Grupo", "Tipo semana", "Días O30", "Días O40", "Días O42", "Días VAC", "Horas semana"];
-  const aoa = [headers];
-  weekIdxs.forEach(wi => {
-    const wDays = weeksMap[wi];
-    const start = wDays[0];
-    const end = wDays[wDays.length - 1];
-    const period = `${start.label} – ${end.label}`;
-    const month = wDays[Math.floor(wDays.length / 2)].month;
-    employees.forEach(emp => {
-      const cnt = {
-        O30: 0,
-        O40: 0,
-        O42: 0,
-        V: 0
-      };
-      wDays.forEach(day => {
-        const t = schedule[emp.id][day.id];
-        if (cnt[t] !== undefined) cnt[t]++;
-      });
-      const nonVac = {
-        O30: cnt.O30,
-        O40: cnt.O40,
-        O42: cnt.O42
-      };
-      const dominant = Object.entries(nonVac).sort((a, b) => b[1] - a[1])[0][0];
-      const hours = cnt.O30 * 6 + cnt.O40 * 8 + cnt.O42 * 9;
-      aoa.push([`Semana ${wi + 1}`, period, month, emp.name, emp.role, `Grupo ${emp.group}`, dominant, cnt.O30, cnt.O40, cnt.O42, cnt.V, hours]);
-    });
-    aoa.push([]);
-  });
-  return aoa;
-};
-const buildEstadisticasSheet = ({
-  employees,
-  days,
-  schedule,
-  forcedOfficeDetails,
-  intensiveWeeksByEmp,
-  totalHoursByEmp
-}) => {
-  const forcedByEmp = {};
-  employees.forEach(e => {
-    forcedByEmp[e.id] = 0;
-  });
-  forcedOfficeDetails.forEach(item => {
-    forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1;
-  });
-  const weeksMap = {};
-  days.forEach(d => {
-    weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-    weeksMap[d.weekIndex].push(d);
-  });
-  const headers = ["Integrante", "Rol", "Grupo", "Días en periodo", "Días O30", "Días O40", "Días O42", "Días VAC", "Sem. Intensivas", "Obj. mín. (6 sem)", "Horas Totales", "Media H/Día lab.", "Días Forzados Oficina"];
-  const aoa = [headers];
-  employees.forEach(emp => {
-    const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
-    const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
-    const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
-    const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
-    const tot = totalHoursByEmp[emp.id] || 0;
-    const workDays = o30 + o40 + o42;
-    const avg = workDays > 0 ? Math.round(tot / workDays * 10) / 10 : 0;
-    const intensSem = intensiveWeeksByEmp[emp.id] || 0;
-    const meetsMin = intensSem >= 6 ? "SÍ ✓" : `NO (faltan ${6 - intensSem})`;
-    aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, days.length, o30, o40, o42, vac, intensSem, meetsMin, tot, avg, forcedByEmp[emp.id]]);
-  });
-  // Summary row
-  aoa.push([]);
-  aoa.push(["TOTALES", "", "", "", employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O30").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O40").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O42").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "V").length, 0), "", "", employees.reduce((s, e) => s + (totalHoursByEmp[e.id] || 0), 0), "", forcedOfficeDetails.length]);
-  return aoa;
-};
-const buildVacacionesSheet = ({
-  employees,
-  days,
-  schedule
-}) => {
-  const headers = ["Integrante", "Rol", "Fecha", "Día semana", "Mes", "Num. semana"];
-  const aoa = [headers];
-  const vacList = [];
-  employees.forEach(emp => {
-    days.forEach(day => {
-      if (schedule[emp.id][day.id] === "V") vacList.push({
-        emp,
-        day
-      });
-    });
-  });
-  vacList.sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
-  vacList.forEach(({
-    emp,
-    day
-  }) => {
-    aoa.push([emp.name, emp.role, day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`]);
-  });
-  aoa.push([]);
-  aoa.push([`Total días de vacaciones: ${vacList.length}`]);
-  // Summary per employee
-  aoa.push([]);
-  aoa.push(["Resumen por integrante"]);
-  aoa.push(["Integrante", "Total días VAC"]);
-  employees.forEach(emp => {
-    const cnt = days.filter(d => schedule[emp.id][d.id] === "V").length;
-    aoa.push([emp.name, cnt]);
-  });
-  return aoa;
-};
-const buildAlertasSheet = ({
-  alerts,
-  days,
-  employees,
-  schedule
-}) => {
-  const headers = ["Fecha", "Día semana", "Mes", "Semana", "Severidad", "Categoría", "Título alerta", "Detalle", "Contexto adicional", "Disponibles"];
-  const aoa = [headers];
-  if (alerts.length === 0) {
-    aoa.push(["Sin alertas", "", "", "", "", "", "La planificación no presenta conflictos."]);
-    return aoa;
-  }
-  alerts.forEach(alert => {
-    const day = days.find(d => d.id === alert.dayId);
-    if (!day) return;
-    alert.reasons.forEach(reason => {
-      const sev = reason.severity === "critical" ? "CRÍTICO" : reason.severity === "warning" ? "AVISO" : "INFO";
-      aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`, sev, reason.category || "", reason.title, reason.detail, reason.context || "", alert.present]);
-    });
-  });
-  aoa.push([]);
-  aoa.push([`Total alertas: ${alerts.reduce((s, a) => s + a.reasons.length, 0)}`]);
-  return aoa;
-};
-const buildDatosGraficosSheet = ({
-  employees,
-  days,
-  schedule,
-  intensiveWeeksByEmp,
-  forcedOfficeDetails,
-  dailyCoverage
-}) => {
-  const months = [];
-  const monthSet = new Set();
-  days.forEach(d => {
-    if (!monthSet.has(d.month)) {
-      monthSet.add(d.month);
-      months.push(d.month);
-    }
-  });
-  const weeksMap = {};
-  days.forEach(d => {
-    weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-    weeksMap[d.weekIndex].push(d);
-  });
-  const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
-  const weekToMonth = {};
-  Object.keys(weeksMap).forEach(wi => {
-    const cnt = {};
-    weeksMap[wi].forEach(d => {
-      cnt[d.month] = (cnt[d.month] || 0) + 1;
-    });
-    weekToMonth[wi] = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
-  });
-  const forcedByEmp = {};
-  employees.forEach(e => {
-    forcedByEmp[e.id] = 0;
-  });
-  forcedOfficeDetails.forEach(item => {
-    forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1;
-  });
-  const aoa = [];
-
-  // ── Tabla 1: Semanas intensivas por mes e integrante ──────────────
-  aoa.push(["TABLA 1 — Semanas con jornada intensiva (O30 completa) por integrante y mes"]);
-  aoa.push(["Gráfico sugerido: Barras agrupadas — columnas=meses, series=integrante"]);
-  aoa.push([]);
-  aoa.push(["Integrante", "Rol", ...months.map(m => m.substring(0, 3)), "Total", "Días forzados oficina"]);
-  employees.forEach(emp => {
-    const byMonth = {};
-    months.forEach(m => {
-      byMonth[m] = 0;
-    });
-    weekIdxs.forEach(wi => {
-      const wDays = weeksMap[wi];
-      if (wDays.every(d => schedule[emp.id][d.id] === "O30")) {
-        const m = weekToMonth[wi];
-        if (byMonth[m] !== undefined) byMonth[m]++;
-      }
-    });
-    const total = months.reduce((s, m) => s + byMonth[m], 0);
-    aoa.push([emp.name, emp.role, ...months.map(m => byMonth[m]), total, forcedByEmp[emp.id]]);
-  });
-  aoa.push([]);
-  aoa.push([]);
-
-  // ── Tabla 2: Horas totales y distribución por tipo ───────────────
-  aoa.push(["TABLA 2 — Horas totales trabajadas por integrante en el periodo"]);
-  aoa.push(["Gráfico sugerido: Barras horizontales apiladas por tipo de jornada"]);
-  aoa.push([]);
-  aoa.push(["Integrante", "Rol", "Grupo", "H. O30", "H. O40", "H. O42", "Horas Totales", "Días O30", "Días O40", "Días O42", "Días VAC"]);
-  employees.forEach(emp => {
-    const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
-    const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
-    const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
-    const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
-    aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, o30 * 6, o40 * 8, o42 * 9, o30 * 6 + o40 * 8 + o42 * 9, o30, o40, o42, vac]);
-  });
-  aoa.push([]);
-  aoa.push([]);
-
-  // ── Tabla 3: Distribución de tipos por semana ────────────────────
-  aoa.push(["TABLA 3 — Distribución de tipos de jornada por semana (total días-persona)"]);
-  aoa.push(["Gráfico sugerido: Barras apiladas al 100% — eje X= semanas"]);
-  aoa.push([]);
-  aoa.push(["Semana", "Período", "Mes", "Días O30", "Días O40", "Días O42", "Días VAC", "% Intensiva", "% 40h", "% 42h", "% VAC"]);
-  weekIdxs.forEach(wi => {
-    const wDays = weeksMap[wi];
-    const start = wDays[0];
-    const end = wDays[wDays.length - 1];
-    let o30 = 0,
-      o40 = 0,
-      o42 = 0,
-      vac = 0;
-    employees.forEach(emp => {
-      wDays.forEach(day => {
-        const t = schedule[emp.id][day.id];
-        if (t === "O30") o30++;else if (t === "O40") o40++;else if (t === "O42") o42++;else if (t === "V") vac++;
-      });
-    });
-    const total = o30 + o40 + o42 + vac;
-    const pct = v => total > 0 ? Math.round(v / total * 100) : 0;
-    aoa.push([`Sem. ${wi + 1}`, `${start.label} – ${end.label}`, weekToMonth[wi], o30, o40, o42, vac, pct(o30), pct(o40), pct(o42), pct(vac)]);
-  });
-  aoa.push([]);
-  aoa.push([]);
-
-  // ── Tabla 4: Presencia diaria ────────────────────────────────────
-  aoa.push(["TABLA 4 — Presencia diaria de integrantes"]);
-  aoa.push(["Gráfico sugerido: Gráfico de líneas — eje X=fechas, eje Y=personas disponibles"]);
-  aoa.push([]);
-  aoa.push(["Fecha", "Día", "Mes", "Semana", "Disponibles (no VAC)", "De vacaciones", "Con O30", "Con O40", "Con O42"]);
-  dailyCoverage.forEach(cov => {
-    const day = days.find(d => d.id === cov.dayId);
-    if (!day) return;
-    const o30c = employees.filter(e => schedule[e.id][cov.dayId] === "O30").length;
-    const o40c = employees.filter(e => schedule[e.id][cov.dayId] === "O40").length;
-    const o42c = employees.filter(e => schedule[e.id][cov.dayId] === "O42").length;
-    aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter], day.month, `Sem. ${day.weekIndex + 1}`, cov.present, employees.length - cov.present, o30c, o40c, o42c]);
-  });
-  aoa.push([]);
-  aoa.push([]);
-  aoa.push(["─── INSTRUCCIONES PARA CREAR GRÁFICOS EN EXCEL ───"]);
-  aoa.push(["TABLA 1 → Seleccionar el rango de datos → Insertar → Gráfico de Columnas Agrupadas"]);
-  aoa.push(["         Eje horizontal: Meses de verano, Series: un integrante por serie"]);
-  aoa.push(["TABLA 2 → Seleccionar Integrante + H.O30 + H.O40 + H.O42 → Insertar → Barras apiladas"]);
-  aoa.push(["TABLA 3 → Seleccionar Semana + columnas % → Insertar → Barras apiladas al 100%"]);
-  aoa.push(["TABLA 4 → Seleccionar Fecha + Disponibles → Insertar → Gráfico de Líneas"]);
-  return aoa;
-};
-const IconHome = ({
-  className = ""
-}) => /*#__PURE__*/React.createElement("svg", {
-  xmlns: "http://www.w3.org/2000/svg",
-  viewBox: "0 0 24 24",
-  fill: "currentColor",
-  className: className
-}, /*#__PURE__*/React.createElement("path", {
-  d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
-}));
-const IconOffice = ({
-  className = ""
-}) => /*#__PURE__*/React.createElement("svg", {
-  xmlns: "http://www.w3.org/2000/svg",
-  viewBox: "0 0 24 24",
-  fill: "currentColor",
-  className: className
-}, /*#__PURE__*/React.createElement("path", {
-  d: "M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"
-}));
-const buildChartDataRows = ({
-  employees,
-  intensiveWeeksByEmp,
-  forcedOfficeDetails
-}) => {
-  const forcedDaysByEmp = {};
-  employees.forEach(emp => {
-    forcedDaysByEmp[emp.id] = 0;
-  });
-  if (forcedOfficeDetails) {
-    forcedOfficeDetails.forEach(item => {
-      forcedDaysByEmp[item.empId] = (forcedDaysByEmp[item.empId] || 0) + 1;
-    });
-  }
-  const rows = [["Integrante", "Semanas intensivas", "Días forzados"]];
-  employees.forEach(emp => {
-    rows.push([emp.name, intensiveWeeksByEmp[emp.id] || 0, forcedDaysByEmp[emp.id] || 0]);
-  });
-  return rows;
-};
-const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return readAuthSession();
-  });
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    writeAuthSession();
-  };
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    clearAuthSession();
-  };
-  const handleResetPlan = () => {
-    if (window.confirm("¿Seguro que quieres resetear el plan? Se borrarán los dashboards guardados y se restaurarán las vacaciones por defecto.")) {
-      setVacationPlan(DEFAULT_VACATION_PLAN_2026);
-      setPlanning(generateSchedule(year, DEFAULT_VACATION_PLAN_2026));
-      setAcceptedDashboards({});
-      setActiveDashboardYear(null);
-      setMode("config");
-      window.localStorage.removeItem("horarios_dashboards");
-    }
-  };
-  const [year, setYear] = useState(2026);
-  const [vacationPlan, setVacationPlan] = useState(DEFAULT_VACATION_PLAN_2026);
-  const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
-  const [selectedEmp, setSelectedEmp] = useState("all");
-  const [employeeSearch, setEmployeeSearch] = useState("");
-  const [tableDensity, setTableDensity] = useState("comfortable");
-  const [hoveredEmpId, setHoveredEmpId] = useState(null);
-  const [hoveredDayId, setHoveredDayId] = useState(null);
-  const [modalData, setModalData] = useState({
-    isOpen: false,
-    emp: null,
-    day: null,
-    typeKey: null
-  });
-  const [oListOpen, setOListOpen] = useState(false);
-  const [selectedAlertDayId, setSelectedAlertDayId] = useState(null);
-  const [mode, setMode] = useState("config");
-  const [acceptedDashboards, setAcceptedDashboards] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem("horarios_dashboards");
-      if (!stored) return {};
-      const parsed = JSON.parse(stored);
-      return typeof parsed === "object" && parsed !== null ? parsed : {};
-    } catch {
-      return {};
-    }
-  });
-  const [activeDashboardYear, setActiveDashboardYear] = useState(null);
-  const [selectedVacationEmpName, setSelectedVacationEmpName] = useState(EMPLOYEES[0].name);
-  const [exportFormat, setExportFormat] = useState("xlsx");
-  const [exportStylePreset, setExportStylePreset] = useState("corporativo");
-  const [exportIncludeFormulas, setExportIncludeFormulas] = useState(true);
-  const [exportIncludeChartData, setExportIncludeChartData] = useState(true);
-  const [exportProtectSheet, setExportProtectSheet] = useState(false);
-  const [exportPassword, setExportPassword] = useState("");
-  const [exportInProgress, setExportInProgress] = useState(false);
-  const [exportProgress, setExportProgress] = useState(0);
-  const [exportStatus, setExportStatus] = useState("");
-  const [exportError, setExportError] = useState("");
-  const [exportLogs, setExportLogs] = useState([]);
-  const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
-  const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
-  const [viewMode, setViewMode] = useState("matrix");
-  const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
-    } catch (error) {
-      console.error('Failed to save to localStorage:', error);
-    }
-  }, [acceptedDashboards]);
-  const savedYears = useMemo(() => Object.keys(acceptedDashboards).map(y => parseInt(y, 10)).filter(y => !isNaN(y)).sort((a, b) => a - b), [acceptedDashboards]);
-  const currentDashboard = mode === "dashboard" && activeDashboardYear && acceptedDashboards[activeDashboardYear] ? acceptedDashboards[activeDashboardYear] : null;
-  const schedule = currentDashboard ? currentDashboard.schedule : planning.schedule;
-  const days = currentDashboard ? currentDashboard.days : planning.days;
-  const strictAudit = currentDashboard ? currentDashboard.strictAudit : planning.strictAudit;
-  const currentYear = currentDashboard ? activeDashboardYear : year;
-  const daysByMonth = useMemo(() => {
-    const map = {};
-    days.forEach(d => {
-      map[d.month] = map[d.month] || [];
-      map[d.month].push(d);
-    });
-    return Object.entries(map);
-  }, [days]);
-  const handleYearChange = value => {
-    const nextYear = parseInt(value, 10);
-    if (isNaN(nextYear)) return;
-    let basePlan;
-    if (nextYear === 2026) {
-      basePlan = DEFAULT_VACATION_PLAN_2026;
-    } else if (acceptedDashboards[nextYear]) {
-      basePlan = acceptedDashboards[nextYear].vacationPlan || {};
-    } else {
-      basePlan = createEmptyVacationPlan();
-    }
-    const nextPlan = {};
-    EMPLOYEES.forEach(emp => {
-      nextPlan[emp.name] = [...(basePlan[emp.name] || [])];
-    });
-    setYear(nextYear);
-    setVacationPlan(nextPlan);
-    setPlanning(generateSchedule(nextYear, nextPlan));
-    setMode("config");
-  };
-  const toggleVacationDay = (empName, dayId) => {
-    const current = vacationPlan;
-    const next = {};
-    EMPLOYEES.forEach(emp => {
-      const list = current[emp.name] || [];
-      if (emp.name === empName) {
-        if (list.includes(dayId)) {
-          next[emp.name] = list.filter(id => id !== dayId);
-        } else {
-          next[emp.name] = [...list, dayId].sort();
-        }
-      } else {
-        next[emp.name] = [...list];
-      }
-    });
-    setVacationPlan(next);
-    setPlanning(generateSchedule(year, next));
-  };
-  const handleAcceptCalendar = () => {
-    const generated = generateSchedule(year, vacationPlan);
-    const snapshotVacationPlan = {};
-    EMPLOYEES.forEach(emp => {
-      snapshotVacationPlan[emp.name] = [...(vacationPlan[emp.name] || [])];
-    });
-    const entry = {
-      year,
-      schedule: generated.schedule,
-      days: generated.days,
-      strictAudit: generated.strictAudit,
-      vacationPlan: snapshotVacationPlan
-    };
-    setAcceptedDashboards(prev => {
-      const next = {
-        ...prev,
-        [year]: entry
-      };
-      return next;
-    });
-    setActiveDashboardYear(year);
-    setMode("dashboard");
-  };
-  const handleModeChange = nextMode => {
-    if (nextMode === "dashboard") {
-      if (!savedYears.length) return;
-      const initialYear = activeDashboardYear || savedYears[0];
-      setActiveDashboardYear(initialYear);
-      setMode("dashboard");
-    } else {
-      setMode("config");
-    }
-  };
-  const handleSelectDashboardYear = y => {
-    setActiveDashboardYear(y);
-    setMode("dashboard");
-  };
-  const WeekDetailModal = ({
-    isOpen,
-    onClose,
-    emp,
-    day,
-    typeKey
-  }) => {
-    if (!isOpen || !emp || !day) return null;
-    const typeInfo = TYPES[typeKey];
-    const horarioSalida = typeKey === "O42" ? "18:00 (Viernes 14:00)" : typeKey === "O40" ? "17:00" : typeKey === "O30" || typeKey === "T30" ? "14:00 (Intensiva)" : "N/A";
-    const diasOficina = emp.officeDays;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: onClose,
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative",
-      onClick: e => e.stopPropagation()
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "24",
-      height: "24",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mb-6"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-xl font-bold text-gray-900 mb-1"
-    }, emp.name, " ", /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-500 text-sm font-normal"
-    }, "(", emp.role, ")")), /*#__PURE__*/React.createElement("p", {
-      className: "text-brand-blue font-medium"
-    }, "Fecha ", day.label)), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-gray-50 p-4 rounded-lg border border-gray-100"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
-    }, "Estado Actual"), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-3 h-3 rounded-full ${typeInfo.color}`
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-semibold text-gray-800"
-    }, typeInfo.label))), typeKey !== "V" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "Horario Salida"), /*#__PURE__*/React.createElement("p", {
-      className: `text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`
-    }, horarioSalida)), /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "Grupo Turno"), /*#__PURE__*/React.createElement("p", {
-      className: "text-lg font-bold text-gray-700"
-    }, "Grupo ", emp.group))), /*#__PURE__*/React.createElement("div", {
-      className: "bg-white p-3 rounded-lg border border-gray-200"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mb-1"
-    }, "D\xEDas en Oficina (Fijos)"), /*#__PURE__*/React.createElement("p", {
-      className: "text-gray-800 font-medium"
-    }, diasOficina))), typeKey === "V" && /*#__PURE__*/React.createElement("div", {
-      className: "bg-rose-50 p-4 rounded-lg border border-rose-200 text-center"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "text-rose-600"
-    }, "\uD83C\uDF34 Disfrutando de vacaciones")))));
-  };
-  const AlertDetailModal = ({
-    isOpen,
-    onClose,
-    dayId
-  }) => {
-    if (!isOpen || !dayId) return null;
-    const alert = stats.alerts.find(a => a.dayId === dayId);
-    if (!alert) return null;
-    const day = days.find(d => d.id === dayId);
-    const hasCritical = alert.reasons.some(r => r.severity === "critical");
-    const hasWarning = alert.reasons.some(r => r.severity === "warning");
-    const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
-    const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: onClose,
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`,
-      onClick: e => e.stopPropagation()
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`
-    }, WEEKDAY_FULL[day.weekdayLetter], " ", day.label), /*#__PURE__*/React.createElement("span", {
-      className: "text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm"
-    }, alert.present, "/6 disponibles")), /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto"
-    }, alert.reasons.map((reason, idx) => {
-      const severityStyles = {
-        critical: {
-          bg: "bg-rose-50",
-          border: "border-rose-200",
-          titleColor: "text-rose-700",
-          iconColor: "text-rose-500",
-          detailColor: "text-rose-600"
-        },
-        warning: {
-          bg: "bg-amber-50",
-          border: "border-amber-200",
-          titleColor: "text-amber-700",
-          iconColor: "text-amber-500",
-          detailColor: "text-amber-600"
-        },
-        info: {
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          titleColor: "text-blue-700",
-          iconColor: "text-blue-500",
-          detailColor: "text-blue-600"
-        }
-      };
-      const s = severityStyles[reason.severity] || severityStyles.info;
-      const iconMap = {
-        people: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-        }), /*#__PURE__*/React.createElement("circle", {
-          cx: "9",
-          cy: "7",
-          r: "4"
-        })),
-        clock: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("circle", {
-          cx: "12",
-          cy: "12",
-          r: "10"
-        }), /*#__PURE__*/React.createElement("polyline", {
-          points: "12 6 12 12 16 14"
-        })),
-        alert: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-        }), /*#__PURE__*/React.createElement("line", {
-          x1: "12",
-          y1: "9",
-          x2: "12",
-          y2: "13"
-        }), /*#__PURE__*/React.createElement("line", {
-          x1: "12",
-          y1: "17",
-          x2: "12.01",
-          y2: "17"
-        })),
-        group: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-        }), /*#__PURE__*/React.createElement("circle", {
-          cx: "9",
-          cy: "7",
-          r: "4"
-        }), /*#__PURE__*/React.createElement("path", {
-          d: "M23 21v-2a4 4 0 0 0-3-3.87"
-        }), /*#__PURE__*/React.createElement("path", {
-          d: "M16 3.13a4 4 0 0 1 0 7.75"
-        })),
-        check: /*#__PURE__*/React.createElement("svg", {
-          xmlns: "http://www.w3.org/2000/svg",
-          width: "18",
-          height: "18",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-          strokeLinejoin: "round"
-        }, /*#__PURE__*/React.createElement("path", {
-          d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
-        }), /*#__PURE__*/React.createElement("polyline", {
-          points: "22 4 12 14.01 9 11.01"
-        }))
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        key: idx,
-        className: `${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start gap-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`
-      }, iconMap[reason.icon] || iconMap.alert), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-        className: `text-sm font-bold ${s.titleColor}`
-      }, reason.title), /*#__PURE__*/React.createElement("p", {
-        className: `text-sm mt-1 leading-relaxed ${s.detailColor}`
-      }, reason.detail), reason.context && /*#__PURE__*/React.createElement("p", {
-        className: "text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5"
-      }, reason.context))));
-    }))));
-  };
-  const ForcedOfficeListModal = ({
-    open,
-    onClose
-  }) => {
-    if (!open) return null;
-
-    // Agrupar conteo por empleado
-    const countByEmp = {};
-    stats.forcedOfficeDetails.forEach(item => {
-      countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
-    });
-    const entries = stats.forcedOfficeDetails.map(it => {
-      const day = days.find(d => d.id === it.dayId);
-      const emp = EMPLOYEES.find(e => e.id === it.empId);
-      return {
-        day,
-        emp,
-        reason: it.reason
-      };
-    }).sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
-    return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
-      onClick: onClose,
-      role: "button",
-      tabIndex: 0,
-      onKeyDown: e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClose();
-        }
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative",
-      onClick: e => e.stopPropagation()
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: onClose,
-      className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-    }, /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "24",
-      height: "24",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("line", {
-      x1: "18",
-      y1: "6",
-      x2: "6",
-      y2: "18"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "6",
-      y1: "6",
-      x2: "18",
-      y2: "18"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mb-6"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-xl font-bold text-gray-900"
-    }, "Listado de O forzadas"), /*#__PURE__*/React.createElement("p", {
-      className: "text-gray-500 text-sm mb-4"
-    }, "Motivo por el que deben asistir a la oficina"), /*#__PURE__*/React.createElement("div", {
-      className: "bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"
-    }, /*#__PURE__*/React.createElement("h4", {
-      className: "text-sm font-bold text-brand-blue mb-2"
-    }, "Resumen por Integrante:"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap gap-2"
-    }, Object.keys(countByEmp).length === 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-xs text-gray-500"
-    }, "Sin registros."), Object.entries(countByEmp).map(([empId, count]) => {
-      const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
-      return /*#__PURE__*/React.createElement("span", {
-        key: empId,
-        className: "px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm"
-      }, emp.name, ": ", count);
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "overflow-auto max-h-[50vh]"
-    }, /*#__PURE__*/React.createElement("table", {
-      className: "w-full text-left border-collapse"
-    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Fecha"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "D\xEDa"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Integrante"), /*#__PURE__*/React.createElement("th", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, "Motivo"))), /*#__PURE__*/React.createElement("tbody", null, entries.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-      colSpan: "4",
-      className: "p-4 text-center text-gray-500"
-    }, "No hay O forzadas en el periodo.")), entries.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
-      key: idx,
-      className: "hover:bg-gray-50"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-800"
-    }, row.day.label), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-500"
-    }, WEEKDAY_FULL[row.day.weekdayLetter]), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-800"
-    }, row.emp.name), /*#__PURE__*/React.createElement("td", {
-      className: "p-2 border-b border-gray-200 text-gray-600"
-    }, row.reason))))))));
-  };
-  const stats = useMemo(() => {
-    const forcedOfficeSet = {};
-    const forcedOfficeDetails = [];
-
-    // Rastreo local de carga para reparto equitativo
-    const tempForcedCount = {};
-    EMPLOYEES.forEach(e => tempForcedCount[e.id] = 0);
-    const pickLowestForcedCandidate = candidates => {
-      if (!candidates || candidates.length === 0) return null;
-      const minLoad = Math.min(...candidates.map(candidate => tempForcedCount[candidate.id] || 0));
-      const pool = candidates.filter(candidate => (tempForcedCount[candidate.id] || 0) === minLoad).sort((a, b) => a.id - b.id);
-      return pool[0] || null;
-    };
-    const getBestCandidate = (groupNames, day) => {
-      const candidates = EMPLOYEES.filter(emp => {
-        if (!groupNames.includes(emp.name)) return false;
-        const type = schedule[emp.id][day.id];
-        if (type === "V") return false;
-        if (type === "O30") return false; // Enforce afternoon coverage
-        const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-        return !daysOffice.includes(day.weekdayLetter);
-      });
-      if (candidates.length === 0) return null;
-      return pickLowestForcedCandidate(candidates);
-    };
-    const dailyCoverage = days.map(day => {
-      let present = 0,
-        vacation = 0,
-        shift18hCount = 0,
-        shift18hOfficeCount = 0,
-        intensiveCount = 0;
-      let group1HasOffice = false,
-        group2HasOffice = false;
-      let group1Covering = [];
-      let group2Covering = [];
-      EMPLOYEES.forEach(emp => {
-        const type = schedule[emp.id][day.id];
-        if (type === "V") {
-          vacation++;
-          return;
-        }
-        present++;
-        if (type === "O30") intensiveCount++;
-        if (type === "O42") shift18hCount++;
-        const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-        const isInOffice = daysOffice.includes(day.weekdayLetter);
-        if (type === "O42" && isInOffice) shift18hOfficeCount++;
-        const hasFullSchedule = day.weekdayLetter === "V" ? type === "O40" : type === "O40" || type === "O42";
-        if (isInOffice && hasFullSchedule) {
-          if (GROUP1.includes(emp.name)) {
-            group1HasOffice = true;
-            group1Covering.push(emp.name);
-          }
-          if (GROUP2.includes(emp.name)) {
-            group2HasOffice = true;
-            group2Covering.push(emp.name);
-          }
-        }
-      });
-
-      // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
-      if (day.weekdayLetter !== "V") {
-        if (!group1HasOffice && group2Covering.length === 0) {
-          const candidate = getBestCandidate(GROUP1, day);
-          if (candidate) {
-            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-            forcedOfficeSet[day.id].add(candidate.id);
-            forcedOfficeDetails.push({
-              dayId: day.id,
-              empId: candidate.id,
-              reason: "Falta presencia del grupo {Enrique/Luis/David} y el otro grupo no cubre"
-            });
-            group1HasOffice = true;
-            group1Covering.push(candidate.name);
-            tempForcedCount[candidate.id]++;
-          }
-        }
-        if (!group2HasOffice && group1Covering.length === 0) {
-          const candidate = getBestCandidate(GROUP2, day);
-          if (candidate) {
-            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-            forcedOfficeSet[day.id].add(candidate.id);
-            forcedOfficeDetails.push({
-              dayId: day.id,
-              empId: candidate.id,
-              reason: "Falta presencia del grupo {Jose/Ariel/Kike} y el otro grupo no cubre"
-            });
-            group2HasOffice = true;
-            group2Covering.push(candidate.name);
-            tempForcedCount[candidate.id]++;
-          }
-        }
-        shift18hOfficeCount = EMPLOYEES.filter(emp => {
-          if (schedule[emp.id][day.id] !== "O42") return false;
-          const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-          if (daysOffice.includes(day.weekdayLetter)) return true;
-          if (forcedOfficeSet[day.id] && forcedOfficeSet[day.id].has(emp.id)) return true;
-          return false;
-        }).length;
-        if (shift18hOfficeCount < 1) {
-          const o42Candidates = EMPLOYEES.filter(emp => {
-            if (schedule[emp.id][day.id] !== "O42") return false;
-            const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-            return !daysOffice.includes(day.weekdayLetter);
-          });
-          if (o42Candidates.length > 0) {
-            const candidate = pickLowestForcedCandidate(o42Candidates);
-            forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-            forcedOfficeSet[day.id].add(candidate.id);
-            forcedOfficeDetails.push({
-              dayId: day.id,
-              empId: candidate.id,
-              reason: "Cobertura 18h presencial (17:00-18:00)"
-            });
-            tempForcedCount[candidate.id]++;
-            shift18hOfficeCount = 1;
-          } else {
-            const o40InOffice = EMPLOYEES.filter(emp => {
-              if (schedule[emp.id][day.id] !== "O40") return false;
-              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-              return daysOffice.includes(day.weekdayLetter);
-            });
-            if (o40InOffice.length > 0) {
-              const candidate = pickLowestForcedCandidate(o40InOffice);
-              schedule[candidate.id][day.id] = "O42";
-              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-              forcedOfficeSet[day.id].add(candidate.id);
-              forcedOfficeDetails.push({
-                dayId: day.id,
-                empId: candidate.id,
-                reason: "Conversión a 42h: falta cobertura presencial de tarde"
-              });
-              tempForcedCount[candidate.id]++;
-              shift18hOfficeCount = 1;
             }
+            if (improved) break;
           }
         }
       }
-      if (day.weekdayLetter === "V") {
-        const hasO40InOffice = EMPLOYEES.some(emp => {
-          const type = schedule[emp.id][day.id];
-          if (type !== "O40") return false;
-          const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-          return daysOffice.includes("V");
-        });
-        if (!hasO40InOffice) {
-          const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-          const lateGroup = isGroupALate ? "A" : "B";
-          const o40NotOffice = EMPLOYEES.filter(emp => {
-            const type = schedule[emp.id][day.id];
-            if (type !== "O40") return false;
-            const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-            return !daysOffice.includes("V");
-          });
-          if (o40NotOffice.length > 0) {
-            const preferred = o40NotOffice.filter(e => e.name === "Luis");
-            const nonLate = o40NotOffice.filter(e => e.group !== lateGroup);
-            const candidate = pickLowestForcedCandidate(preferred) || pickLowestForcedCandidate(nonLate) || pickLowestForcedCandidate(o40NotOffice);
-            if (candidate) {
-              schedule[candidate.id][day.id] = "O40";
-              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-              forcedOfficeSet[day.id].add(candidate.id);
-              forcedOfficeDetails.push({
-                dayId: day.id,
-                empId: candidate.id,
-                reason: "Viernes: se requiere 40h en oficina hasta las 17:00"
-              });
-              tempForcedCount[candidate.id]++;
-            }
-          } else {
-            // No hay nadie con O40. Convertir un O42 presencial a O40 para cubrir viernes.
-            const o42InOffice = EMPLOYEES.filter(emp => {
-              const type = schedule[emp.id][day.id];
-              if (type !== "O42") return false;
-              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-              return daysOffice.includes("V");
-            });
-            const o42NotOffice = EMPLOYEES.filter(emp => {
-              const type = schedule[emp.id][day.id];
-              if (type !== "O42") return false;
-              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-              return !daysOffice.includes("V");
-            });
-            const candidate = pickLowestForcedCandidate(o42InOffice) || pickLowestForcedCandidate(o42NotOffice);
-            if (candidate) {
-              schedule[candidate.id][day.id] = "O40";
-              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
-              forcedOfficeSet[day.id].add(candidate.id);
-              forcedOfficeDetails.push({
-                dayId: day.id,
-                empId: candidate.id,
-                reason: "Viernes: conversión O42→O40 para cobertura presencial hasta 17:00"
-              });
-              tempForcedCount[candidate.id]++;
-            }
-          }
-        }
-      }
-      return {
-        dayId: day.id,
-        present,
-        vacation,
-        shift18hCount,
-        shift18hOfficeCount,
-        intensiveCount,
-        group1HasOffice,
-        group2HasOffice,
-        group1Covering,
-        group2Covering
-      };
-    });
-    const alerts = [];
-    dailyCoverage.forEach(d => {
-      const day = days.find(x => x.id === d.dayId);
-      const need18h = day.weekdayLetter !== "V";
-      const reasons = [];
-      if (d.present < 3) {
-        const onVacation = EMPLOYEES.filter(e => schedule[e.id][day.id] === "V").map(e => e.name);
-        reasons.push({
-          category: "cobertura",
-          severity: "critical",
-          title: "Cobertura insuficiente",
-          detail: `Solo ${d.present} de 6 integrantes disponibles (mínimo 3).`,
-          context: onVacation.length > 0 ? `De vacaciones: ${onVacation.join(", ")}` : null,
-          icon: "people"
-        });
-      }
-      if (need18h && d.shift18hOfficeCount < 1) {
-        reasons.push({
-          category: "turno18h",
-          severity: "critical",
-          title: "Sin cobertura presencial de tarde (17h-18h)",
-          detail: `No hay nadie en oficina cubriendo de 17:00 a 18:00 en ${WEEKDAY_FULL[day.weekdayLetter]}.`,
-          context: d.shift18hCount < 1 ? "No hay ningún turno O42 asignado." : "Hay turno O42 asignado, pero en teletrabajo.",
-          icon: "clock"
-        });
-      }
-      if (d.intensiveCount > 3) {
-        const inIntensive = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").map(e => e.name);
-        reasons.push({
-          category: "intensiva",
-          severity: "warning",
-          title: "Exceso de intensivas",
-          detail: `${d.intensiveCount} personas en intensiva (máximo permitido: 3).`,
-          context: `En intensiva: ${inIntensive.join(", ")}`,
-          icon: "alert"
-        });
-      }
-      if (need18h && !d.group1HasOffice) {
-        const g1OnVac = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
-        const g1OnIntensive = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
-        const g1OnTelework = EMPLOYEES.filter(e => {
-          if (!GROUP1.includes(e.name)) return false;
-          if (schedule[e.id][day.id] === "V") return false;
-          const od = e.officeDays.split(",").map(x => x.trim());
-          return !od.includes(day.weekdayLetter);
-        }).map(e => e.name);
-        const isCovered = d.group2Covering && d.group2Covering.length > 0;
-        if (!isCovered) {
-          let contextParts = [];
-          if (g1OnVac.length > 0) contextParts.push(`Vacaciones: ${g1OnVac.join(", ")}`);
-          if (g1OnIntensive.length > 0) contextParts.push(`Intensiva: ${g1OnIntensive.join(", ")}`);
-          if (g1OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g1OnTelework.join(", ")}`);
-          reasons.push({
-            category: "grupo1",
-            severity: "critical",
-            title: "Grupo {Enrique/Luis/David} sin presencia",
-            detail: `Ningún miembro del grupo está en oficina con turno completo.`,
-            context: contextParts.length > 0 ? contextParts.join(" · ") : null,
-            icon: "group"
-          });
-        }
-      }
-      if (need18h && !d.group2HasOffice) {
-        const g2OnVac = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
-        const g2OnIntensive = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
-        const g2OnTelework = EMPLOYEES.filter(e => {
-          if (!GROUP2.includes(e.name)) return false;
-          if (schedule[e.id][day.id] === "V") return false;
-          const od = e.officeDays.split(",").map(x => x.trim());
-          return !od.includes(day.weekdayLetter);
-        }).map(e => e.name);
-        const isCovered = d.group1Covering && d.group1Covering.length > 0;
-        if (!isCovered) {
-          let contextParts = [];
-          if (g2OnVac.length > 0) contextParts.push(`Vacaciones: ${g2OnVac.join(", ")}`);
-          if (g2OnIntensive.length > 0) contextParts.push(`Intensiva: ${g2OnIntensive.join(", ")}`);
-          if (g2OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g2OnTelework.join(", ")}`);
-          reasons.push({
-            category: "grupo2",
-            severity: "critical",
-            title: "Grupo {Jose/Ariel/Kike} sin presencia",
-            detail: `Ningún miembro del grupo está en oficina con turno completo.`,
-            context: contextParts.length > 0 ? contextParts.join(" · ") : null,
-            icon: "group"
-          });
-        }
-      }
-      if (reasons.length > 0) {
-        alerts.push({
-          ...d,
-          reasons
-        });
-      }
-    });
-    const weeksMap = {};
-    days.forEach(d => {
-      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
-      weeksMap[d.weekIndex].push(d);
-    });
-    const intensiveWeeksByEmp = {};
-    const totalHoursByEmp = {};
-    EMPLOYEES.forEach(emp => {
-      intensiveWeeksByEmp[emp.id] = 0;
-      totalHoursByEmp[emp.id] = 0;
-    });
-    days.forEach(day => {
-      EMPLOYEES.forEach(emp => {
-        totalHoursByEmp[emp.id] += HOURS_PER_TYPE[schedule[emp.id][day.id]] || 0;
-      });
-    });
-    Object.keys(weeksMap).forEach(wiStr => {
-      const daysInWeek = weeksMap[wiStr];
-      EMPLOYEES.forEach(emp => {
-        if (daysInWeek.every(day => schedule[emp.id][day.id] === "O30")) intensiveWeeksByEmp[emp.id] += 1;
-      });
-    });
-    const equityAudit = buildEquityAudit({
-      employees: EMPLOYEES,
-      days,
-      schedule,
-      forcedOfficeDetails
-    });
-    const strictValidation = validateStrictWeeklyRules({
-      employees: EMPLOYEES,
-      days,
-      schedule
-    });
+      ensureMinSixWeeksAllFinal(strictAudit.schedule);
+    }
     return {
-      dailyCoverage,
-      alerts,
-      forcedOfficeSet,
-      forcedOfficeDetails,
-      intensiveWeeksByEmp,
-      totalHoursByEmp,
-      equityAudit,
-      strictValidation,
-      strictCorrections: strictAudit?.corrections || []
+      schedule: strictAudit.schedule,
+      days,
+      strictAudit: {
+        violations: strictAudit.violations,
+        corrections: strictAudit.corrections,
+        summary: strictAudit.summary
+      }
     };
-  }, [schedule, days, strictAudit]);
-  const exportToExcel = async () => {
-    const appendExportLog = (message, level = "info") => {
-      setExportLogs(prev => [...prev, {
-        level,
-        message,
-        ts: new Date().toISOString()
-      }].slice(-80));
-    };
-    const waitTick = () => new Promise(resolve => setTimeout(resolve, 0));
-    const downloadBlob = (blob, filename) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    };
-    setExportInProgress(true);
-    setExportProgress(0);
-    setExportStatus("Inicializando exportación...");
-    setExportError("");
-    setExportLogs([]);
-    appendExportLog("Inicio del proceso de exportación.");
-    try {
-      if (!["xlsx", "xls", "csv"].includes(exportFormat)) {
-        throw new Error("Formato no soportado. Selecciona .xlsx, .xls o .csv.");
-      }
-      const validation = validateExportPayload({
-        employees: EMPLOYEES,
-        days,
-        schedule
-      });
-      if (!validation.ok) {
-        throw new Error(`Validación fallida: ${validation.errors.join(" | ")}`);
-      }
-      const strictValidation = validateStrictWeeklyRules({
-        employees: EMPLOYEES,
-        days,
-        schedule
-      });
-      if (!strictValidation.ok) {
-        const grouped = Object.values(STRICT_WEEKLY_RULES).map(rule => {
-          const count = strictValidation.summary.byRule[rule] || 0;
-          if (count === 0) return null;
-          return `${STRICT_WEEKLY_RULE_MESSAGES[rule]} (${count})`;
-        }).filter(Boolean);
-        throw new Error(`Integridad semanal inválida: ${grouped.join(" | ")}`);
-      }
-      appendExportLog(`Validación completada. Filas: ${validation.rowCount}, columnas: ${validation.columnCount}.`);
-      setExportProgress(12);
-      setExportStatus("Validación completada.");
-      await waitTick();
-      const preset = getExportStylePreset(exportStylePreset);
-      const {
-        headers,
-        rows
-      } = buildExportRows({
-        employees: EMPLOYEES,
-        days,
-        schedule,
-        includeFormulas: exportIncludeFormulas && exportFormat !== "csv"
-      });
-      const totalRows = rows.length + 1;
-      const isLargeExport = totalRows > 10000;
-      appendExportLog(`Preparación de dataset completada. Registros: ${totalRows}.`);
-      if (isLargeExport) {
-        appendExportLog("Se activará modo optimizado para exportación pesada.", "warning");
-      }
-      setExportProgress(24);
-      setExportStatus("Construyendo hoja principal...");
-      await waitTick();
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      const headerStyle = {
-        font: {
-          bold: true,
-          color: {
-            rgb: preset.headerText
-          }
-        },
-        fill: {
-          fgColor: {
-            rgb: preset.headerBg
-          }
-        },
-        alignment: {
-          horizontal: "center"
-        },
-        border: {
-          top: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          bottom: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          left: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          right: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          }
-        }
-      };
-      for (let c = 0; c < headers.length; c++) {
-        const cellRef = XLSX.utils.encode_cell({
-          r: 0,
-          c
-        });
-        if (ws[cellRef]) ws[cellRef].s = headerStyle;
-      }
-      const lastDayColIndex = days.length;
-      const lastDayColLetter = XLSX.utils.encode_col(lastDayColIndex);
-      const o30FormulaCol = days.length + 1;
-      const hoursFormulaCol = days.length + 2;
-      for (let rIndex = 0; rIndex < rows.length; rIndex++) {
-        const row = rows[rIndex];
-        const rowIndex = rIndex + 1;
-        for (let cIndex = 0; cIndex < row.length; cIndex++) {
-          const cellRef = XLSX.utils.encode_cell({
-            r: rowIndex,
-            c: cIndex
-          });
-          if (!ws[cellRef]) continue;
-          if (cIndex === 0) {
-            ws[cellRef].s = {
-              font: {
-                bold: true,
-                color: {
-                  rgb: preset.rowText
-                }
-              },
-              alignment: {
-                horizontal: "left"
-              },
-              border: {
-                top: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                bottom: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                left: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                right: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                }
-              }
-            };
-          } else if (cIndex <= days.length) {
-            ws[cellRef].s = createExportCellStyle(row[cIndex], preset);
-          } else {
-            ws[cellRef].s = {
-              font: {
-                color: {
-                  rgb: preset.rowText
-                }
-              },
-              alignment: {
-                horizontal: "center"
-              },
-              border: {
-                top: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                bottom: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                left: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                },
-                right: {
-                  style: "thin",
-                  color: {
-                    rgb: preset.border
-                  }
-                }
-              }
-            };
-          }
-        }
-        if (exportIncludeFormulas && exportFormat !== "csv") {
-          const excelRow = rIndex + 2;
-          const range = `B${excelRow}:${lastDayColLetter}${excelRow}`;
-          const o30Cell = XLSX.utils.encode_cell({
-            r: rowIndex,
-            c: o30FormulaCol
-          });
-          const hoursCell = XLSX.utils.encode_cell({
-            r: rowIndex,
-            c: hoursFormulaCol
-          });
-          ws[o30Cell] = {
-            t: "n",
-            f: `COUNTIF(${range},"O30")`,
-            s: ws[o30Cell]?.s
-          };
-          ws[hoursCell] = {
-            t: "n",
-            f: `COUNTIF(${range},"O30")*6+COUNTIF(${range},"O40")*8+COUNTIF(${range},"O42")*9`,
-            s: ws[hoursCell]?.s
-          };
-        }
-        if (isLargeExport && rIndex % 500 === 0) {
-          const progressBase = 24 + Math.min(36, Math.floor(rIndex / Math.max(1, rows.length) * 36));
-          setExportProgress(progressBase);
-          setExportStatus(`Aplicando estilos y fórmulas (${rIndex + 1}/${rows.length})...`);
-          await waitTick();
-        }
-      }
-
-      // ── Filas de totales en hoja Horarios ──────────────────────────
-      if (exportFormat !== "csv") {
-        const totalsTypes = [["TOTAL 30h", "O30"], ["TOTAL 40h", "O40"], ["TOTAL 42h", "O42"], ["TOTAL VAC", "V"]];
-        const totalRowsAoa = totalsTypes.map(([label, type]) => {
-          const tRow = [label];
-          days.forEach(day => {
-            tRow.push(EMPLOYEES.filter(emp => schedule[emp.id][day.id] === type).length);
-          });
-          if (exportIncludeFormulas) {
-            tRow.push(null);
-            tRow.push(null);
-          }
-          return tRow;
-        });
-        XLSX.utils.sheet_add_aoa(ws, totalRowsAoa, {
-          origin: {
-            r: rows.length + 1,
-            c: 0
-          }
-        });
-        totalsTypes.forEach(([, type], tIdx) => {
-          const rIdx = rows.length + 1 + tIdx;
-          for (let c = 0; c < days.length + 1 + (exportIncludeFormulas ? 2 : 0); c++) {
-            const cellRef = XLSX.utils.encode_cell({
-              r: rIdx,
-              c
-            });
-            if (!ws[cellRef]) continue;
-            ws[cellRef].s = c === 0 ? {
-              font: {
-                bold: true,
-                color: {
-                  rgb: preset.headerText
-                }
-              },
-              fill: {
-                fgColor: {
-                  rgb: preset.headerBg
-                }
-              },
-              alignment: {
-                horizontal: "left"
-              }
-            } : createExportCellStyle(type, preset);
-          }
-        });
-        appendExportLog("Filas de totales añadidas a Horarios.");
-      }
-      const colWidths = [{
-        wch: 20
-      }, ...days.map(() => ({
-        wch: 11
-      }))];
-      if (exportIncludeFormulas && exportFormat !== "csv") {
-        colWidths.push({
-          wch: 18
-        });
-        colWidths.push({
-          wch: 24
-        });
-      }
-      ws["!cols"] = colWidths;
-      ws["!freeze"] = {
-        xSplit: 1,
-        ySplit: 1
-      };
-      if (exportProtectSheet && exportFormat !== "csv") {
-        ws["!protect"] = {
-          password: exportPassword || "Horarios2026",
-          selectLockedCells: true,
-          selectUnlockedCells: true
-        };
-        appendExportLog("Protección de hoja activada.");
-      }
-      XLSX.utils.book_append_sheet(wb, ws, "Horarios");
-      setExportProgress(42);
-      setExportStatus("Generando hojas adicionales...");
-      await waitTick();
-
-      // Estilos reutilizables para hojas auxiliares
-      const auxHeaderStyle = {
-        font: {
-          bold: true,
-          color: {
-            rgb: preset.headerText
-          }
-        },
-        fill: {
-          fgColor: {
-            rgb: preset.headerBg
-          }
-        },
-        alignment: {
-          horizontal: "center",
-          wrapText: true
-        },
-        border: {
-          top: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          bottom: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          left: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          },
-          right: {
-            style: "thin",
-            color: {
-              rgb: preset.border
-            }
-          }
-        }
-      };
-      const auxSubHeaderStyle = {
-        font: {
-          bold: true,
-          color: {
-            rgb: preset.rowText
-          }
-        },
-        fill: {
-          fgColor: {
-            rgb: "E2E8F0"
-          }
-        },
-        alignment: {
-          horizontal: "center"
-        }
-      };
-      const auxTitleStyle = {
-        font: {
-          bold: true,
-          sz: 12,
-          color: {
-            rgb: "1E40AF"
-          }
-        },
-        fill: {
-          fgColor: {
-            rgb: "EFF6FF"
-          }
-        }
-      };
-      const auxSubtitleStyle = {
-        font: {
-          italic: true,
-          color: {
-            rgb: "64748B"
-          }
-        },
-        fill: {
-          fgColor: {
-            rgb: "F8FAFC"
-          }
-        }
-      };
-      const applyRowStyle = (wsTarget, rIdx, colCount, style) => {
-        for (let c = 0; c < colCount; c++) {
-          const ref = XLSX.utils.encode_cell({
-            r: rIdx,
-            c
-          });
-          if (wsTarget[ref]) wsTarget[ref].s = style;
-        }
-      };
-      if (exportFormat !== "csv") {
-        // ── Hoja 2: Resumen_Mensual ───────────────────────────────────
-        const aoaResumen = buildResumenMensualSheet({
-          employees: EMPLOYEES,
-          days,
-          schedule
-        });
-        const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
-        applyRowStyle(wsResumen, 0, aoaResumen[0].length, auxHeaderStyle);
-        applyRowStyle(wsResumen, 1, aoaResumen[1].length, auxSubHeaderStyle);
-        wsResumen["!freeze"] = {
-          xSplit: 3,
-          ySplit: 2
-        };
-        wsResumen["!cols"] = [{
-          wch: 16
-        }, {
-          wch: 12
-        }, {
-          wch: 10
-        }, ...Array(aoaResumen[0].length - 3).fill({
-          wch: 9
-        })];
-        XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen_Mensual");
-        appendExportLog("Hoja Resumen_Mensual generada.");
-        setExportProgress(52);
-        await waitTick();
-
-        // ── Hoja 3: Vista_Semanas ────────────────────────────────────
-        const aoaSemanas = buildVistaSemanasSheet({
-          employees: EMPLOYEES,
-          days,
-          schedule
-        });
-        const wsSemanas = XLSX.utils.aoa_to_sheet(aoaSemanas);
-        applyRowStyle(wsSemanas, 0, aoaSemanas[0].length, auxHeaderStyle);
-        wsSemanas["!freeze"] = {
-          xSplit: 1,
-          ySplit: 1
-        };
-        wsSemanas["!cols"] = [{
-          wch: 10
-        }, {
-          wch: 22
-        }, {
-          wch: 12
-        }, {
-          wch: 14
-        }, {
-          wch: 12
-        }, {
-          wch: 8
-        }, {
-          wch: 12
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 12
-        }];
-        XLSX.utils.book_append_sheet(wb, wsSemanas, "Vista_Semanas");
-        appendExportLog("Hoja Vista_Semanas generada.");
-        setExportProgress(60);
-        await waitTick();
-
-        // ── Hoja 4: Estadisticas ─────────────────────────────────────
-        const aoaStats = buildEstadisticasSheet({
-          employees: EMPLOYEES,
-          days,
-          schedule,
-          forcedOfficeDetails: stats.forcedOfficeDetails,
-          intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
-          totalHoursByEmp: stats.totalHoursByEmp
-        });
-        const wsStats = XLSX.utils.aoa_to_sheet(aoaStats);
-        applyRowStyle(wsStats, 0, aoaStats[0].length, auxHeaderStyle);
-        // Style totals row (last row)
-        const statsLastRow = aoaStats.length - 1;
-        applyRowStyle(wsStats, statsLastRow, aoaStats[0].length, {
-          font: {
-            bold: true
-          },
-          fill: {
-            fgColor: {
-              rgb: "DBEAFE"
-            }
-          }
-        });
-        wsStats["!freeze"] = {
-          xSplit: 1,
-          ySplit: 1
-        };
-        wsStats["!cols"] = [{
-          wch: 14
-        }, {
-          wch: 12
-        }, {
-          wch: 8
-        }, {
-          wch: 12
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 9
-        }, {
-          wch: 13
-        }, {
-          wch: 16
-        }, {
-          wch: 13
-        }, {
-          wch: 14
-        }, {
-          wch: 20
-        }];
-        XLSX.utils.book_append_sheet(wb, wsStats, "Estadisticas");
-        appendExportLog("Hoja Estadisticas generada.");
-        setExportProgress(68);
-        await waitTick();
-
-        // ── Hoja 5: Vacaciones ───────────────────────────────────────
-        const aoaVac = buildVacacionesSheet({
-          employees: EMPLOYEES,
-          days,
-          schedule
-        });
-        const wsVac = XLSX.utils.aoa_to_sheet(aoaVac);
-        applyRowStyle(wsVac, 0, aoaVac[0].length, auxHeaderStyle);
-        // Color vacation rows rose
-        const vacStyle = {
-          fill: {
-            fgColor: {
-              rgb: "FFF1F2"
-            }
-          },
-          font: {
-            color: {
-              rgb: "9F1239"
-            }
-          }
-        };
-        for (let r = 1; r < EMPLOYEES.length * days.length + 1; r++) {
-          const firstCell = XLSX.utils.encode_cell({
-            r,
-            c: 0
-          });
-          if (!wsVac[firstCell] || !wsVac[firstCell].v) break;
-          applyRowStyle(wsVac, r, aoaVac[0].length, vacStyle);
-        }
-        wsVac["!freeze"] = {
-          xSplit: 1,
-          ySplit: 1
-        };
-        wsVac["!cols"] = [{
-          wch: 14
-        }, {
-          wch: 12
-        }, {
-          wch: 14
-        }, {
-          wch: 12
-        }, {
-          wch: 12
-        }, {
-          wch: 12
-        }];
-        XLSX.utils.book_append_sheet(wb, wsVac, "Vacaciones");
-        appendExportLog("Hoja Vacaciones generada.");
-        setExportProgress(75);
-        await waitTick();
-
-        // ── Hoja 6: Alertas ──────────────────────────────────────────
-        const aoaAlertas = buildAlertasSheet({
-          alerts: stats.alerts,
-          days,
-          employees: EMPLOYEES,
-          schedule
-        });
-        const wsAlertas = XLSX.utils.aoa_to_sheet(aoaAlertas);
-        applyRowStyle(wsAlertas, 0, aoaAlertas[0].length, auxHeaderStyle);
-        // Color rows by severity
-        for (let r = 1; r < aoaAlertas.length; r++) {
-          const sevCell = XLSX.utils.encode_cell({
-            r,
-            c: 4
-          });
-          if (!wsAlertas[sevCell]) continue;
-          const sev = wsAlertas[sevCell].v;
-          const alertRowStyle = sev === "CRÍTICO" ? {
-            fill: {
-              fgColor: {
-                rgb: "FEF2F2"
-              }
-            },
-            font: {
-              color: {
-                rgb: "991B1B"
-              }
-            }
-          } : sev === "AVISO" ? {
-            fill: {
-              fgColor: {
-                rgb: "FFFBEB"
-              }
-            },
-            font: {
-              color: {
-                rgb: "92400E"
-              }
-            }
-          } : null;
-          if (alertRowStyle) applyRowStyle(wsAlertas, r, aoaAlertas[0].length, alertRowStyle);
-        }
-        wsAlertas["!freeze"] = {
-          xSplit: 1,
-          ySplit: 1
-        };
-        wsAlertas["!cols"] = [{
-          wch: 14
-        }, {
-          wch: 12
-        }, {
-          wch: 12
-        }, {
-          wch: 10
-        }, {
-          wch: 10
-        }, {
-          wch: 14
-        }, {
-          wch: 30
-        }, {
-          wch: 40
-        }, {
-          wch: 35
-        }, {
-          wch: 12
-        }];
-        XLSX.utils.book_append_sheet(wb, wsAlertas, "Alertas");
-        appendExportLog("Hoja Alertas generada.");
-        setExportProgress(82);
-        await waitTick();
-
-        // ── Hoja 7: Datos_Graficos ───────────────────────────────────
-        if (exportIncludeChartData) {
-          const aoaGraficos = buildDatosGraficosSheet({
-            employees: EMPLOYEES,
-            days,
-            schedule,
-            intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
-            forcedOfficeDetails: stats.forcedOfficeDetails,
-            dailyCoverage: stats.dailyCoverage
-          });
-          const wsGraficos = XLSX.utils.aoa_to_sheet(aoaGraficos);
-          // Style section titles and subtitles
-          aoaGraficos.forEach((row, r) => {
-            if (!row[0]) return;
-            const v = String(row[0]);
-            if (v.startsWith("TABLA")) applyRowStyle(wsGraficos, r, 1, auxTitleStyle);else if (v.startsWith("Gráfico")) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);else if (v.startsWith("───")) applyRowStyle(wsGraficos, r, 1, {
-              font: {
-                bold: true,
-                color: {
-                  rgb: "1E40AF"
-                }
-              }
-            });else if (v.startsWith("TABLA") || v.match(/^[1-4]\./)) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);
-          });
-          wsGraficos["!cols"] = [{
-            wch: 20
-          }, {
-            wch: 14
-          }, ...Array(10).fill({
-            wch: 12
-          })];
-          XLSX.utils.book_append_sheet(wb, wsGraficos, "Datos_Graficos");
-          appendExportLog("Hoja Datos_Graficos (4 tablas con instrucciones) generada.");
-          appendExportLog("Nota: los gráficos deben crearse manualmente en Excel usando los rangos indicados en cada tabla.", "warning");
-          setExportProgress(90);
-          await waitTick();
-        }
-      }
-      const fileBase = `planificacion_horarios_${currentYear}`;
-      if (exportFormat === "csv") {
-        const csv = XLSX.utils.sheet_to_csv(ws);
-        const csvBlob = new Blob([csv], {
-          type: "text/csv;charset=utf-8;"
-        });
-        const csvBytes = csvBlob.size;
-        if (csvBytes > 1024 * 1024 && typeof CompressionStream !== "undefined") {
-          const compression = new CompressionStream("gzip");
-          const compressedStream = new Blob([csv]).stream().pipeThrough(compression);
-          const compressedBlob = await new Response(compressedStream).blob();
-          downloadBlob(compressedBlob, `${fileBase}.csv.gz`);
-          appendExportLog(`CSV comprimido automáticamente (${Math.round(csvBytes / 1024)} KB -> ${Math.round(compressedBlob.size / 1024)} KB).`);
-        } else {
-          downloadBlob(csvBlob, `${fileBase}.csv`);
-          if (csvBytes > 1024 * 1024) {
-            appendExportLog("No se pudo comprimir automáticamente por limitaciones del navegador.", "warning");
-          }
-        }
-      } else {
-        const wbout = XLSX.write(wb, {
-          bookType: exportFormat,
-          type: "array",
-          compression: isLargeExport
-        });
-        const blob = new Blob([wbout], {
-          type: "application/octet-stream"
-        });
-        downloadBlob(blob, `${fileBase}.${exportFormat}`);
-      }
-      setExportProgress(100);
-      setExportStatus("Exportación completada correctamente.");
-      appendExportLog("Exportación finalizada con éxito.");
-    } catch (error) {
-      const message = getExportErrorMessage(error);
-      setExportError(`No se pudo completar la exportación: ${message}`);
-      setExportStatus("Exportación fallida.");
-      appendExportLog(`Error: ${message}`, "error");
-    } finally {
-      setExportInProgress(false);
-    }
-  };
-  const handleCellClick = (emp, day) => {
-    const typeKey = schedule[emp.id][day.id];
-    setModalData({
-      isOpen: true,
-      emp,
-      day,
-      typeKey
-    });
-  };
-  const quickFilteredEmployees = useMemo(() => {
-    const query = employeeSearch.trim().toLowerCase();
-    if (!query) return EMPLOYEES;
-    return EMPLOYEES.filter(emp => emp.name.toLowerCase().includes(query));
-  }, [employeeSearch]);
-  const filteredEmployees = selectedEmp === "all" ? quickFilteredEmployees : quickFilteredEmployees.filter(e => e.id === parseInt(selectedEmp, 10));
-  const weekdaysCalendar = ["L", "M", "X", "J", "V"];
-  const calendarMonths = useMemo(() => {
-    return daysByMonth.map(([monthName, monthDays]) => {
-      const weeksMap = {};
-      monthDays.forEach(day => {
-        weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
-        weeksMap[day.weekIndex][day.weekdayLetter] = day;
-      });
-      const weekIndexes = Object.keys(weeksMap).map(value => parseInt(value, 10)).sort((a, b) => a - b);
-      return {
-        monthName,
-        weeks: weekIndexes.map(index => weeksMap[index])
-      };
-    });
-  }, [daysByMonth]);
-  const tableSpacing = tableDensity === "compact" ? {
-    headerCell: "p-1.5",
-    firstColHeader: "p-2.5",
-    firstColCell: "p-2",
-    bodyCell: "p-0.5",
-    slotHeight: "h-8"
-  } : {
-    headerCell: "p-2",
-    firstColHeader: "p-4",
-    firstColCell: "p-3",
-    bodyCell: "p-1",
-    slotHeight: "h-10"
-  };
-  if (!isLoggedIn) {
-    return /*#__PURE__*/React.createElement(LoginForm, {
-      onLogin: handleLogin
-    });
   }
-  return /*#__PURE__*/React.createElement("div", {
-    className: "min-h-screen bg-white p-3 sm:p-6 text-brand-dark"
-  }, /*#__PURE__*/React.createElement(WeekDetailModal, _extends({}, modalData, {
-    onClose: () => setModalData({
-      ...modalData,
-      isOpen: false
-    })
-  })), /*#__PURE__*/React.createElement(ForcedOfficeListModal, {
-    open: oListOpen,
-    onClose: () => setOListOpen(false)
-  }), /*#__PURE__*/React.createElement("header", {
-    className: "mb-6 flex flex-col gap-4 border-b border-gray-200 pb-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-6"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: "logo.png",
-    alt: "Logo",
-    className: "h-16 w-auto object-contain"
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
-    className: "text-2xl font-bold text-brand-blue tracking-tight"
-  }, "Gestion Horaria Dept. Sistemas"))), /*#__PURE__*/React.createElement("div", {
-    className: "sticky top-0 z-40 bg-white/95 backdrop-blur border border-gray-200 rounded-xl p-3 shadow-sm"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap items-center gap-2"
-  }, /*#__PURE__*/React.createElement("select", {
-    className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm",
-    value: selectedEmp,
-    onChange: e => setSelectedEmp(e.target.value)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "all"
-  }, "Todos los integrantes"), EMPLOYEES.map(e => /*#__PURE__*/React.createElement("option", {
-    key: e.id,
-    value: e.id
-  }, e.name))), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: employeeSearch,
-    onChange: e => setEmployeeSearch(e.target.value),
-    placeholder: "Filtrar por nombre",
-    className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm min-w-[12rem]"
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setOListOpen(true),
-    className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
-  }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setVacationSectionOpen(prev => !prev);
-      if (!vacationSectionOpen) {
-        setExportPanelExpanded(false);
+  ;
+  const LoginForm = ({
+    onLogin
+  }) => {
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const handleSubmit = e => {
+      e.preventDefault();
+      if (username === "Sistemas" && password === "Inicio2026") {
+        onLogin();
+      } else {
+        setError("Usuario o contraseña incorrectos");
       }
-    },
-    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${vacationSectionOpen ? "bg-teal-700" : "bg-teal-600 hover:bg-teal-700"}`
-  }, vacationSectionOpen ? "Cerrar vacaciones" : "Ver vacaciones"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setExportPanelExpanded(prev => !prev);
-      if (!exportPanelExpanded) {
-        setVacationSectionOpen(false);
-      }
-    },
-    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportPanelExpanded ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"}`
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "16",
-    height: "16",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-  }), /*#__PURE__*/React.createElement("polyline", {
-    points: "14 2 14 8 20 8"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "16",
-    y1: "13",
-    x2: "8",
-    y2: "13"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "16",
-    y1: "17",
-    x2: "8",
-    y2: "17"
-  }), /*#__PURE__*/React.createElement("polyline", {
-    points: "10 9 9 9 8 9"
-  })), exportPanelExpanded ? "Cerrar exportación" : "Exportar"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setViewMode(prev => prev === "matrix" ? "calendar" : "matrix"),
-    className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${viewMode === "calendar" ? "bg-fuchsia-700" : "bg-fuchsia-600 hover:bg-fuchsia-700"}`
-  }, viewMode === "calendar" ? "Vista matriz" : "Vista calendario"), /*#__PURE__*/React.createElement("button", {
-    onClick: handleResetPlan,
-    className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
-  }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
-    onClick: handleLogout,
-    className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
-  }, "Cerrar Sesi\xF3n")))), exportPanelExpanded && /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 bg-white border border-emerald-200 rounded-xl p-4 shadow-sm space-y-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between gap-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-gray-800"
-  }, "Exportaci\xF3n Excel y validaciones"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-gray-500"
-  }, "Configura la exportaci\xF3n y lanza la descarga.")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setExportPanelExpanded(false),
-    className: "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
-  }, "Ocultar")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-6 gap-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-gray-500 mb-1"
-  }, "Formato"), /*#__PURE__*/React.createElement("select", {
-    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
-    value: exportFormat,
-    onChange: e => setExportFormat(e.target.value)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "xlsx"
-  }, ".xlsx"), /*#__PURE__*/React.createElement("option", {
-    value: "xls"
-  }, ".xls"), /*#__PURE__*/React.createElement("option", {
-    value: "csv"
-  }, ".csv"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-gray-500 mb-1"
-  }, "Estilo"), /*#__PURE__*/React.createElement("select", {
-    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
-    value: exportStylePreset,
-    onChange: e => setExportStylePreset(e.target.value)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "corporativo"
-  }, "Corporativo"), /*#__PURE__*/React.createElement("option", {
-    value: "neutro"
-  }, "Neutro"))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-end"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 text-xs text-gray-700"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: exportIncludeFormulas,
-    onChange: e => setExportIncludeFormulas(e.target.checked)
-  }), "F\xF3rmulas Excel")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-end"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 text-xs text-gray-700"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: exportIncludeChartData,
-    onChange: e => setExportIncludeChartData(e.target.checked)
-  }), "Datos para gr\xE1ficos")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-end"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 text-xs text-gray-700"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: exportProtectSheet,
-    onChange: e => setExportProtectSheet(e.target.checked)
-  }), "Proteger hoja")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-gray-500 mb-1"
-  }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
-    value: exportPassword,
-    onChange: e => setExportPassword(e.target.value),
-    disabled: !exportProtectSheet,
-    placeholder: "Opcional"
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-end"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: exportToExcel,
-    disabled: exportInProgress,
-    className: `px-4 py-2 rounded text-sm font-semibold text-white transition-colors ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
-  }, exportInProgress ? "Exportando..." : "Descargar archivo")), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "h-2 bg-gray-100 rounded overflow-hidden"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: `h-full ${exportError ? "bg-rose-500" : "bg-emerald-500"}`,
-    style: {
-      width: `${Math.max(0, Math.min(100, exportProgress))}%`
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between text-xs"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: exportError ? "text-rose-600" : "text-gray-600"
-  }, exportError || exportStatus || "Listo para exportar"), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-500"
-  }, Math.round(exportProgress), "%"))), exportLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-36 overflow-auto"
-  }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
-    key: `${entry.ts}-${idx}`,
-    className: `text-[11px] ${entry.level === "error" ? "text-rose-700" : entry.level === "warning" ? "text-amber-700" : "text-slate-600"}`
-  }, entry.ts.slice(11, 19), " \xB7 ", entry.message)))), /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col md:flex-row md:items-center md:justify-between gap-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => handleModeChange("config"),
-    className: `px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "config" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"}`
-  }, "Configuraci\xF3n"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => handleModeChange("dashboard"),
-    className: `px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "dashboard" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"} ${savedYears.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
-    disabled: savedYears.length === 0
-  }, "Dashboards definitivos")), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col md:flex-row md:items-center md:justify-end gap-2 text-xs text-gray-500"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "A\xF1o activo:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-800 font-bold"
-  }, currentYear)), mode === "dashboard" && savedYears.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "A\xF1os guardados:"), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap gap-1"
-  }, savedYears.map(y => /*#__PURE__*/React.createElement("button", {
-    key: y,
-    type: "button",
-    onClick: () => handleSelectDashboardYear(y),
-    className: `px-2 py-0.5 rounded-full border text-[11px] ${activeDashboardYear === y ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-600 border-gray-300"}`
-  }, y)))))), mode === "config" && vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 lg:grid-cols-3 gap-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-3"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-gray-800"
-  }, "Gestor de vacaciones"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-gray-400"
-  }, "A\xF1o ", year), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setVacationSectionOpen(false),
-    className: "px-2 py-1 rounded-md text-[11px] font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
-  }, "Ocultar"))), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-gray-500 mb-1"
-  }, "A\xF1o de planificaci\xF3n"), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    className: "w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue",
-    value: year,
-    min: "2024",
-    max: "2100",
-    onChange: e => handleYearChange(e.target.value)
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-gray-500 mb-1"
-  }, "Integrante"), /*#__PURE__*/React.createElement("select", {
-    className: "w-full bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue",
-    value: selectedVacationEmpName,
-    onChange: e => setSelectedVacationEmpName(e.target.value)
-  }, EMPLOYEES.map(e => /*#__PURE__*/React.createElement("option", {
-    key: e.id,
-    value: e.name
-  }, e.name)))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between text-xs text-gray-500"
-  }, /*#__PURE__*/React.createElement("span", null, "D\xEDas seleccionados: ", vacationPlan[selectedVacationEmpName]?.length || 0)), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: handleAcceptCalendar,
-    className: "w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-sm font-semibold shadow-md transition-colors"
-  }, "Aceptar calendario ", year))), /*#__PURE__*/React.createElement("div", {
-    className: "lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-3"
-  }, /*#__PURE__*/React.createElement("h4", {
-    className: "text-sm font-semibold text-gray-800"
-  }, "Calendario de vacaciones"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-gray-500"
-  }, "Click en un d\xEDa para alternar vacaciones")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-2 gap-4"
-  }, daysByMonth.map(([monthName, monthDays]) => /*#__PURE__*/React.createElement("div", {
-    key: monthName
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-xs font-semibold text-gray-500 mb-1"
-  }, monthName), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-5 gap-1"
-  }, monthDays.map(day => {
-    const isSelected = (vacationPlan[selectedVacationEmpName] || []).includes(day.id);
-    return /*#__PURE__*/React.createElement("button", {
-      key: day.id,
-      type: "button",
-      onClick: () => toggleVacationDay(selectedVacationEmpName, day.id),
-      className: `h-10 rounded-md border text-[11px] flex flex-col items-center justify-center ${isSelected ? "bg-rose-500 text-white border-rose-500" : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-mono"
-    }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] opacity-80"
-    }, day.weekdayLetter));
-  }))))))), mode === "config" && !vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
-    className: "rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700"
-  }, "El gestor de vacaciones est\xE1 oculto. Pulsa \u201CVer vacaciones\u201D en la barra superior para abrirlo.")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "24",
-    height: "24",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: "9",
-    cy: "7",
-    r: "4"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M23 21v-2a4 4 0 0 0-3-3.87"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M16 3.13a4 4 0 0 1 0 7.75"
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-500"
-  }, "Total Integrantes"), /*#__PURE__*/React.createElement("p", {
-    className: "text-2xl font-bold text-gray-800"
-  }, EMPLOYEES.length))), /*#__PURE__*/React.createElement("div", {
-    className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: `p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-gray-800`
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "24",
-    height: "24",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "12",
-    y1: "9",
-    x2: "12",
-    y2: "13"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "12",
-    y1: "17",
-    x2: "12.01",
-    y2: "17"
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-500"
-  }, "Conflictos / Alertas"), /*#__PURE__*/React.createElement("p", {
-    className: "text-2xl font-bold text-gray-800"
-  }, stats.alerts.length))), /*#__PURE__*/React.createElement("div", {
-    className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-600"
-  }, /*#__PURE__*/React.createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: "24",
-    height: "24",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "3",
-    y: "3",
-    width: "18",
-    height: "18",
-    rx: "2",
-    ry: "2"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "9",
-    x2: "15",
-    y2: "9"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "9",
-    y1: "15",
-    x2: "15",
-    y2: "15"
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-500"
-  }, "D\xEDas con forzado oficina (O)"), /*#__PURE__*/React.createElement("p", {
-    className: "text-2xl font-bold text-gray-800"
-  }, stats.forcedOfficeDetails.length))), /*#__PURE__*/React.createElement("div", {
-    className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider"
-  }, "Leyenda"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-emerald-700"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "Intensiva 30h")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-blue-700"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "40h (17:00)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-violet-700"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "42h (18:00, V 14:00)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-rose-700"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "Vacaciones"))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
-  }, /*#__PURE__*/React.createElement(IconHome, {
-    className: "w-[10px] h-[10px]"
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "Teletrabajo")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
-  }, /*#__PURE__*/React.createElement(IconOffice, {
-    className: "w-[10px] h-[10px]"
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "En oficina")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center space-x-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-4 h-4 rounded bg-amber-500 flex items-center justify-center text-white"
-  }, /*#__PURE__*/React.createElement(IconOffice, {
-    className: "w-[10px] h-[10px]"
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-gray-600"
-  }, "Forzado oficina"))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-400 mt-2"
-  }, "* Click en celda para ver detalle de turno"))), stats.alerts.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mb-6 space-y-4"
-  }, (() => {
-    const allReasons = stats.alerts.flatMap(a => a.reasons);
-    const criticalCount = allReasons.filter(r => r.severity === "critical").length;
-    const warningCount = allReasons.filter(r => r.severity === "warning").length;
-    const infoCount = allReasons.filter(r => r.severity === "info").length;
-    const allCovered = criticalCount === 0 && warningCount === 0;
+    };
     return /*#__PURE__*/React.createElement("div", {
-      className: `p-4 rounded-lg border flex flex-col md:flex-row md:items-center gap-4 ${allCovered ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`
+      className: "min-h-screen bg-slate-50 flex items-center justify-center p-4"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3 flex-1"
+      className: "max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `p-2 rounded-full shrink-0 ${allCovered ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`
-    }, allCovered ? /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("path", {
-      d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
-    }), /*#__PURE__*/React.createElement("polyline", {
-      points: "22 4 12 14.01 9 11.01"
-    })) : /*#__PURE__*/React.createElement("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      width: "20",
-      height: "20",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "2",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("path", {
-      d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "12",
-      y1: "9",
-      x2: "12",
-      y2: "13"
-    }), /*#__PURE__*/React.createElement("line", {
-      x1: "12",
-      y1: "17",
-      x2: "12.01",
-      y2: "17"
-    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-      className: `font-bold ${allCovered ? 'text-emerald-800' : 'text-amber-800'}`
-    }, allCovered ? 'Planificación sin conflictos' : 'Atención requerida en la planificación'), /*#__PURE__*/React.createElement("p", {
-      className: `text-sm ${allCovered ? 'text-emerald-600' : 'text-amber-600'}`
-    }, allCovered ? `${stats.alerts.length} días con observaciones informativas, todas cubiertas.` : `${stats.alerts.length} días con alertas · ${criticalCount + warningCount} requieren revisión.`))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 flex-wrap"
-    }, criticalCount > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200"
+      className: "text-center mb-8"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-4"
+    }, /*#__PURE__*/React.createElement("img", {
+      src: "logo.png",
+      alt: "Logo",
+      className: "w-48 mx-auto object-contain"
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-2xl font-bold text-gray-900"
+    }, "Acceso Restringido"), /*#__PURE__*/React.createElement("p", {
+      className: "text-gray-500 mt-2"
+    }, "Introduce tus credenciales para continuar")), /*#__PURE__*/React.createElement("form", {
+      onSubmit: handleSubmit,
+      className: "space-y-6"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-sm font-medium text-gray-700 mb-1.5"
+    }, "Usuario"), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      required: true,
+      className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
+      placeholder: "Nombre de usuario",
+      value: username,
+      onChange: e => setUsername(e.target.value)
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-sm font-medium text-gray-700 mb-1.5"
+    }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
+      type: "password",
+      required: true,
+      className: "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all text-black font-semibold",
+      placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+      value: password,
+      onChange: e => setPassword(e.target.value)
+    })), error && /*#__PURE__*/React.createElement("div", {
+      className: "bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2"
     }, /*#__PURE__*/React.createElement("svg", {
       xmlns: "http://www.w3.org/2000/svg",
-      width: "12",
-      height: "12",
+      width: "16",
+      height: "16",
       viewBox: "0 0 24 24",
       fill: "none",
       stroke: "currentColor",
-      strokeWidth: "2.5",
+      strokeWidth: "2",
       strokeLinecap: "round",
       strokeLinejoin: "round"
     }, /*#__PURE__*/React.createElement("circle", {
@@ -4749,16 +2115,2447 @@ const App = () => {
       y1: "16",
       x2: "12.01",
       y2: "16"
-    })), criticalCount, " cr\xEDticas"), warningCount > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"
+    })), error), /*#__PURE__*/React.createElement("button", {
+      type: "submit",
+      className: "w-full bg-brand-blue hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-blue/20 transform transition-all active:scale-[0.98]"
+    }, "Iniciar Sesi\xF3n")), /*#__PURE__*/React.createElement("p", {
+      className: "mt-8 text-center text-xs text-gray-400"
+    }, "Dept. Sistemas \xA9 2026")));
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // FUNCIONES AUXILIARES PARA HOJAS EXCEL
+  // ═══════════════════════════════════════════════════════════
+
+  const buildResumenMensualSheet = ({
+    employees,
+    days,
+    schedule
+  }) => {
+    const months = [];
+    const monthSet = new Set();
+    days.forEach(d => {
+      if (!monthSet.has(d.month)) {
+        monthSet.add(d.month);
+        months.push(d.month);
+      }
+    });
+    const types = ["O30", "O40", "O42", "V"];
+    const typeLabels = {
+      O30: "30h",
+      O40: "40h",
+      O42: "42h",
+      V: "VAC"
+    };
+    const hoursPerType = {
+      O30: 6,
+      O40: 8,
+      O42: 9,
+      V: 0
+    };
+    const row0 = ["Integrante", "Rol", "Grupo"];
+    const row1 = ["", "", ""];
+    months.forEach(m => {
+      types.forEach(t => {
+        row0.push(m.substring(0, 3));
+        row1.push(typeLabels[t]);
+      });
+      row0.push(m.substring(0, 3));
+      row1.push("Horas");
+    });
+    row0.push("TOTAL");
+    row1.push("Horas");
+    row0.push("Días O30");
+    row1.push("");
+    row0.push("Sem. Intens.");
+    row1.push("");
+    const aoa = [row0, row1];
+    employees.forEach(emp => {
+      const row = [emp.name, emp.role, `Grupo ${emp.group}`];
+      let totalHours = 0;
+      let totalO30 = 0;
+      months.forEach(m => {
+        const mDays = days.filter(d => d.month === m);
+        const cnt = {
+          O30: 0,
+          O40: 0,
+          O42: 0,
+          V: 0
+        };
+        mDays.forEach(day => {
+          const t = schedule[emp.id][day.id];
+          if (cnt[t] !== undefined) cnt[t]++;
+        });
+        types.forEach(t => row.push(cnt[t]));
+        const mHours = types.reduce((s, t) => s + cnt[t] * hoursPerType[t], 0);
+        row.push(mHours);
+        totalHours += mHours;
+        totalO30 += cnt.O30;
+      });
+      row.push(totalHours);
+      row.push(totalO30);
+      // Intensive weeks count
+      const weeksMap = {};
+      days.forEach(d => {
+        weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+        weeksMap[d.weekIndex].push(d);
+      });
+      let intensiveWeeks = 0;
+      Object.values(weeksMap).forEach(wDays => {
+        if (wDays.every(d => schedule[emp.id][d.id] === "O30")) intensiveWeeks++;
+      });
+      row.push(intensiveWeeks);
+      aoa.push(row);
+    });
+    return aoa;
+  };
+  const buildVistaSemanasSheet = ({
+    employees,
+    days,
+    schedule
+  }) => {
+    const weeksMap = {};
+    days.forEach(d => {
+      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+      weeksMap[d.weekIndex].push(d);
+    });
+    const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+    const headers = ["Semana", "Período", "Mes", "Integrante", "Rol", "Grupo", "Tipo semana", "Días O30", "Días O40", "Días O42", "Días VAC", "Horas semana"];
+    const aoa = [headers];
+    weekIdxs.forEach(wi => {
+      const wDays = weeksMap[wi];
+      const start = wDays[0];
+      const end = wDays[wDays.length - 1];
+      const period = `${start.label} – ${end.label}`;
+      const month = wDays[Math.floor(wDays.length / 2)].month;
+      employees.forEach(emp => {
+        const cnt = {
+          O30: 0,
+          O40: 0,
+          O42: 0,
+          V: 0
+        };
+        wDays.forEach(day => {
+          const t = schedule[emp.id][day.id];
+          if (cnt[t] !== undefined) cnt[t]++;
+        });
+        const nonVac = {
+          O30: cnt.O30,
+          O40: cnt.O40,
+          O42: cnt.O42
+        };
+        const dominant = Object.entries(nonVac).sort((a, b) => b[1] - a[1])[0][0];
+        const hours = cnt.O30 * 6 + cnt.O40 * 8 + cnt.O42 * 9;
+        aoa.push([`Semana ${wi + 1}`, period, month, emp.name, emp.role, `Grupo ${emp.group}`, dominant, cnt.O30, cnt.O40, cnt.O42, cnt.V, hours]);
+      });
+      aoa.push([]);
+    });
+    return aoa;
+  };
+  const buildEstadisticasSheet = ({
+    employees,
+    days,
+    schedule,
+    forcedOfficeDetails,
+    intensiveWeeksByEmp,
+    totalHoursByEmp
+  }) => {
+    const forcedByEmp = {};
+    employees.forEach(e => {
+      forcedByEmp[e.id] = 0;
+    });
+    forcedOfficeDetails.forEach(item => {
+      forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1;
+    });
+    const weeksMap = {};
+    days.forEach(d => {
+      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+      weeksMap[d.weekIndex].push(d);
+    });
+    const headers = ["Integrante", "Rol", "Grupo", "Días en periodo", "Días O30", "Días O40", "Días O42", "Días VAC", "Sem. Intensivas", "Obj. mín. (6 sem)", "Horas Totales", "Media H/Día lab.", "Días Forzados Oficina"];
+    const aoa = [headers];
+    employees.forEach(emp => {
+      const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
+      const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
+      const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
+      const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
+      const tot = totalHoursByEmp[emp.id] || 0;
+      const workDays = o30 + o40 + o42;
+      const avg = workDays > 0 ? Math.round(tot / workDays * 10) / 10 : 0;
+      const intensSem = intensiveWeeksByEmp[emp.id] || 0;
+      const meetsMin = intensSem >= 6 ? "SÍ ✓" : `NO (faltan ${6 - intensSem})`;
+      aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, days.length, o30, o40, o42, vac, intensSem, meetsMin, tot, avg, forcedByEmp[emp.id]]);
+    });
+    // Summary row
+    aoa.push([]);
+    aoa.push(["TOTALES", "", "", "", employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O30").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O40").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "O42").length, 0), employees.reduce((s, e) => s + days.filter(d => schedule[e.id][d.id] === "V").length, 0), "", "", employees.reduce((s, e) => s + (totalHoursByEmp[e.id] || 0), 0), "", forcedOfficeDetails.length]);
+    return aoa;
+  };
+  const buildVacacionesSheet = ({
+    employees,
+    days,
+    schedule
+  }) => {
+    const headers = ["Integrante", "Rol", "Fecha", "Día semana", "Mes", "Num. semana"];
+    const aoa = [headers];
+    const vacList = [];
+    employees.forEach(emp => {
+      days.forEach(day => {
+        if (schedule[emp.id][day.id] === "V") vacList.push({
+          emp,
+          day
+        });
+      });
+    });
+    vacList.sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+    vacList.forEach(({
+      emp,
+      day
+    }) => {
+      aoa.push([emp.name, emp.role, day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`]);
+    });
+    aoa.push([]);
+    aoa.push([`Total días de vacaciones: ${vacList.length}`]);
+    // Summary per employee
+    aoa.push([]);
+    aoa.push(["Resumen por integrante"]);
+    aoa.push(["Integrante", "Total días VAC"]);
+    employees.forEach(emp => {
+      const cnt = days.filter(d => schedule[emp.id][d.id] === "V").length;
+      aoa.push([emp.name, cnt]);
+    });
+    return aoa;
+  };
+  const buildAlertasSheet = ({
+    alerts,
+    days,
+    employees,
+    schedule
+  }) => {
+    const headers = ["Fecha", "Día semana", "Mes", "Semana", "Severidad", "Categoría", "Título alerta", "Detalle", "Contexto adicional", "Disponibles"];
+    const aoa = [headers];
+    if (alerts.length === 0) {
+      aoa.push(["Sin alertas", "", "", "", "", "", "La planificación no presenta conflictos."]);
+      return aoa;
+    }
+    alerts.forEach(alert => {
+      const day = days.find(d => d.id === alert.dayId);
+      if (!day) return;
+      alert.reasons.forEach(reason => {
+        const sev = reason.severity === "critical" ? "CRÍTICO" : reason.severity === "warning" ? "AVISO" : "INFO";
+        aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter] || day.weekdayLetter, day.month, `Semana ${day.weekIndex + 1}`, sev, reason.category || "", reason.title, reason.detail, reason.context || "", alert.present]);
+      });
+    });
+    aoa.push([]);
+    aoa.push([`Total alertas: ${alerts.reduce((s, a) => s + a.reasons.length, 0)}`]);
+    return aoa;
+  };
+  const buildDatosGraficosSheet = ({
+    employees,
+    days,
+    schedule,
+    intensiveWeeksByEmp,
+    forcedOfficeDetails,
+    dailyCoverage
+  }) => {
+    const months = [];
+    const monthSet = new Set();
+    days.forEach(d => {
+      if (!monthSet.has(d.month)) {
+        monthSet.add(d.month);
+        months.push(d.month);
+      }
+    });
+    const weeksMap = {};
+    days.forEach(d => {
+      weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+      weeksMap[d.weekIndex].push(d);
+    });
+    const weekIdxs = Object.keys(weeksMap).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+    const weekToMonth = {};
+    Object.keys(weeksMap).forEach(wi => {
+      const cnt = {};
+      weeksMap[wi].forEach(d => {
+        cnt[d.month] = (cnt[d.month] || 0) + 1;
+      });
+      weekToMonth[wi] = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
+    });
+    const forcedByEmp = {};
+    employees.forEach(e => {
+      forcedByEmp[e.id] = 0;
+    });
+    forcedOfficeDetails.forEach(item => {
+      forcedByEmp[item.empId] = (forcedByEmp[item.empId] || 0) + 1;
+    });
+    const aoa = [];
+
+    // ── Tabla 1: Semanas intensivas por mes e integrante ──────────────
+    aoa.push(["TABLA 1 — Semanas con jornada intensiva (O30 completa) por integrante y mes"]);
+    aoa.push(["Gráfico sugerido: Barras agrupadas — columnas=meses, series=integrante"]);
+    aoa.push([]);
+    aoa.push(["Integrante", "Rol", ...months.map(m => m.substring(0, 3)), "Total", "Días forzados oficina"]);
+    employees.forEach(emp => {
+      const byMonth = {};
+      months.forEach(m => {
+        byMonth[m] = 0;
+      });
+      weekIdxs.forEach(wi => {
+        const wDays = weeksMap[wi];
+        if (wDays.every(d => schedule[emp.id][d.id] === "O30")) {
+          const m = weekToMonth[wi];
+          if (byMonth[m] !== undefined) byMonth[m]++;
+        }
+      });
+      const total = months.reduce((s, m) => s + byMonth[m], 0);
+      aoa.push([emp.name, emp.role, ...months.map(m => byMonth[m]), total, forcedByEmp[emp.id]]);
+    });
+    aoa.push([]);
+    aoa.push([]);
+
+    // ── Tabla 2: Horas totales y distribución por tipo ───────────────
+    aoa.push(["TABLA 2 — Horas totales trabajadas por integrante en el periodo"]);
+    aoa.push(["Gráfico sugerido: Barras horizontales apiladas por tipo de jornada"]);
+    aoa.push([]);
+    aoa.push(["Integrante", "Rol", "Grupo", "H. O30", "H. O40", "H. O42", "Horas Totales", "Días O30", "Días O40", "Días O42", "Días VAC"]);
+    employees.forEach(emp => {
+      const o30 = days.filter(d => schedule[emp.id][d.id] === "O30").length;
+      const o40 = days.filter(d => schedule[emp.id][d.id] === "O40").length;
+      const o42 = days.filter(d => schedule[emp.id][d.id] === "O42").length;
+      const vac = days.filter(d => schedule[emp.id][d.id] === "V").length;
+      aoa.push([emp.name, emp.role, `Grupo ${emp.group}`, o30 * 6, o40 * 8, o42 * 9, o30 * 6 + o40 * 8 + o42 * 9, o30, o40, o42, vac]);
+    });
+    aoa.push([]);
+    aoa.push([]);
+
+    // ── Tabla 3: Distribución de tipos por semana ────────────────────
+    aoa.push(["TABLA 3 — Distribución de tipos de jornada por semana (total días-persona)"]);
+    aoa.push(["Gráfico sugerido: Barras apiladas al 100% — eje X= semanas"]);
+    aoa.push([]);
+    aoa.push(["Semana", "Período", "Mes", "Días O30", "Días O40", "Días O42", "Días VAC", "% Intensiva", "% 40h", "% 42h", "% VAC"]);
+    weekIdxs.forEach(wi => {
+      const wDays = weeksMap[wi];
+      const start = wDays[0];
+      const end = wDays[wDays.length - 1];
+      let o30 = 0,
+        o40 = 0,
+        o42 = 0,
+        vac = 0;
+      employees.forEach(emp => {
+        wDays.forEach(day => {
+          const t = schedule[emp.id][day.id];
+          if (t === "O30") o30++;else if (t === "O40") o40++;else if (t === "O42") o42++;else if (t === "V") vac++;
+        });
+      });
+      const total = o30 + o40 + o42 + vac;
+      const pct = v => total > 0 ? Math.round(v / total * 100) : 0;
+      aoa.push([`Sem. ${wi + 1}`, `${start.label} – ${end.label}`, weekToMonth[wi], o30, o40, o42, vac, pct(o30), pct(o40), pct(o42), pct(vac)]);
+    });
+    aoa.push([]);
+    aoa.push([]);
+
+    // ── Tabla 4: Presencia diaria ────────────────────────────────────
+    aoa.push(["TABLA 4 — Presencia diaria de integrantes"]);
+    aoa.push(["Gráfico sugerido: Gráfico de líneas — eje X=fechas, eje Y=personas disponibles"]);
+    aoa.push([]);
+    aoa.push(["Fecha", "Día", "Mes", "Semana", "Disponibles (no VAC)", "De vacaciones", "Con O30", "Con O40", "Con O42"]);
+    dailyCoverage.forEach(cov => {
+      const day = days.find(d => d.id === cov.dayId);
+      if (!day) return;
+      const o30c = employees.filter(e => schedule[e.id][cov.dayId] === "O30").length;
+      const o40c = employees.filter(e => schedule[e.id][cov.dayId] === "O40").length;
+      const o42c = employees.filter(e => schedule[e.id][cov.dayId] === "O42").length;
+      aoa.push([day.id, WEEKDAY_FULL[day.weekdayLetter], day.month, `Sem. ${day.weekIndex + 1}`, cov.present, employees.length - cov.present, o30c, o40c, o42c]);
+    });
+    aoa.push([]);
+    aoa.push([]);
+    aoa.push(["─── INSTRUCCIONES PARA CREAR GRÁFICOS EN EXCEL ───"]);
+    aoa.push(["TABLA 1 → Seleccionar el rango de datos → Insertar → Gráfico de Columnas Agrupadas"]);
+    aoa.push(["         Eje horizontal: Meses de verano, Series: un integrante por serie"]);
+    aoa.push(["TABLA 2 → Seleccionar Integrante + H.O30 + H.O40 + H.O42 → Insertar → Barras apiladas"]);
+    aoa.push(["TABLA 3 → Seleccionar Semana + columnas % → Insertar → Barras apiladas al 100%"]);
+    aoa.push(["TABLA 4 → Seleccionar Fecha + Disponibles → Insertar → Gráfico de Líneas"]);
+    return aoa;
+  };
+  const IconHome = ({
+    className = ""
+  }) => /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    className: className
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
+  }));
+  const IconOffice = ({
+    className = ""
+  }) => /*#__PURE__*/React.createElement("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    className: className
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"
+  }));
+  const buildChartDataRows = ({
+    employees,
+    intensiveWeeksByEmp,
+    forcedOfficeDetails
+  }) => {
+    const forcedDaysByEmp = {};
+    employees.forEach(emp => {
+      forcedDaysByEmp[emp.id] = 0;
+    });
+    if (forcedOfficeDetails) {
+      forcedOfficeDetails.forEach(item => {
+        forcedDaysByEmp[item.empId] = (forcedDaysByEmp[item.empId] || 0) + 1;
+      });
+    }
+    const rows = [["Integrante", "Semanas intensivas", "Días forzados"]];
+    employees.forEach(emp => {
+      rows.push([emp.name, intensiveWeeksByEmp[emp.id] || 0, forcedDaysByEmp[emp.id] || 0]);
+    });
+    return rows;
+  };
+  const App = () => {
+    const [isLoggedIn, setIsLoggedIn] = useState(() => {
+      return readAuthSession();
+    });
+    const handleLogin = () => {
+      setIsLoggedIn(true);
+      writeAuthSession();
+    };
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      clearAuthSession();
+    };
+    const handleResetPlan = () => {
+      if (window.confirm("¿Seguro que quieres resetear el plan? Se borrarán los dashboards guardados y se restaurarán las vacaciones por defecto.")) {
+        setVacationPlan(DEFAULT_VACATION_PLAN_2026);
+        setPlanning(generateSchedule(year, DEFAULT_VACATION_PLAN_2026));
+        setAcceptedDashboards({});
+        setActiveDashboardYear(null);
+        setMode("config");
+        window.localStorage.removeItem("horarios_dashboards");
+      }
+    };
+    const [year, setYear] = useState(2026);
+    const [vacationPlan, setVacationPlan] = useState(DEFAULT_VACATION_PLAN_2026);
+    const [planning, setPlanning] = useState(() => generateSchedule(2026, DEFAULT_VACATION_PLAN_2026));
+    const [selectedEmp, setSelectedEmp] = useState("all");
+    const [employeeSearch, setEmployeeSearch] = useState("");
+    const [tableDensity, setTableDensity] = useState("comfortable");
+    const [hoveredEmpId, setHoveredEmpId] = useState(null);
+    const [hoveredDayId, setHoveredDayId] = useState(null);
+    const [modalData, setModalData] = useState({
+      isOpen: false,
+      emp: null,
+      day: null,
+      typeKey: null
+    });
+    const [oListOpen, setOListOpen] = useState(false);
+    const [selectedAlertDayId, setSelectedAlertDayId] = useState(null);
+    const [mode, setMode] = useState("config");
+    const [acceptedDashboards, setAcceptedDashboards] = useState(() => {
+      try {
+        const stored = window.localStorage.getItem("horarios_dashboards");
+        if (!stored) return {};
+        const parsed = JSON.parse(stored);
+        return typeof parsed === "object" && parsed !== null ? parsed : {};
+      } catch {
+        return {};
+      }
+    });
+    const [activeDashboardYear, setActiveDashboardYear] = useState(null);
+    const [selectedVacationEmpName, setSelectedVacationEmpName] = useState(EMPLOYEES[0].name);
+    const [exportFormat, setExportFormat] = useState("xlsx");
+    const [exportStylePreset, setExportStylePreset] = useState("corporativo");
+    const [exportIncludeFormulas, setExportIncludeFormulas] = useState(true);
+    const [exportIncludeChartData, setExportIncludeChartData] = useState(true);
+    const [exportProtectSheet, setExportProtectSheet] = useState(false);
+    const [exportPassword, setExportPassword] = useState("");
+    const [exportInProgress, setExportInProgress] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
+    const [exportStatus, setExportStatus] = useState("");
+    const [exportError, setExportError] = useState("");
+    const [exportLogs, setExportLogs] = useState([]);
+    const [exportPanelExpanded, setExportPanelExpanded] = useState(false);
+    const [vacationSectionOpen, setVacationSectionOpen] = useState(false);
+    const [viewMode, setViewMode] = useState("matrix");
+    const [vacationCalendarExpanded, setVacationCalendarExpanded] = useState(false);
+    useEffect(() => {
+      try {
+        window.localStorage.setItem("horarios_dashboards", JSON.stringify(acceptedDashboards));
+      } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+      }
+    }, [acceptedDashboards]);
+    const savedYears = useMemo(() => Object.keys(acceptedDashboards).map(y => parseInt(y, 10)).filter(y => !isNaN(y)).sort((a, b) => a - b), [acceptedDashboards]);
+    const currentDashboard = mode === "dashboard" && activeDashboardYear && acceptedDashboards[activeDashboardYear] ? acceptedDashboards[activeDashboardYear] : null;
+    const schedule = currentDashboard ? currentDashboard.schedule : planning.schedule;
+    const days = currentDashboard ? currentDashboard.days : planning.days;
+    const strictAudit = currentDashboard ? currentDashboard.strictAudit : planning.strictAudit;
+    const currentYear = currentDashboard ? activeDashboardYear : year;
+    const daysByMonth = useMemo(() => {
+      const map = {};
+      days.forEach(d => {
+        map[d.month] = map[d.month] || [];
+        map[d.month].push(d);
+      });
+      return Object.entries(map);
+    }, [days]);
+    const handleYearChange = value => {
+      const nextYear = parseInt(value, 10);
+      if (isNaN(nextYear)) return;
+      let basePlan;
+      if (nextYear === 2026) {
+        basePlan = DEFAULT_VACATION_PLAN_2026;
+      } else if (acceptedDashboards[nextYear]) {
+        basePlan = acceptedDashboards[nextYear].vacationPlan || {};
+      } else {
+        basePlan = createEmptyVacationPlan();
+      }
+      const nextPlan = {};
+      EMPLOYEES.forEach(emp => {
+        nextPlan[emp.name] = [...(basePlan[emp.name] || [])];
+      });
+      setYear(nextYear);
+      setVacationPlan(nextPlan);
+      setPlanning(generateSchedule(nextYear, nextPlan));
+      setMode("config");
+    };
+    const toggleVacationDay = (empName, dayId) => {
+      const current = vacationPlan;
+      const next = {};
+      EMPLOYEES.forEach(emp => {
+        const list = current[emp.name] || [];
+        if (emp.name === empName) {
+          if (list.includes(dayId)) {
+            next[emp.name] = list.filter(id => id !== dayId);
+          } else {
+            next[emp.name] = [...list, dayId].sort();
+          }
+        } else {
+          next[emp.name] = [...list];
+        }
+      });
+      setVacationPlan(next);
+      setPlanning(generateSchedule(year, next));
+    };
+    const handleAcceptCalendar = () => {
+      const generated = generateSchedule(year, vacationPlan);
+      const snapshotVacationPlan = {};
+      EMPLOYEES.forEach(emp => {
+        snapshotVacationPlan[emp.name] = [...(vacationPlan[emp.name] || [])];
+      });
+      const entry = {
+        year,
+        schedule: generated.schedule,
+        days: generated.days,
+        strictAudit: generated.strictAudit,
+        vacationPlan: snapshotVacationPlan
+      };
+      setAcceptedDashboards(prev => {
+        const next = {
+          ...prev,
+          [year]: entry
+        };
+        return next;
+      });
+      setActiveDashboardYear(year);
+      setMode("dashboard");
+    };
+    const handleModeChange = nextMode => {
+      if (nextMode === "dashboard") {
+        if (!savedYears.length) return;
+        const initialYear = activeDashboardYear || savedYears[0];
+        setActiveDashboardYear(initialYear);
+        setMode("dashboard");
+      } else {
+        setMode("config");
+      }
+    };
+    const handleSelectDashboardYear = y => {
+      setActiveDashboardYear(y);
+      setMode("dashboard");
+    };
+    const WeekDetailModal = ({
+      isOpen,
+      onClose,
+      emp,
+      day,
+      typeKey
+    }) => {
+      if (!isOpen || !emp || !day) return null;
+      const typeInfo = TYPES[typeKey];
+      const horarioSalida = typeKey === "O42" ? "18:00 (Viernes 14:00)" : typeKey === "O40" ? "17:00" : typeKey === "O30" || typeKey === "T30" ? "14:00 (Intensiva)" : "N/A";
+      const diasOficina = emp.officeDays;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+        onClick: onClose,
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onClose();
+          }
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 relative",
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "24",
+        height: "24",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "18",
+        y1: "6",
+        x2: "6",
+        y2: "18"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "6",
+        y1: "6",
+        x2: "18",
+        y2: "18"
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "mb-6"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-xl font-bold text-gray-900 mb-1"
+      }, emp.name, " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-gray-500 text-sm font-normal"
+      }, "(", emp.role, ")")), /*#__PURE__*/React.createElement("p", {
+        className: "text-brand-blue font-medium"
+      }, "Fecha ", day.label)), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-4"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "bg-gray-50 p-4 rounded-lg border border-gray-100"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
+      }, "Estado Actual"), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-3 h-3 rounded-full ${typeInfo.color}`
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-lg font-semibold text-gray-800"
+      }, typeInfo.label))), typeKey !== "V" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-4"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "bg-white p-3 rounded-lg border border-gray-200"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-gray-500 mb-1"
+      }, "Horario Salida"), /*#__PURE__*/React.createElement("p", {
+        className: `text-lg font-bold ${typeKey.includes("30") ? "text-emerald-600" : "text-amber-600"}`
+      }, horarioSalida)), /*#__PURE__*/React.createElement("div", {
+        className: "bg-white p-3 rounded-lg border border-gray-200"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-gray-500 mb-1"
+      }, "Grupo Turno"), /*#__PURE__*/React.createElement("p", {
+        className: "text-lg font-bold text-gray-700"
+      }, "Grupo ", emp.group))), /*#__PURE__*/React.createElement("div", {
+        className: "bg-white p-3 rounded-lg border border-gray-200"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-gray-500 mb-1"
+      }, "D\xEDas en Oficina (Fijos)"), /*#__PURE__*/React.createElement("p", {
+        className: "text-gray-800 font-medium"
+      }, diasOficina))), typeKey === "V" && /*#__PURE__*/React.createElement("div", {
+        className: "bg-rose-50 p-4 rounded-lg border border-rose-200 text-center"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-rose-600"
+      }, "\uD83C\uDF34 Disfrutando de vacaciones")))));
+    };
+    const AlertDetailModal = ({
+      isOpen,
+      onClose,
+      dayId
+    }) => {
+      if (!isOpen || !dayId) return null;
+      const alert = stats.alerts.find(a => a.dayId === dayId);
+      if (!alert) return null;
+      const day = days.find(d => d.id === dayId);
+      const hasCritical = alert.reasons.some(r => r.severity === "critical");
+      const hasWarning = alert.reasons.some(r => r.severity === "warning");
+      const borderColor = hasCritical ? "border-rose-200" : hasWarning ? "border-amber-200" : "border-blue-100";
+      const headerBg = hasCritical ? "bg-rose-50" : hasWarning ? "bg-amber-50" : "bg-blue-50";
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+        onClick: onClose,
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onClose();
+          }
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `bg-white border ${borderColor} rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative flex flex-col`,
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `${headerBg} px-5 py-4 flex items-center justify-between border-b ${borderColor}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-lg font-bold ${hasCritical ? 'text-rose-700' : hasWarning ? 'text-amber-700' : 'text-blue-700'}`
+      }, WEEKDAY_FULL[day.weekdayLetter], " ", day.label), /*#__PURE__*/React.createElement("span", {
+        className: "text-xs text-gray-600 bg-white/70 px-2.5 py-1 rounded-full font-medium shadow-sm"
+      }, alert.present, "/6 disponibles")), /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        className: "text-gray-400 hover:text-gray-700 transition-colors bg-white/50 hover:bg-white rounded-full p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "20",
+        height: "20",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "18",
+        y1: "6",
+        x2: "6",
+        y2: "18"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "6",
+        y1: "6",
+        x2: "18",
+        y2: "18"
+      })))), /*#__PURE__*/React.createElement("div", {
+        className: "p-5 space-y-3 bg-white max-h-[75vh] overflow-y-auto"
+      }, alert.reasons.map((reason, idx) => {
+        const severityStyles = {
+          critical: {
+            bg: "bg-rose-50",
+            border: "border-rose-200",
+            titleColor: "text-rose-700",
+            iconColor: "text-rose-500",
+            detailColor: "text-rose-600"
+          },
+          warning: {
+            bg: "bg-amber-50",
+            border: "border-amber-200",
+            titleColor: "text-amber-700",
+            iconColor: "text-amber-500",
+            detailColor: "text-amber-600"
+          },
+          info: {
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            titleColor: "text-blue-700",
+            iconColor: "text-blue-500",
+            detailColor: "text-blue-600"
+          }
+        };
+        const s = severityStyles[reason.severity] || severityStyles.info;
+        const iconMap = {
+          people: /*#__PURE__*/React.createElement("svg", {
+            xmlns: "http://www.w3.org/2000/svg",
+            width: "18",
+            height: "18",
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }, /*#__PURE__*/React.createElement("path", {
+            d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+          }), /*#__PURE__*/React.createElement("circle", {
+            cx: "9",
+            cy: "7",
+            r: "4"
+          })),
+          clock: /*#__PURE__*/React.createElement("svg", {
+            xmlns: "http://www.w3.org/2000/svg",
+            width: "18",
+            height: "18",
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }, /*#__PURE__*/React.createElement("circle", {
+            cx: "12",
+            cy: "12",
+            r: "10"
+          }), /*#__PURE__*/React.createElement("polyline", {
+            points: "12 6 12 12 16 14"
+          })),
+          alert: /*#__PURE__*/React.createElement("svg", {
+            xmlns: "http://www.w3.org/2000/svg",
+            width: "18",
+            height: "18",
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }, /*#__PURE__*/React.createElement("path", {
+            d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+          }), /*#__PURE__*/React.createElement("line", {
+            x1: "12",
+            y1: "9",
+            x2: "12",
+            y2: "13"
+          }), /*#__PURE__*/React.createElement("line", {
+            x1: "12",
+            y1: "17",
+            x2: "12.01",
+            y2: "17"
+          })),
+          group: /*#__PURE__*/React.createElement("svg", {
+            xmlns: "http://www.w3.org/2000/svg",
+            width: "18",
+            height: "18",
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }, /*#__PURE__*/React.createElement("path", {
+            d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+          }), /*#__PURE__*/React.createElement("circle", {
+            cx: "9",
+            cy: "7",
+            r: "4"
+          }), /*#__PURE__*/React.createElement("path", {
+            d: "M23 21v-2a4 4 0 0 0-3-3.87"
+          }), /*#__PURE__*/React.createElement("path", {
+            d: "M16 3.13a4 4 0 0 1 0 7.75"
+          })),
+          check: /*#__PURE__*/React.createElement("svg", {
+            xmlns: "http://www.w3.org/2000/svg",
+            width: "18",
+            height: "18",
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }, /*#__PURE__*/React.createElement("path", {
+            d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
+          }), /*#__PURE__*/React.createElement("polyline", {
+            points: "22 4 12 14.01 9 11.01"
+          }))
+        };
+        return /*#__PURE__*/React.createElement("div", {
+          key: idx,
+          className: `${s.bg} border ${s.border} rounded-lg p-3.5 shadow-sm transform transition-all hover:scale-[1.01]`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-start gap-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: `mt-0.5 shrink-0 ${s.iconColor} bg-white p-1.5 rounded-md shadow-sm border ${s.border}`
+        }, iconMap[reason.icon] || iconMap.alert), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+          className: `text-sm font-bold ${s.titleColor}`
+        }, reason.title), /*#__PURE__*/React.createElement("p", {
+          className: `text-sm mt-1 leading-relaxed ${s.detailColor}`
+        }, reason.detail), reason.context && /*#__PURE__*/React.createElement("p", {
+          className: "text-xs text-gray-500 mt-2 italic border-l-2 border-gray-300 pl-2 py-0.5"
+        }, reason.context))));
+      }))));
+    };
+    const ForcedOfficeListModal = ({
+      open,
+      onClose
+    }) => {
+      if (!open) return null;
+
+      // Agrupar conteo por empleado
+      const countByEmp = {};
+      stats.forcedOfficeDetails.forEach(item => {
+        countByEmp[item.empId] = (countByEmp[item.empId] || 0) + 1;
+      });
+      const entries = stats.forcedOfficeDetails.map(it => {
+        const day = days.find(d => d.id === it.dayId);
+        const emp = EMPLOYEES.find(e => e.id === it.empId);
+        return {
+          day,
+          emp,
+          reason: it.reason
+        };
+      }).sort((a, b) => a.day.id.localeCompare(b.day.id) || a.emp.id - b.emp.id);
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4",
+        onClick: onClose,
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onClose();
+          }
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "bg-white border border-gray-200 rounded-xl shadow-2xl max-w-3xl w-full p-6 relative",
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        className: "absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "24",
+        height: "24",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "18",
+        y1: "6",
+        x2: "6",
+        y2: "18"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "6",
+        y1: "6",
+        x2: "18",
+        y2: "18"
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "mb-6"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-xl font-bold text-gray-900"
+      }, "Listado de O forzadas"), /*#__PURE__*/React.createElement("p", {
+        className: "text-gray-500 text-sm mb-4"
+      }, "Motivo por el que deben asistir a la oficina"), /*#__PURE__*/React.createElement("div", {
+        className: "bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"
+      }, /*#__PURE__*/React.createElement("h4", {
+        className: "text-sm font-bold text-brand-blue mb-2"
+      }, "Resumen por Integrante:"), /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-wrap gap-2"
+      }, Object.keys(countByEmp).length === 0 && /*#__PURE__*/React.createElement("span", {
+        className: "text-xs text-gray-500"
+      }, "Sin registros."), Object.entries(countByEmp).map(([empId, count]) => {
+        const emp = EMPLOYEES.find(e => e.id === parseInt(empId));
+        return /*#__PURE__*/React.createElement("span", {
+          key: empId,
+          className: "px-2 py-1 bg-white border border-blue-200 rounded text-xs text-brand-blue font-medium shadow-sm"
+        }, emp.name, ": ", count);
+      })))), /*#__PURE__*/React.createElement("div", {
+        className: "overflow-auto max-h-[50vh]"
+      }, /*#__PURE__*/React.createElement("table", {
+        className: "w-full text-left border-collapse"
+      }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+        className: "p-2 border-b border-gray-200 text-gray-600"
+      }, "Fecha"), /*#__PURE__*/React.createElement("th", {
+        className: "p-2 border-b border-gray-200 text-gray-600"
+      }, "D\xEDa"), /*#__PURE__*/React.createElement("th", {
+        className: "p-2 border-b border-gray-200 text-gray-600"
+      }, "Integrante"), /*#__PURE__*/React.createElement("th", {
+        className: "p-2 border-b border-gray-200 text-gray-600"
+      }, "Motivo"))), /*#__PURE__*/React.createElement("tbody", null, entries.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+        colSpan: "4",
+        className: "p-4 text-center text-gray-500"
+      }, "No hay O forzadas en el periodo.")), entries.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
+        key: idx,
+        className: "hover:bg-gray-50"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-2 border-b border-gray-200 text-gray-800"
+      }, row.day.label), /*#__PURE__*/React.createElement("td", {
+        className: "p-2 border-b border-gray-200 text-gray-500"
+      }, WEEKDAY_FULL[row.day.weekdayLetter]), /*#__PURE__*/React.createElement("td", {
+        className: "p-2 border-b border-gray-200 text-gray-800"
+      }, row.emp.name), /*#__PURE__*/React.createElement("td", {
+        className: "p-2 border-b border-gray-200 text-gray-600"
+      }, row.reason))))))));
+    };
+    const stats = useMemo(() => {
+      const forcedOfficeSet = {};
+      const forcedOfficeDetails = [];
+
+      // Rastreo local de carga para reparto equitativo
+      const tempForcedCount = {};
+      EMPLOYEES.forEach(e => tempForcedCount[e.id] = 0);
+      const pickLowestForcedCandidate = candidates => {
+        if (!candidates || candidates.length === 0) return null;
+        const minLoad = Math.min(...candidates.map(candidate => tempForcedCount[candidate.id] || 0));
+        const pool = candidates.filter(candidate => (tempForcedCount[candidate.id] || 0) === minLoad).sort((a, b) => a.id - b.id);
+        return pool[0] || null;
+      };
+      const getBestCandidate = (groupNames, day) => {
+        const candidates = EMPLOYEES.filter(emp => {
+          if (!groupNames.includes(emp.name)) return false;
+          const type = schedule[emp.id][day.id];
+          if (type === "V") return false;
+          if (type === "O30") return false; // Enforce afternoon coverage
+          const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+          return !daysOffice.includes(day.weekdayLetter);
+        });
+        if (candidates.length === 0) return null;
+        return pickLowestForcedCandidate(candidates);
+      };
+      const dailyCoverage = days.map(day => {
+        let present = 0,
+          vacation = 0,
+          shift18hCount = 0,
+          shift18hOfficeCount = 0,
+          intensiveCount = 0;
+        let group1HasOffice = false,
+          group2HasOffice = false;
+        let group1Covering = [];
+        let group2Covering = [];
+        EMPLOYEES.forEach(emp => {
+          const type = schedule[emp.id][day.id];
+          if (type === "V") {
+            vacation++;
+            return;
+          }
+          present++;
+          if (type === "O30") intensiveCount++;
+          if (type === "O42") shift18hCount++;
+          const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+          const isInOffice = daysOffice.includes(day.weekdayLetter);
+          if (type === "O42" && isInOffice) shift18hOfficeCount++;
+          const hasFullSchedule = day.weekdayLetter === "V" ? type === "O40" : type === "O40" || type === "O42";
+          if (isInOffice && hasFullSchedule) {
+            if (GROUP1.includes(emp.name)) {
+              group1HasOffice = true;
+              group1Covering.push(emp.name);
+            }
+            if (GROUP2.includes(emp.name)) {
+              group2HasOffice = true;
+              group2Covering.push(emp.name);
+            }
+          }
+        });
+
+        // Si un grupo falta pero el otro puede cubrirlo, no forzamos a nadie
+        if (day.weekdayLetter !== "V") {
+          if (!group1HasOffice && group2Covering.length === 0) {
+            const candidate = getBestCandidate(GROUP1, day);
+            if (candidate) {
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Falta presencia del grupo {Enrique/Luis/David} y el otro grupo no cubre"
+              });
+              group1HasOffice = true;
+              group1Covering.push(candidate.name);
+              tempForcedCount[candidate.id]++;
+            }
+          }
+          if (!group2HasOffice && group1Covering.length === 0) {
+            const candidate = getBestCandidate(GROUP2, day);
+            if (candidate) {
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Falta presencia del grupo {Jose/Ariel/Kike} y el otro grupo no cubre"
+              });
+              group2HasOffice = true;
+              group2Covering.push(candidate.name);
+              tempForcedCount[candidate.id]++;
+            }
+          }
+          shift18hOfficeCount = EMPLOYEES.filter(emp => {
+            if (schedule[emp.id][day.id] !== "O42") return false;
+            const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+            if (daysOffice.includes(day.weekdayLetter)) return true;
+            if (forcedOfficeSet[day.id] && forcedOfficeSet[day.id].has(emp.id)) return true;
+            return false;
+          }).length;
+          if (shift18hOfficeCount < 1) {
+            const o42Candidates = EMPLOYEES.filter(emp => {
+              if (schedule[emp.id][day.id] !== "O42") return false;
+              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+              return !daysOffice.includes(day.weekdayLetter);
+            });
+            if (o42Candidates.length > 0) {
+              const candidate = pickLowestForcedCandidate(o42Candidates);
+              forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+              forcedOfficeSet[day.id].add(candidate.id);
+              forcedOfficeDetails.push({
+                dayId: day.id,
+                empId: candidate.id,
+                reason: "Cobertura 18h presencial (17:00-18:00)"
+              });
+              tempForcedCount[candidate.id]++;
+              shift18hOfficeCount = 1;
+            } else {
+              const o40InOffice = EMPLOYEES.filter(emp => {
+                if (schedule[emp.id][day.id] !== "O40") return false;
+                const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+                return daysOffice.includes(day.weekdayLetter);
+              });
+              if (o40InOffice.length > 0) {
+                const candidate = pickLowestForcedCandidate(o40InOffice);
+                schedule[candidate.id][day.id] = "O42";
+                forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+                forcedOfficeSet[day.id].add(candidate.id);
+                forcedOfficeDetails.push({
+                  dayId: day.id,
+                  empId: candidate.id,
+                  reason: "Conversión a 42h: falta cobertura presencial de tarde"
+                });
+                tempForcedCount[candidate.id]++;
+                shift18hOfficeCount = 1;
+              }
+            }
+          }
+        }
+        if (day.weekdayLetter === "V") {
+          const hasO40InOffice = EMPLOYEES.some(emp => {
+            const type = schedule[emp.id][day.id];
+            if (type !== "O40") return false;
+            const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+            return daysOffice.includes("V");
+          });
+          if (!hasO40InOffice) {
+            const isGroupALate = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+            const lateGroup = isGroupALate ? "A" : "B";
+            const o40NotOffice = EMPLOYEES.filter(emp => {
+              const type = schedule[emp.id][day.id];
+              if (type !== "O40") return false;
+              const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+              return !daysOffice.includes("V");
+            });
+            if (o40NotOffice.length > 0) {
+              const preferred = o40NotOffice.filter(e => e.name === "Luis");
+              const nonLate = o40NotOffice.filter(e => e.group !== lateGroup);
+              const candidate = pickLowestForcedCandidate(preferred) || pickLowestForcedCandidate(nonLate) || pickLowestForcedCandidate(o40NotOffice);
+              if (candidate) {
+                schedule[candidate.id][day.id] = "O40";
+                forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+                forcedOfficeSet[day.id].add(candidate.id);
+                forcedOfficeDetails.push({
+                  dayId: day.id,
+                  empId: candidate.id,
+                  reason: "Viernes: se requiere 40h en oficina hasta las 17:00"
+                });
+                tempForcedCount[candidate.id]++;
+              }
+            } else {
+              // No hay nadie con O40. Convertir un O42 presencial a O40 para cubrir viernes.
+              const o42InOffice = EMPLOYEES.filter(emp => {
+                const type = schedule[emp.id][day.id];
+                if (type !== "O42") return false;
+                const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+                return daysOffice.includes("V");
+              });
+              const o42NotOffice = EMPLOYEES.filter(emp => {
+                const type = schedule[emp.id][day.id];
+                if (type !== "O42") return false;
+                const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+                return !daysOffice.includes("V");
+              });
+              const candidate = pickLowestForcedCandidate(o42InOffice) || pickLowestForcedCandidate(o42NotOffice);
+              if (candidate) {
+                schedule[candidate.id][day.id] = "O40";
+                forcedOfficeSet[day.id] = forcedOfficeSet[day.id] || new Set();
+                forcedOfficeSet[day.id].add(candidate.id);
+                forcedOfficeDetails.push({
+                  dayId: day.id,
+                  empId: candidate.id,
+                  reason: "Viernes: conversión O42→O40 para cobertura presencial hasta 17:00"
+                });
+                tempForcedCount[candidate.id]++;
+              }
+            }
+          }
+        }
+        return {
+          dayId: day.id,
+          present,
+          vacation,
+          shift18hCount,
+          shift18hOfficeCount,
+          intensiveCount,
+          group1HasOffice,
+          group2HasOffice,
+          group1Covering,
+          group2Covering
+        };
+      });
+      const alerts = [];
+      dailyCoverage.forEach(d => {
+        const day = days.find(x => x.id === d.dayId);
+        const need18h = day.weekdayLetter !== "V";
+        const reasons = [];
+        if (d.present < 3) {
+          const onVacation = EMPLOYEES.filter(e => schedule[e.id][day.id] === "V").map(e => e.name);
+          reasons.push({
+            category: "cobertura",
+            severity: "critical",
+            title: "Cobertura insuficiente",
+            detail: `Solo ${d.present} de 6 integrantes disponibles (mínimo 3).`,
+            context: onVacation.length > 0 ? `De vacaciones: ${onVacation.join(", ")}` : null,
+            icon: "people"
+          });
+        }
+        if (need18h && d.shift18hOfficeCount < 1) {
+          reasons.push({
+            category: "turno18h",
+            severity: "critical",
+            title: "Sin cobertura presencial de tarde (17h-18h)",
+            detail: `No hay nadie en oficina cubriendo de 17:00 a 18:00 en ${WEEKDAY_FULL[day.weekdayLetter]}.`,
+            context: d.shift18hCount < 1 ? "No hay ningún turno O42 asignado." : "Hay turno O42 asignado, pero en teletrabajo.",
+            icon: "clock"
+          });
+        }
+        if (d.intensiveCount > 3) {
+          const inIntensive = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").map(e => e.name);
+          reasons.push({
+            category: "intensiva",
+            severity: "warning",
+            title: "Exceso de intensivas",
+            detail: `${d.intensiveCount} personas en intensiva (máximo permitido: 3).`,
+            context: `En intensiva: ${inIntensive.join(", ")}`,
+            icon: "alert"
+          });
+        }
+        if (need18h && !d.group1HasOffice) {
+          const g1OnVac = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
+          const g1OnIntensive = EMPLOYEES.filter(e => GROUP1.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
+          const g1OnTelework = EMPLOYEES.filter(e => {
+            if (!GROUP1.includes(e.name)) return false;
+            if (schedule[e.id][day.id] === "V") return false;
+            const od = e.officeDays.split(",").map(x => x.trim());
+            return !od.includes(day.weekdayLetter);
+          }).map(e => e.name);
+          const isCovered = d.group2Covering && d.group2Covering.length > 0;
+          if (!isCovered) {
+            let contextParts = [];
+            if (g1OnVac.length > 0) contextParts.push(`Vacaciones: ${g1OnVac.join(", ")}`);
+            if (g1OnIntensive.length > 0) contextParts.push(`Intensiva: ${g1OnIntensive.join(", ")}`);
+            if (g1OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g1OnTelework.join(", ")}`);
+            reasons.push({
+              category: "grupo1",
+              severity: "critical",
+              title: "Grupo {Enrique/Luis/David} sin presencia",
+              detail: `Ningún miembro del grupo está en oficina con turno completo.`,
+              context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+              icon: "group"
+            });
+          }
+        }
+        if (need18h && !d.group2HasOffice) {
+          const g2OnVac = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "V").map(e => e.name);
+          const g2OnIntensive = EMPLOYEES.filter(e => GROUP2.includes(e.name) && schedule[e.id][day.id] === "O30").map(e => e.name);
+          const g2OnTelework = EMPLOYEES.filter(e => {
+            if (!GROUP2.includes(e.name)) return false;
+            if (schedule[e.id][day.id] === "V") return false;
+            const od = e.officeDays.split(",").map(x => x.trim());
+            return !od.includes(day.weekdayLetter);
+          }).map(e => e.name);
+          const isCovered = d.group1Covering && d.group1Covering.length > 0;
+          if (!isCovered) {
+            let contextParts = [];
+            if (g2OnVac.length > 0) contextParts.push(`Vacaciones: ${g2OnVac.join(", ")}`);
+            if (g2OnIntensive.length > 0) contextParts.push(`Intensiva: ${g2OnIntensive.join(", ")}`);
+            if (g2OnTelework.length > 0) contextParts.push(`Teletrabajo: ${g2OnTelework.join(", ")}`);
+            reasons.push({
+              category: "grupo2",
+              severity: "critical",
+              title: "Grupo {Jose/Ariel/Kike} sin presencia",
+              detail: `Ningún miembro del grupo está en oficina con turno completo.`,
+              context: contextParts.length > 0 ? contextParts.join(" · ") : null,
+              icon: "group"
+            });
+          }
+        }
+        if (reasons.length > 0) {
+          alerts.push({
+            ...d,
+            reasons
+          });
+        }
+      });
+      const weeksMap = {};
+      days.forEach(d => {
+        weeksMap[d.weekIndex] = weeksMap[d.weekIndex] || [];
+        weeksMap[d.weekIndex].push(d);
+      });
+      const intensiveWeeksByEmp = {};
+      const totalHoursByEmp = {};
+      EMPLOYEES.forEach(emp => {
+        intensiveWeeksByEmp[emp.id] = 0;
+        totalHoursByEmp[emp.id] = 0;
+      });
+      days.forEach(day => {
+        EMPLOYEES.forEach(emp => {
+          totalHoursByEmp[emp.id] += HOURS_PER_TYPE[schedule[emp.id][day.id]] || 0;
+        });
+      });
+      Object.keys(weeksMap).forEach(wiStr => {
+        const daysInWeek = weeksMap[wiStr];
+        EMPLOYEES.forEach(emp => {
+          if (daysInWeek.every(day => schedule[emp.id][day.id] === "O30")) intensiveWeeksByEmp[emp.id] += 1;
+        });
+      });
+      const equityAudit = buildEquityAudit({
+        employees: EMPLOYEES,
+        days,
+        schedule,
+        forcedOfficeDetails
+      });
+      const strictValidation = validateStrictWeeklyRules({
+        employees: EMPLOYEES,
+        days,
+        schedule
+      });
+      return {
+        dailyCoverage,
+        alerts,
+        forcedOfficeSet,
+        forcedOfficeDetails,
+        intensiveWeeksByEmp,
+        totalHoursByEmp,
+        equityAudit,
+        strictValidation,
+        strictCorrections: strictAudit?.corrections || []
+      };
+    }, [schedule, days, strictAudit]);
+    const exportToExcel = async () => {
+      const appendExportLog = (message, level = "info") => {
+        setExportLogs(prev => [...prev, {
+          level,
+          message,
+          ts: new Date().toISOString()
+        }].slice(-80));
+      };
+      const waitTick = () => new Promise(resolve => setTimeout(resolve, 0));
+      const downloadBlob = (blob, filename) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      };
+      setExportInProgress(true);
+      setExportProgress(0);
+      setExportStatus("Inicializando exportación...");
+      setExportError("");
+      setExportLogs([]);
+      appendExportLog("Inicio del proceso de exportación.");
+      try {
+        if (!["xlsx", "xls", "csv"].includes(exportFormat)) {
+          throw new Error("Formato no soportado. Selecciona .xlsx, .xls o .csv.");
+        }
+        const validation = validateExportPayload({
+          employees: EMPLOYEES,
+          days,
+          schedule
+        });
+        if (!validation.ok) {
+          throw new Error(`Validación fallida: ${validation.errors.join(" | ")}`);
+        }
+        const strictValidation = validateStrictWeeklyRules({
+          employees: EMPLOYEES,
+          days,
+          schedule
+        });
+        if (!strictValidation.ok) {
+          const grouped = Object.values(STRICT_WEEKLY_RULES).map(rule => {
+            const count = strictValidation.summary.byRule[rule] || 0;
+            if (count === 0) return null;
+            return `${STRICT_WEEKLY_RULE_MESSAGES[rule]} (${count})`;
+          }).filter(Boolean);
+          throw new Error(`Integridad semanal inválida: ${grouped.join(" | ")}`);
+        }
+        appendExportLog(`Validación completada. Filas: ${validation.rowCount}, columnas: ${validation.columnCount}.`);
+        setExportProgress(12);
+        setExportStatus("Validación completada.");
+        await waitTick();
+        const preset = getExportStylePreset(exportStylePreset);
+        const {
+          headers,
+          rows
+        } = buildExportRows({
+          employees: EMPLOYEES,
+          days,
+          schedule,
+          includeFormulas: exportIncludeFormulas && exportFormat !== "csv"
+        });
+        const totalRows = rows.length + 1;
+        const isLargeExport = totalRows > 10000;
+        appendExportLog(`Preparación de dataset completada. Registros: ${totalRows}.`);
+        if (isLargeExport) {
+          appendExportLog("Se activará modo optimizado para exportación pesada.", "warning");
+        }
+        setExportProgress(24);
+        setExportStatus("Construyendo hoja principal...");
+        await waitTick();
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const headerStyle = {
+          font: {
+            bold: true,
+            color: {
+              rgb: preset.headerText
+            }
+          },
+          fill: {
+            fgColor: {
+              rgb: preset.headerBg
+            }
+          },
+          alignment: {
+            horizontal: "center"
+          },
+          border: {
+            top: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            bottom: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            left: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            right: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            }
+          }
+        };
+        for (let c = 0; c < headers.length; c++) {
+          const cellRef = XLSX.utils.encode_cell({
+            r: 0,
+            c
+          });
+          if (ws[cellRef]) ws[cellRef].s = headerStyle;
+        }
+        const lastDayColIndex = days.length;
+        const lastDayColLetter = XLSX.utils.encode_col(lastDayColIndex);
+        const o30FormulaCol = days.length + 1;
+        const hoursFormulaCol = days.length + 2;
+        for (let rIndex = 0; rIndex < rows.length; rIndex++) {
+          const row = rows[rIndex];
+          const rowIndex = rIndex + 1;
+          for (let cIndex = 0; cIndex < row.length; cIndex++) {
+            const cellRef = XLSX.utils.encode_cell({
+              r: rowIndex,
+              c: cIndex
+            });
+            if (!ws[cellRef]) continue;
+            if (cIndex === 0) {
+              ws[cellRef].s = {
+                font: {
+                  bold: true,
+                  color: {
+                    rgb: preset.rowText
+                  }
+                },
+                alignment: {
+                  horizontal: "left"
+                },
+                border: {
+                  top: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  bottom: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  left: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  right: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  }
+                }
+              };
+            } else if (cIndex <= days.length) {
+              ws[cellRef].s = createExportCellStyle(row[cIndex], preset);
+            } else {
+              ws[cellRef].s = {
+                font: {
+                  color: {
+                    rgb: preset.rowText
+                  }
+                },
+                alignment: {
+                  horizontal: "center"
+                },
+                border: {
+                  top: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  bottom: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  left: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  },
+                  right: {
+                    style: "thin",
+                    color: {
+                      rgb: preset.border
+                    }
+                  }
+                }
+              };
+            }
+          }
+          if (exportIncludeFormulas && exportFormat !== "csv") {
+            const excelRow = rIndex + 2;
+            const range = `B${excelRow}:${lastDayColLetter}${excelRow}`;
+            const o30Cell = XLSX.utils.encode_cell({
+              r: rowIndex,
+              c: o30FormulaCol
+            });
+            const hoursCell = XLSX.utils.encode_cell({
+              r: rowIndex,
+              c: hoursFormulaCol
+            });
+            ws[o30Cell] = {
+              t: "n",
+              f: `COUNTIF(${range},"O30")`,
+              s: ws[o30Cell]?.s
+            };
+            ws[hoursCell] = {
+              t: "n",
+              f: `COUNTIF(${range},"O30")*6+COUNTIF(${range},"O40")*8+COUNTIF(${range},"O42")*9`,
+              s: ws[hoursCell]?.s
+            };
+          }
+          if (isLargeExport && rIndex % 500 === 0) {
+            const progressBase = 24 + Math.min(36, Math.floor(rIndex / Math.max(1, rows.length) * 36));
+            setExportProgress(progressBase);
+            setExportStatus(`Aplicando estilos y fórmulas (${rIndex + 1}/${rows.length})...`);
+            await waitTick();
+          }
+        }
+
+        // ── Filas de totales en hoja Horarios ──────────────────────────
+        if (exportFormat !== "csv") {
+          const totalsTypes = [["TOTAL 30h", "O30"], ["TOTAL 40h", "O40"], ["TOTAL 42h", "O42"], ["TOTAL VAC", "V"]];
+          const totalRowsAoa = totalsTypes.map(([label, type]) => {
+            const tRow = [label];
+            days.forEach(day => {
+              tRow.push(EMPLOYEES.filter(emp => schedule[emp.id][day.id] === type).length);
+            });
+            if (exportIncludeFormulas) {
+              tRow.push(null);
+              tRow.push(null);
+            }
+            return tRow;
+          });
+          XLSX.utils.sheet_add_aoa(ws, totalRowsAoa, {
+            origin: {
+              r: rows.length + 1,
+              c: 0
+            }
+          });
+          totalsTypes.forEach(([, type], tIdx) => {
+            const rIdx = rows.length + 1 + tIdx;
+            for (let c = 0; c < days.length + 1 + (exportIncludeFormulas ? 2 : 0); c++) {
+              const cellRef = XLSX.utils.encode_cell({
+                r: rIdx,
+                c
+              });
+              if (!ws[cellRef]) continue;
+              ws[cellRef].s = c === 0 ? {
+                font: {
+                  bold: true,
+                  color: {
+                    rgb: preset.headerText
+                  }
+                },
+                fill: {
+                  fgColor: {
+                    rgb: preset.headerBg
+                  }
+                },
+                alignment: {
+                  horizontal: "left"
+                }
+              } : createExportCellStyle(type, preset);
+            }
+          });
+          appendExportLog("Filas de totales añadidas a Horarios.");
+        }
+        const colWidths = [{
+          wch: 20
+        }, ...days.map(() => ({
+          wch: 11
+        }))];
+        if (exportIncludeFormulas && exportFormat !== "csv") {
+          colWidths.push({
+            wch: 18
+          });
+          colWidths.push({
+            wch: 24
+          });
+        }
+        ws["!cols"] = colWidths;
+        ws["!freeze"] = {
+          xSplit: 1,
+          ySplit: 1
+        };
+        if (exportProtectSheet && exportFormat !== "csv") {
+          ws["!protect"] = {
+            password: exportPassword || "Horarios2026",
+            selectLockedCells: true,
+            selectUnlockedCells: true
+          };
+          appendExportLog("Protección de hoja activada.");
+        }
+        XLSX.utils.book_append_sheet(wb, ws, "Horarios");
+        setExportProgress(42);
+        setExportStatus("Generando hojas adicionales...");
+        await waitTick();
+
+        // Estilos reutilizables para hojas auxiliares
+        const auxHeaderStyle = {
+          font: {
+            bold: true,
+            color: {
+              rgb: preset.headerText
+            }
+          },
+          fill: {
+            fgColor: {
+              rgb: preset.headerBg
+            }
+          },
+          alignment: {
+            horizontal: "center",
+            wrapText: true
+          },
+          border: {
+            top: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            bottom: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            left: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            },
+            right: {
+              style: "thin",
+              color: {
+                rgb: preset.border
+              }
+            }
+          }
+        };
+        const auxSubHeaderStyle = {
+          font: {
+            bold: true,
+            color: {
+              rgb: preset.rowText
+            }
+          },
+          fill: {
+            fgColor: {
+              rgb: "E2E8F0"
+            }
+          },
+          alignment: {
+            horizontal: "center"
+          }
+        };
+        const auxTitleStyle = {
+          font: {
+            bold: true,
+            sz: 12,
+            color: {
+              rgb: "1E40AF"
+            }
+          },
+          fill: {
+            fgColor: {
+              rgb: "EFF6FF"
+            }
+          }
+        };
+        const auxSubtitleStyle = {
+          font: {
+            italic: true,
+            color: {
+              rgb: "64748B"
+            }
+          },
+          fill: {
+            fgColor: {
+              rgb: "F8FAFC"
+            }
+          }
+        };
+        const applyRowStyle = (wsTarget, rIdx, colCount, style) => {
+          for (let c = 0; c < colCount; c++) {
+            const ref = XLSX.utils.encode_cell({
+              r: rIdx,
+              c
+            });
+            if (wsTarget[ref]) wsTarget[ref].s = style;
+          }
+        };
+        if (exportFormat !== "csv") {
+          // ── Hoja 2: Resumen_Mensual ───────────────────────────────────
+          const aoaResumen = buildResumenMensualSheet({
+            employees: EMPLOYEES,
+            days,
+            schedule
+          });
+          const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
+          applyRowStyle(wsResumen, 0, aoaResumen[0].length, auxHeaderStyle);
+          applyRowStyle(wsResumen, 1, aoaResumen[1].length, auxSubHeaderStyle);
+          wsResumen["!freeze"] = {
+            xSplit: 3,
+            ySplit: 2
+          };
+          wsResumen["!cols"] = [{
+            wch: 16
+          }, {
+            wch: 12
+          }, {
+            wch: 10
+          }, ...Array(aoaResumen[0].length - 3).fill({
+            wch: 9
+          })];
+          XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen_Mensual");
+          appendExportLog("Hoja Resumen_Mensual generada.");
+          setExportProgress(52);
+          await waitTick();
+
+          // ── Hoja 3: Vista_Semanas ────────────────────────────────────
+          const aoaSemanas = buildVistaSemanasSheet({
+            employees: EMPLOYEES,
+            days,
+            schedule
+          });
+          const wsSemanas = XLSX.utils.aoa_to_sheet(aoaSemanas);
+          applyRowStyle(wsSemanas, 0, aoaSemanas[0].length, auxHeaderStyle);
+          wsSemanas["!freeze"] = {
+            xSplit: 1,
+            ySplit: 1
+          };
+          wsSemanas["!cols"] = [{
+            wch: 10
+          }, {
+            wch: 22
+          }, {
+            wch: 12
+          }, {
+            wch: 14
+          }, {
+            wch: 12
+          }, {
+            wch: 8
+          }, {
+            wch: 12
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 12
+          }];
+          XLSX.utils.book_append_sheet(wb, wsSemanas, "Vista_Semanas");
+          appendExportLog("Hoja Vista_Semanas generada.");
+          setExportProgress(60);
+          await waitTick();
+
+          // ── Hoja 4: Estadisticas ─────────────────────────────────────
+          const aoaStats = buildEstadisticasSheet({
+            employees: EMPLOYEES,
+            days,
+            schedule,
+            forcedOfficeDetails: stats.forcedOfficeDetails,
+            intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
+            totalHoursByEmp: stats.totalHoursByEmp
+          });
+          const wsStats = XLSX.utils.aoa_to_sheet(aoaStats);
+          applyRowStyle(wsStats, 0, aoaStats[0].length, auxHeaderStyle);
+          // Style totals row (last row)
+          const statsLastRow = aoaStats.length - 1;
+          applyRowStyle(wsStats, statsLastRow, aoaStats[0].length, {
+            font: {
+              bold: true
+            },
+            fill: {
+              fgColor: {
+                rgb: "DBEAFE"
+              }
+            }
+          });
+          wsStats["!freeze"] = {
+            xSplit: 1,
+            ySplit: 1
+          };
+          wsStats["!cols"] = [{
+            wch: 14
+          }, {
+            wch: 12
+          }, {
+            wch: 8
+          }, {
+            wch: 12
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 9
+          }, {
+            wch: 13
+          }, {
+            wch: 16
+          }, {
+            wch: 13
+          }, {
+            wch: 14
+          }, {
+            wch: 20
+          }];
+          XLSX.utils.book_append_sheet(wb, wsStats, "Estadisticas");
+          appendExportLog("Hoja Estadisticas generada.");
+          setExportProgress(68);
+          await waitTick();
+
+          // ── Hoja 5: Vacaciones ───────────────────────────────────────
+          const aoaVac = buildVacacionesSheet({
+            employees: EMPLOYEES,
+            days,
+            schedule
+          });
+          const wsVac = XLSX.utils.aoa_to_sheet(aoaVac);
+          applyRowStyle(wsVac, 0, aoaVac[0].length, auxHeaderStyle);
+          // Color vacation rows rose
+          const vacStyle = {
+            fill: {
+              fgColor: {
+                rgb: "FFF1F2"
+              }
+            },
+            font: {
+              color: {
+                rgb: "9F1239"
+              }
+            }
+          };
+          for (let r = 1; r < EMPLOYEES.length * days.length + 1; r++) {
+            const firstCell = XLSX.utils.encode_cell({
+              r,
+              c: 0
+            });
+            if (!wsVac[firstCell] || !wsVac[firstCell].v) break;
+            applyRowStyle(wsVac, r, aoaVac[0].length, vacStyle);
+          }
+          wsVac["!freeze"] = {
+            xSplit: 1,
+            ySplit: 1
+          };
+          wsVac["!cols"] = [{
+            wch: 14
+          }, {
+            wch: 12
+          }, {
+            wch: 14
+          }, {
+            wch: 12
+          }, {
+            wch: 12
+          }, {
+            wch: 12
+          }];
+          XLSX.utils.book_append_sheet(wb, wsVac, "Vacaciones");
+          appendExportLog("Hoja Vacaciones generada.");
+          setExportProgress(75);
+          await waitTick();
+
+          // ── Hoja 6: Alertas ──────────────────────────────────────────
+          const aoaAlertas = buildAlertasSheet({
+            alerts: stats.alerts,
+            days,
+            employees: EMPLOYEES,
+            schedule
+          });
+          const wsAlertas = XLSX.utils.aoa_to_sheet(aoaAlertas);
+          applyRowStyle(wsAlertas, 0, aoaAlertas[0].length, auxHeaderStyle);
+          // Color rows by severity
+          for (let r = 1; r < aoaAlertas.length; r++) {
+            const sevCell = XLSX.utils.encode_cell({
+              r,
+              c: 4
+            });
+            if (!wsAlertas[sevCell]) continue;
+            const sev = wsAlertas[sevCell].v;
+            const alertRowStyle = sev === "CRÍTICO" ? {
+              fill: {
+                fgColor: {
+                  rgb: "FEF2F2"
+                }
+              },
+              font: {
+                color: {
+                  rgb: "991B1B"
+                }
+              }
+            } : sev === "AVISO" ? {
+              fill: {
+                fgColor: {
+                  rgb: "FFFBEB"
+                }
+              },
+              font: {
+                color: {
+                  rgb: "92400E"
+                }
+              }
+            } : null;
+            if (alertRowStyle) applyRowStyle(wsAlertas, r, aoaAlertas[0].length, alertRowStyle);
+          }
+          wsAlertas["!freeze"] = {
+            xSplit: 1,
+            ySplit: 1
+          };
+          wsAlertas["!cols"] = [{
+            wch: 14
+          }, {
+            wch: 12
+          }, {
+            wch: 12
+          }, {
+            wch: 10
+          }, {
+            wch: 10
+          }, {
+            wch: 14
+          }, {
+            wch: 30
+          }, {
+            wch: 40
+          }, {
+            wch: 35
+          }, {
+            wch: 12
+          }];
+          XLSX.utils.book_append_sheet(wb, wsAlertas, "Alertas");
+          appendExportLog("Hoja Alertas generada.");
+          setExportProgress(82);
+          await waitTick();
+
+          // ── Hoja 7: Datos_Graficos ───────────────────────────────────
+          if (exportIncludeChartData) {
+            const aoaGraficos = buildDatosGraficosSheet({
+              employees: EMPLOYEES,
+              days,
+              schedule,
+              intensiveWeeksByEmp: stats.intensiveWeeksByEmp,
+              forcedOfficeDetails: stats.forcedOfficeDetails,
+              dailyCoverage: stats.dailyCoverage
+            });
+            const wsGraficos = XLSX.utils.aoa_to_sheet(aoaGraficos);
+            // Style section titles and subtitles
+            aoaGraficos.forEach((row, r) => {
+              if (!row[0]) return;
+              const v = String(row[0]);
+              if (v.startsWith("TABLA")) applyRowStyle(wsGraficos, r, 1, auxTitleStyle);else if (v.startsWith("Gráfico")) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);else if (v.startsWith("───")) applyRowStyle(wsGraficos, r, 1, {
+                font: {
+                  bold: true,
+                  color: {
+                    rgb: "1E40AF"
+                  }
+                }
+              });else if (v.startsWith("TABLA") || v.match(/^[1-4]\./)) applyRowStyle(wsGraficos, r, 1, auxSubtitleStyle);
+            });
+            wsGraficos["!cols"] = [{
+              wch: 20
+            }, {
+              wch: 14
+            }, ...Array(10).fill({
+              wch: 12
+            })];
+            XLSX.utils.book_append_sheet(wb, wsGraficos, "Datos_Graficos");
+            appendExportLog("Hoja Datos_Graficos (4 tablas con instrucciones) generada.");
+            appendExportLog("Nota: los gráficos deben crearse manualmente en Excel usando los rangos indicados en cada tabla.", "warning");
+            setExportProgress(90);
+            await waitTick();
+          }
+        }
+        const fileBase = `planificacion_horarios_${currentYear}`;
+        if (exportFormat === "csv") {
+          const csv = XLSX.utils.sheet_to_csv(ws);
+          const csvBlob = new Blob([csv], {
+            type: "text/csv;charset=utf-8;"
+          });
+          const csvBytes = csvBlob.size;
+          if (csvBytes > 1024 * 1024 && typeof CompressionStream !== "undefined") {
+            const compression = new CompressionStream("gzip");
+            const compressedStream = new Blob([csv]).stream().pipeThrough(compression);
+            const compressedBlob = await new Response(compressedStream).blob();
+            downloadBlob(compressedBlob, `${fileBase}.csv.gz`);
+            appendExportLog(`CSV comprimido automáticamente (${Math.round(csvBytes / 1024)} KB -> ${Math.round(compressedBlob.size / 1024)} KB).`);
+          } else {
+            downloadBlob(csvBlob, `${fileBase}.csv`);
+            if (csvBytes > 1024 * 1024) {
+              appendExportLog("No se pudo comprimir automáticamente por limitaciones del navegador.", "warning");
+            }
+          }
+        } else {
+          const wbout = XLSX.write(wb, {
+            bookType: exportFormat,
+            type: "array",
+            compression: isLargeExport
+          });
+          const blob = new Blob([wbout], {
+            type: "application/octet-stream"
+          });
+          downloadBlob(blob, `${fileBase}.${exportFormat}`);
+        }
+        setExportProgress(100);
+        setExportStatus("Exportación completada correctamente.");
+        appendExportLog("Exportación finalizada con éxito.");
+      } catch (error) {
+        const message = getExportErrorMessage(error);
+        setExportError(`No se pudo completar la exportación: ${message}`);
+        setExportStatus("Exportación fallida.");
+        appendExportLog(`Error: ${message}`, "error");
+      } finally {
+        setExportInProgress(false);
+      }
+    };
+    const handleCellClick = (emp, day) => {
+      const typeKey = schedule[emp.id][day.id];
+      setModalData({
+        isOpen: true,
+        emp,
+        day,
+        typeKey
+      });
+    };
+    const quickFilteredEmployees = useMemo(() => {
+      const query = employeeSearch.trim().toLowerCase();
+      if (!query) return EMPLOYEES;
+      return EMPLOYEES.filter(emp => emp.name.toLowerCase().includes(query));
+    }, [employeeSearch]);
+    const filteredEmployees = selectedEmp === "all" ? quickFilteredEmployees : quickFilteredEmployees.filter(e => e.id === parseInt(selectedEmp, 10));
+    const weekdaysCalendar = ["L", "M", "X", "J", "V"];
+    const calendarMonths = useMemo(() => {
+      return daysByMonth.map(([monthName, monthDays]) => {
+        const weeksMap = {};
+        monthDays.forEach(day => {
+          weeksMap[day.weekIndex] = weeksMap[day.weekIndex] || {};
+          weeksMap[day.weekIndex][day.weekdayLetter] = day;
+        });
+        const weekIndexes = Object.keys(weeksMap).map(value => parseInt(value, 10)).sort((a, b) => a - b);
+        return {
+          monthName,
+          weeks: weekIndexes.map(index => weeksMap[index])
+        };
+      });
+    }, [daysByMonth]);
+    const tableSpacing = tableDensity === "compact" ? {
+      headerCell: "p-1.5",
+      firstColHeader: "p-2.5",
+      firstColCell: "p-2",
+      bodyCell: "p-0.5",
+      slotHeight: "h-8"
+    } : {
+      headerCell: "p-2",
+      firstColHeader: "p-4",
+      firstColCell: "p-3",
+      bodyCell: "p-1",
+      slotHeight: "h-10"
+    };
+    if (!isLoggedIn) {
+      return /*#__PURE__*/React.createElement(LoginForm, {
+        onLogin: handleLogin
+      });
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-h-screen bg-white p-3 sm:p-6 text-brand-dark"
+    }, /*#__PURE__*/React.createElement(WeekDetailModal, _extends({}, modalData, {
+      onClose: () => setModalData({
+        ...modalData,
+        isOpen: false
+      })
+    })), /*#__PURE__*/React.createElement(ForcedOfficeListModal, {
+      open: oListOpen,
+      onClose: () => setOListOpen(false)
+    }), /*#__PURE__*/React.createElement("header", {
+      className: "mb-6 flex flex-col gap-4 border-b border-gray-200 pb-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-6"
+    }, /*#__PURE__*/React.createElement("img", {
+      src: "logo.png",
+      alt: "Logo",
+      className: "h-16 w-auto object-contain"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+      className: "text-2xl font-bold text-brand-blue tracking-tight"
+    }, "Gestion Horaria Dept. Sistemas"))), /*#__PURE__*/React.createElement("div", {
+      className: "sticky top-0 z-40 bg-white/95 backdrop-blur border border-gray-200 rounded-xl p-3 shadow-sm"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-center gap-2"
+    }, /*#__PURE__*/React.createElement("select", {
+      className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm",
+      value: selectedEmp,
+      onChange: e => setSelectedEmp(e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "all"
+    }, "Todos los integrantes"), EMPLOYEES.map(e => /*#__PURE__*/React.createElement("option", {
+      key: e.id,
+      value: e.id
+    }, e.name))), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      value: employeeSearch,
+      onChange: e => setEmployeeSearch(e.target.value),
+      placeholder: "Filtrar por nombre",
+      className: "bg-white text-gray-700 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-blue shadow-sm min-w-[12rem]"
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOListOpen(true),
+      className: "bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm border border-gray-300 transition-colors shadow-sm"
+    }, "Ver O forzadas"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setVacationSectionOpen(prev => !prev);
+        if (!vacationSectionOpen) {
+          setExportPanelExpanded(false);
+        }
+      },
+      className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${vacationSectionOpen ? "bg-teal-700" : "bg-teal-600 hover:bg-teal-700"}`
+    }, vacationSectionOpen ? "Cerrar vacaciones" : "Ver vacaciones"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setExportPanelExpanded(prev => !prev);
+        if (!exportPanelExpanded) {
+          setVacationSectionOpen(false);
+        }
+      },
+      className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors flex items-center gap-2 ${exportPanelExpanded ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"}`
     }, /*#__PURE__*/React.createElement("svg", {
       xmlns: "http://www.w3.org/2000/svg",
-      width: "12",
-      height: "12",
+      width: "16",
+      height: "16",
       viewBox: "0 0 24 24",
       fill: "none",
       stroke: "currentColor",
-      strokeWidth: "2.5",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+    }), /*#__PURE__*/React.createElement("polyline", {
+      points: "14 2 14 8 20 8"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "16",
+      y1: "13",
+      x2: "8",
+      y2: "13"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "16",
+      y1: "17",
+      x2: "8",
+      y2: "17"
+    }), /*#__PURE__*/React.createElement("polyline", {
+      points: "10 9 9 9 8 9"
+    })), exportPanelExpanded ? "Cerrar exportación" : "Exportar"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setViewMode(prev => prev === "matrix" ? "calendar" : "matrix"),
+      className: `text-white px-4 py-2 rounded text-sm shadow-md transition-colors ${viewMode === "calendar" ? "bg-fuchsia-700" : "bg-fuchsia-600 hover:bg-fuchsia-700"}`
+    }, viewMode === "calendar" ? "Vista matriz" : "Vista calendario"), /*#__PURE__*/React.createElement("button", {
+      onClick: handleResetPlan,
+      className: "bg-brand-blue hover:bg-blue-800 text-white px-4 py-2 rounded text-sm shadow-md transition-colors"
+    }, "Resetear Plan"), /*#__PURE__*/React.createElement("button", {
+      onClick: handleLogout,
+      className: "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-300"
+    }, "Cerrar Sesi\xF3n")))), exportPanelExpanded && /*#__PURE__*/React.createElement("div", {
+      className: "mb-6 bg-white border border-emerald-200 rounded-xl p-4 shadow-sm space-y-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+      className: "text-sm font-bold text-gray-800"
+    }, "Exportaci\xF3n Excel y validaciones"), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500"
+    }, "Configura la exportaci\xF3n y lanza la descarga.")), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setExportPanelExpanded(false),
+      className: "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+    }, "Ocultar")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 md:grid-cols-6 gap-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-gray-500 mb-1"
+    }, "Formato"), /*#__PURE__*/React.createElement("select", {
+      className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+      value: exportFormat,
+      onChange: e => setExportFormat(e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "xlsx"
+    }, ".xlsx"), /*#__PURE__*/React.createElement("option", {
+      value: "xls"
+    }, ".xls"), /*#__PURE__*/React.createElement("option", {
+      value: "csv"
+    }, ".csv"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-gray-500 mb-1"
+    }, "Estilo"), /*#__PURE__*/React.createElement("select", {
+      className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+      value: exportStylePreset,
+      onChange: e => setExportStylePreset(e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "corporativo"
+    }, "Corporativo"), /*#__PURE__*/React.createElement("option", {
+      value: "neutro"
+    }, "Neutro"))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-end"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-2 text-xs text-gray-700"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: exportIncludeFormulas,
+      onChange: e => setExportIncludeFormulas(e.target.checked)
+    }), "F\xF3rmulas Excel")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-end"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-2 text-xs text-gray-700"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: exportIncludeChartData,
+      onChange: e => setExportIncludeChartData(e.target.checked)
+    }), "Datos para gr\xE1ficos")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-end"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-2 text-xs text-gray-700"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: exportProtectSheet,
+      onChange: e => setExportProtectSheet(e.target.checked)
+    }), "Proteger hoja")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-gray-500 mb-1"
+    }, "Contrase\xF1a"), /*#__PURE__*/React.createElement("input", {
+      type: "password",
+      className: "w-full border border-gray-300 rounded px-2 py-1 text-sm",
+      value: exportPassword,
+      onChange: e => setExportPassword(e.target.value),
+      disabled: !exportProtectSheet,
+      placeholder: "Opcional"
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-end"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: exportToExcel,
+      disabled: exportInProgress,
+      className: `px-4 py-2 rounded text-sm font-semibold text-white transition-colors ${exportInProgress ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`
+    }, exportInProgress ? "Exportando..." : "Descargar archivo")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-2 bg-gray-100 rounded overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `h-full ${exportError ? "bg-rose-500" : "bg-emerald-500"}`,
+      style: {
+        width: `${Math.max(0, Math.min(100, exportProgress))}%`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between text-xs"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: exportError ? "text-rose-600" : "text-gray-600"
+    }, exportError || exportStatus || "Listo para exportar"), /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-500"
+    }, Math.round(exportProgress), "%"))), exportLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-36 overflow-auto"
+    }, exportLogs.map((entry, idx) => /*#__PURE__*/React.createElement("div", {
+      key: `${entry.ts}-${idx}`,
+      className: `text-[11px] ${entry.level === "error" ? "text-rose-700" : entry.level === "warning" ? "text-amber-700" : "text-slate-600"}`
+    }, entry.ts.slice(11, 19), " \xB7 ", entry.message)))), /*#__PURE__*/React.createElement("div", {
+      className: "mb-6 space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => handleModeChange("config"),
+      className: `px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "config" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"}`
+    }, "Configuraci\xF3n"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => handleModeChange("dashboard"),
+      className: `px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === "dashboard" ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-700 border-gray-300"} ${savedYears.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+      disabled: savedYears.length === 0
+    }, "Dashboards definitivos")), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col md:flex-row md:items-center md:justify-end gap-2 text-xs text-gray-500"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-semibold"
+    }, "A\xF1o activo:"), /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-800 font-bold"
+    }, currentYear)), mode === "dashboard" && savedYears.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", null, "A\xF1os guardados:"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap gap-1"
+    }, savedYears.map(y => /*#__PURE__*/React.createElement("button", {
+      key: y,
+      type: "button",
+      onClick: () => handleSelectDashboardYear(y),
+      className: `px-2 py-0.5 rounded-full border text-[11px] ${activeDashboardYear === y ? "bg-brand-blue text-white border-brand-blue" : "bg-white text-gray-600 border-gray-300"}`
+    }, y)))))), mode === "config" && vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 lg:grid-cols-3 gap-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-sm font-bold text-gray-800"
+    }, "Gestor de vacaciones"), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-gray-400"
+    }, "A\xF1o ", year), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setVacationSectionOpen(false),
+      className: "px-2 py-1 rounded-md text-[11px] font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+    }, "Ocultar"))), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-gray-500 mb-1"
+    }, "A\xF1o de planificaci\xF3n"), /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      className: "w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue",
+      value: year,
+      min: "2024",
+      max: "2100",
+      onChange: e => handleYearChange(e.target.value)
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-gray-500 mb-1"
+    }, "Integrante"), /*#__PURE__*/React.createElement("select", {
+      className: "w-full bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-blue",
+      value: selectedVacationEmpName,
+      onChange: e => setSelectedVacationEmpName(e.target.value)
+    }, EMPLOYEES.map(e => /*#__PURE__*/React.createElement("option", {
+      key: e.id,
+      value: e.name
+    }, e.name)))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between text-xs text-gray-500"
+    }, /*#__PURE__*/React.createElement("span", null, "D\xEDas seleccionados: ", vacationPlan[selectedVacationEmpName]?.length || 0)), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: handleAcceptCalendar,
+      className: "w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-sm font-semibold shadow-md transition-colors"
+    }, "Aceptar calendario ", year))), /*#__PURE__*/React.createElement("div", {
+      className: "lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-3"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-sm font-semibold text-gray-800"
+    }, "Calendario de vacaciones"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-gray-500"
+    }, "Click en un d\xEDa para alternar vacaciones")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 md:grid-cols-2 gap-4"
+    }, daysByMonth.map(([monthName, monthDays]) => /*#__PURE__*/React.createElement("div", {
+      key: monthName
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-xs font-semibold text-gray-500 mb-1"
+    }, monthName), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-5 gap-1"
+    }, monthDays.map(day => {
+      const isSelected = (vacationPlan[selectedVacationEmpName] || []).includes(day.id);
+      return /*#__PURE__*/React.createElement("button", {
+        key: day.id,
+        type: "button",
+        onClick: () => toggleVacationDay(selectedVacationEmpName, day.id),
+        className: `h-10 rounded-md border text-[11px] flex flex-col items-center justify-center ${isSelected ? "bg-rose-500 text-white border-rose-500" : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "font-mono"
+      }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] opacity-80"
+      }, day.weekdayLetter));
+    }))))))), mode === "config" && !vacationSectionOpen && /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700"
+    }, "El gestor de vacaciones est\xE1 oculto. Pulsa \u201CVer vacaciones\u201D en la barra superior para abrirlo.")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "p-3 rounded-full bg-brand-blue bg-opacity-20 text-brand-blue"
+    }, /*#__PURE__*/React.createElement("svg", {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: "24",
+      height: "24",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "9",
+      cy: "7",
+      r: "4"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M23 21v-2a4 4 0 0 0-3-3.87"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M16 3.13a4 4 0 0 1 0 7.75"
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-500"
+    }, "Total Integrantes"), /*#__PURE__*/React.createElement("p", {
+      className: "text-2xl font-bold text-gray-800"
+    }, EMPLOYEES.length))), /*#__PURE__*/React.createElement("div", {
+      className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `p-3 rounded-full ${stats.alerts.length > 0 ? "bg-rose-500" : "bg-emerald-500"} bg-opacity-20 text-gray-800`
+    }, /*#__PURE__*/React.createElement("svg", {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: "24",
+      height: "24",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2",
       strokeLinecap: "round",
       strokeLinejoin: "round"
     }, /*#__PURE__*/React.createElement("path", {
@@ -4773,183 +4570,387 @@ const App = () => {
       y1: "17",
       x2: "12.01",
       y2: "17"
-    })), warningCount, " advertencias"), infoCount > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200"
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-500"
+    }, "Conflictos / Alertas"), /*#__PURE__*/React.createElement("p", {
+      className: "text-2xl font-bold text-gray-800"
+    }, stats.alerts.length))), /*#__PURE__*/React.createElement("div", {
+      className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center space-x-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "p-3 rounded-full bg-amber-500 bg-opacity-20 text-amber-600"
     }, /*#__PURE__*/React.createElement("svg", {
       xmlns: "http://www.w3.org/2000/svg",
-      width: "12",
-      height: "12",
+      width: "24",
+      height: "24",
       viewBox: "0 0 24 24",
       fill: "none",
       stroke: "currentColor",
-      strokeWidth: "2.5",
+      strokeWidth: "2",
       strokeLinecap: "round",
       strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("polyline", {
-      points: "20 6 9 17 4 12"
-    })), infoCount, " cubiertas")));
-  })()), viewMode === "matrix" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl",
-    onMouseLeave: () => {
-      setHoveredEmpId(null);
-      setHoveredDayId(null);
-    }
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full text-left border-collapse"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: `sticky left-0 z-20 bg-gray-50 ${tableSpacing.firstColHeader} border-b border-r border-gray-200 w-48 min-w-[12rem]`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-brand-blue"
-  }, "Integrante")), days.map(day => {
-    const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
-    const hasAlert = stats.alerts.some(a => a.dayId === day.id);
-    return /*#__PURE__*/React.createElement("th", {
-      key: day.id,
-      onMouseEnter: () => setHoveredDayId(day.id),
-      className: `${tableSpacing.headerCell} border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 relative ${hoveredDayId === day.id ? "bg-blue-50" : "bg-gray-50"}`
-    }, hasAlert && /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors",
-      title: "D\xEDa con alertas (Click para ver)",
-      onClick: e => {
-        e.stopPropagation();
-        setSelectedAlertDayId(day.id);
-      }
-    }, "!"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] text-brand-blue font-semibold"
-    }, WEEKDAY_FULL[day.weekdayLetter]), /*#__PURE__*/React.createElement("div", {
-      className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
-    }, day.month.substring(0, 3)), /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-mono text-gray-600"
-    }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 text-[9px] text-gray-400 font-normal"
-    }, turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden"
+    }, /*#__PURE__*/React.createElement("rect", {
+      x: "3",
+      y: "3",
+      width: "18",
+      height: "18",
+      rx: "2",
+      ry: "2"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "9",
+      y1: "9",
+      x2: "15",
+      y2: "9"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "9",
+      y1: "15",
+      x2: "15",
+      y2: "15"
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-500"
+    }, "D\xEDas con forzado oficina (O)"), /*#__PURE__*/React.createElement("p", {
+      className: "text-2xl font-bold text-gray-800"
+    }, stats.forcedOfficeDetails.length))), /*#__PURE__*/React.createElement("div", {
+      className: "p-4 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col justify-center"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider"
+    }, "Leyenda"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `h-full ${stats.dailyCoverage.find(s => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`,
-      style: {
-        width: `${stats.dailyCoverage.find(s => s.dayId === day.id).present / 6 * 100}%`
-      }
-    })));
-  }))), /*#__PURE__*/React.createElement("tbody", null, filteredEmployees.map(emp => /*#__PURE__*/React.createElement("tr", {
-    key: emp.id,
-    onMouseEnter: () => setHoveredEmpId(emp.id),
-    className: `group transition-colors ${hoveredEmpId === emp.id ? "bg-blue-50/40" : "hover:bg-gray-50"}`
-  }, /*#__PURE__*/React.createElement("td", {
-    className: `sticky left-0 z-10 ${tableSpacing.firstColCell} border-r border-b border-gray-200 ${hoveredEmpId === emp.id ? "bg-blue-50" : "bg-white group-hover:bg-gray-50"}`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-medium text-gray-900"
-  }, emp.name), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-500 flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: `w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`
-  }), "Grupo ", emp.group), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-400 mt-1"
-  }, "Intensiva: ", stats.intensiveWeeksByEmp[emp.id], " semanas \xB7 Horas: ", stats.totalHoursByEmp[emp.id])), days.map(day => {
-    const typeKey = schedule[emp.id][day.id];
-    const style = TYPES[typeKey] || TYPES["O30"];
-    const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
-    const daysOffice = emp.officeDays.split(",").map(d => d.trim());
-    const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
-    const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
-    const isHighlighted = hoveredEmpId === emp.id || hoveredDayId === day.id;
-    return /*#__PURE__*/React.createElement("td", {
-      key: day.id,
-      onMouseEnter: () => {
-        setHoveredEmpId(emp.id);
-        setHoveredDayId(day.id);
-      },
-      className: `${tableSpacing.bodyCell} border-b border-gray-200 relative cursor-pointer border-l border-gray-100 ${isHighlighted ? "bg-blue-50/50" : ""}`,
-      onClick: () => handleCellClick(emp, day)
+      className: "flex items-center space-x-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `w-full ${tableSpacing.slotHeight} rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} ring-1 ring-black/10 ${isHighlighted ? "brightness-110 scale-[1.02]" : "hover:brightness-110 hover:scale-105"} transform`
-    }, /*#__PURE__*/React.createElement("span", null, style.short), typeKey === "O42" && /*#__PURE__*/React.createElement("div", {
-      className: "absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"
-    }), isWFH && /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5 text-white",
-      title: "Teletrabajo"
+      className: "w-4 h-4 rounded bg-emerald-700"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "Intensiva 30h")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-4 h-4 rounded bg-blue-700"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "40h (17:00)")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-4 h-4 rounded bg-violet-700"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "42h (18:00, V 14:00)")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-4 h-4 rounded bg-rose-700"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "Vacaciones"))), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
     }, /*#__PURE__*/React.createElement(IconHome, {
       className: "w-[10px] h-[10px]"
-    })), (isInOffice || isForcedOffice) && typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
-      className: `absolute top-0.5 right-0.5 rounded p-0.5 text-white ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`,
-      title: isForcedOffice ? "Forzado oficina" : "En oficina"
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "Teletrabajo")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-4 h-4 rounded bg-gray-600 flex items-center justify-center text-white"
     }, /*#__PURE__*/React.createElement(IconOffice, {
       className: "w-[10px] h-[10px]"
-    }))));
-  }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: days.length + 1,
-    className: "p-6 text-center text-sm text-gray-500"
-  }, "No hay integrantes que coincidan con el filtro actual.")))))) : /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4"
-  }, calendarMonths.map(month => /*#__PURE__*/React.createElement("div", {
-    key: month.monthName,
-    className: "rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("h4", {
-    className: "text-sm font-bold text-brand-blue"
-  }, month.monthName), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-gray-500"
-  }, filteredEmployees.length, " integrantes")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-5 border-b border-gray-200"
-  }, weekdaysCalendar.map(weekday => /*#__PURE__*/React.createElement("div", {
-    key: `${month.monthName}-${weekday}`,
-    className: "text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200"
-  }, WEEKDAY_FULL[weekday]))), /*#__PURE__*/React.createElement("div", null, month.weeks.map((week, weekIndex) => /*#__PURE__*/React.createElement("div", {
-    key: `${month.monthName}-week-${weekIndex}`,
-    className: "grid grid-cols-5 border-b last:border-b-0 border-gray-200"
-  }, weekdaysCalendar.map(weekday => {
-    const day = week[weekday];
-    if (!day) {
-      return /*#__PURE__*/React.createElement("div", {
-        key: `${month.monthName}-empty-${weekIndex}-${weekday}`,
-        className: "min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"
-      });
-    }
-    const hasAlert = stats.alerts.some(item => item.dayId === day.id);
-    const coverage = stats.dailyCoverage.find(item => item.dayId === day.id);
-    return /*#__PURE__*/React.createElement("div", {
-      key: day.id,
-      className: `min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "En oficina")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center space-x-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
+      className: "w-4 h-4 rounded bg-amber-500 flex items-center justify-center text-white"
+    }, /*#__PURE__*/React.createElement(IconOffice, {
+      className: "w-[10px] h-[10px]"
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-600"
+    }, "Forzado oficina"))), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-gray-400 mt-2"
+    }, "* Click en celda para ver detalle de turno"))), stats.alerts.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mb-6 space-y-4"
+    }, (() => {
+      const allReasons = stats.alerts.flatMap(a => a.reasons);
+      const criticalCount = allReasons.filter(r => r.severity === "critical").length;
+      const warningCount = allReasons.filter(r => r.severity === "warning").length;
+      const infoCount = allReasons.filter(r => r.severity === "info").length;
+      const allCovered = criticalCount === 0 && warningCount === 0;
+      return /*#__PURE__*/React.createElement("div", {
+        className: `p-4 rounded-lg border flex flex-col md:flex-row md:items-center gap-4 ${allCovered ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3 flex-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `p-2 rounded-full shrink-0 ${allCovered ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`
+      }, allCovered ? /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "20",
+        height: "20",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
+      }), /*#__PURE__*/React.createElement("polyline", {
+        points: "22 4 12 14.01 9 11.01"
+      })) : /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "20",
+        height: "20",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "9",
+        x2: "12",
+        y2: "13"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "17",
+        x2: "12.01",
+        y2: "17"
+      }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+        className: `font-bold ${allCovered ? 'text-emerald-800' : 'text-amber-800'}`
+      }, allCovered ? 'Planificación sin conflictos' : 'Atención requerida en la planificación'), /*#__PURE__*/React.createElement("p", {
+        className: `text-sm ${allCovered ? 'text-emerald-600' : 'text-amber-600'}`
+      }, allCovered ? `${stats.alerts.length} días con observaciones informativas, todas cubiertas.` : `${stats.alerts.length} días con alertas · ${criticalCount + warningCount} requieren revisión.`))), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 flex-wrap"
+      }, criticalCount > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "12",
+        height: "12",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "10"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "8",
+        x2: "12",
+        y2: "12"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "16",
+        x2: "12.01",
+        y2: "16"
+      })), criticalCount, " cr\xEDticas"), warningCount > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "12",
+        height: "12",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "9",
+        x2: "12",
+        y2: "13"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "17",
+        x2: "12.01",
+        y2: "17"
+      })), warningCount, " advertencias"), infoCount > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200"
+      }, /*#__PURE__*/React.createElement("svg", {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "12",
+        height: "12",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "2.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("polyline", {
+        points: "20 6 9 17 4 12"
+      })), infoCount, " cubiertas")));
+    })()), viewMode === "matrix" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "overflow-x-auto pb-4 border border-gray-200 rounded-xl bg-white shadow-xl",
+      onMouseLeave: () => {
+        setHoveredEmpId(null);
+        setHoveredDayId(null);
+      }
+    }, /*#__PURE__*/React.createElement("table", {
+      className: "w-full text-left border-collapse"
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+      className: `sticky left-0 z-20 bg-gray-50 ${tableSpacing.firstColHeader} border-b border-r border-gray-200 w-48 min-w-[12rem]`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-bold text-brand-blue"
+    }, "Integrante")), days.map(day => {
+      const turnoA_18h = SHIFT_BASE_A_18H ? day.weekIndex % 2 === 0 : day.weekIndex % 2 !== 0;
+      const hasAlert = stats.alerts.some(a => a.dayId === day.id);
+      return /*#__PURE__*/React.createElement("th", {
+        key: day.id,
+        onMouseEnter: () => setHoveredDayId(day.id),
+        className: `${tableSpacing.headerCell} border-b border-gray-200 min-w-[4.5rem] text-center border-l border-gray-100 relative ${hoveredDayId === day.id ? "bg-blue-50" : "bg-gray-50"}`
+      }, hasAlert && /*#__PURE__*/React.createElement("div", {
+        className: "absolute top-1 right-1 cursor-pointer bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200 rounded-full w-[18px] h-[18px] flex items-center justify-center text-[11px] font-bold shadow-sm z-10 transition-colors",
+        title: "D\xEDa con alertas (Click para ver)",
+        onClick: e => {
+          e.stopPropagation();
+          setSelectedAlertDayId(day.id);
+        }
+      }, "!"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] text-brand-blue font-semibold"
+      }, WEEKDAY_FULL[day.weekdayLetter]), /*#__PURE__*/React.createElement("div", {
+        className: "text-xs text-gray-500 uppercase tracking-wider mb-1"
+      }, day.month.substring(0, 3)), /*#__PURE__*/React.createElement("div", {
+        className: "text-xs font-mono text-gray-600"
+      }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 text-[9px] text-gray-400 font-normal"
+      }, turnoA_18h ? "Gr.A 18h" : "Gr.B 18h"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 h-1 w-full bg-gray-200 rounded overflow-hidden"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `h-full ${stats.dailyCoverage.find(s => s.dayId === day.id).present < 3 ? "bg-rose-500" : "bg-emerald-500"}`,
+        style: {
+          width: `${stats.dailyCoverage.find(s => s.dayId === day.id).present / 6 * 100}%`
+        }
+      })));
+    }))), /*#__PURE__*/React.createElement("tbody", null, filteredEmployees.map(emp => /*#__PURE__*/React.createElement("tr", {
+      key: emp.id,
+      onMouseEnter: () => setHoveredEmpId(emp.id),
+      className: `group transition-colors ${hoveredEmpId === emp.id ? "bg-blue-50/40" : "hover:bg-gray-50"}`
+    }, /*#__PURE__*/React.createElement("td", {
+      className: `sticky left-0 z-10 ${tableSpacing.firstColCell} border-r border-b border-gray-200 ${hoveredEmpId === emp.id ? "bg-blue-50" : "bg-white group-hover:bg-gray-50"}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium text-gray-900"
+    }, emp.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-gray-500 flex items-center gap-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-semibold text-gray-700"
-    }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`
-    }, coverage.present, "/6")), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-1"
-    }, filteredEmployees.map(emp => {
+      className: `w-2 h-2 rounded-full ${emp.group === "A" ? "bg-purple-500" : "bg-orange-500"}`
+    }), "Grupo ", emp.group), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-gray-400 mt-1"
+    }, "Intensiva: ", stats.intensiveWeeksByEmp[emp.id], " semanas \xB7 Horas: ", stats.totalHoursByEmp[emp.id])), days.map(day => {
       const typeKey = schedule[emp.id][day.id];
-      const style = TYPES[typeKey] || TYPES.O30;
+      const style = TYPES[typeKey] || TYPES["O30"];
       const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
       const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+      const isInOffice = daysOffice.includes(day.weekdayLetter) && typeKey !== "V";
       const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
-      const initials = emp.name.split(" ").map(part => part[0]).join("").toUpperCase().slice(0, 2);
-      return /*#__PURE__*/React.createElement("button", {
-        key: `${day.id}-${emp.id}`,
-        type: "button",
-        onClick: () => handleCellClick(emp, day),
-        className: `w-full text-left text-[10px] px-1.5 py-1 rounded flex items-center justify-between gap-1 overflow-hidden ${style.color} ${style.text} hover:brightness-110 transition-colors`
+      const isHighlighted = hoveredEmpId === emp.id || hoveredDayId === day.id;
+      return /*#__PURE__*/React.createElement("td", {
+        key: day.id,
+        onMouseEnter: () => {
+          setHoveredEmpId(emp.id);
+          setHoveredDayId(day.id);
+        },
+        className: `${tableSpacing.bodyCell} border-b border-gray-200 relative cursor-pointer border-l border-gray-100 ${isHighlighted ? "bg-blue-50/50" : ""}`,
+        onClick: () => handleCellClick(emp, day)
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-1 truncate"
+        className: `w-full ${tableSpacing.slotHeight} rounded-md flex flex-col items-center justify-center text-xs font-bold shadow-sm cell-transition relative overflow-hidden ${style.color} ${style.text} ring-1 ring-black/10 ${isHighlighted ? "brightness-110 scale-[1.02]" : "hover:brightness-110 hover:scale-105"} transform`
+      }, /*#__PURE__*/React.createElement("span", null, style.short), typeKey === "O42" && /*#__PURE__*/React.createElement("div", {
+        className: "absolute bottom-0 w-full h-1 bg-amber-400 opacity-70"
+      }), isWFH && /*#__PURE__*/React.createElement("div", {
+        className: "absolute top-0.5 left-0.5 bg-gray-900/50 rounded p-0.5 text-white",
+        title: "Teletrabajo"
+      }, /*#__PURE__*/React.createElement(IconHome, {
+        className: "w-[10px] h-[10px]"
+      })), (isInOffice || isForcedOffice) && typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
+        className: `absolute top-0.5 right-0.5 rounded p-0.5 text-white ${isForcedOffice ? 'bg-amber-500/70' : 'bg-gray-900/50'}`,
+        title: isForcedOffice ? "Forzado oficina" : "En oficina"
+      }, /*#__PURE__*/React.createElement(IconOffice, {
+        className: "w-[10px] h-[10px]"
+      }))));
+    }))), filteredEmployees.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+      colSpan: days.length + 1,
+      className: "p-6 text-center text-sm text-gray-500"
+    }, "No hay integrantes que coincidan con el filtro actual.")))))) : /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4"
+    }, calendarMonths.map(month => /*#__PURE__*/React.createElement("div", {
+      key: month.monthName,
+      className: "rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "px-3 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-sm font-bold text-brand-blue"
+    }, month.monthName), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-gray-500"
+    }, filteredEmployees.length, " integrantes")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-5 border-b border-gray-200"
+    }, weekdaysCalendar.map(weekday => /*#__PURE__*/React.createElement("div", {
+      key: `${month.monthName}-${weekday}`,
+      className: "text-center text-[11px] font-semibold text-gray-600 py-2 bg-gray-50 border-r last:border-r-0 border-gray-200"
+    }, WEEKDAY_FULL[weekday]))), /*#__PURE__*/React.createElement("div", null, month.weeks.map((week, weekIndex) => /*#__PURE__*/React.createElement("div", {
+      key: `${month.monthName}-week-${weekIndex}`,
+      className: "grid grid-cols-5 border-b last:border-b-0 border-gray-200"
+    }, weekdaysCalendar.map(weekday => {
+      const day = week[weekday];
+      if (!day) {
+        return /*#__PURE__*/React.createElement("div", {
+          key: `${month.monthName}-empty-${weekIndex}-${weekday}`,
+          className: "min-h-[8rem] bg-gray-50/30 border-r last:border-r-0 border-gray-100"
+        });
+      }
+      const hasAlert = stats.alerts.some(item => item.dayId === day.id);
+      const coverage = stats.dailyCoverage.find(item => item.dayId === day.id);
+      return /*#__PURE__*/React.createElement("div", {
+        key: day.id,
+        className: `min-h-[8rem] p-1.5 border-r last:border-r-0 border-gray-100 ${hasAlert ? "bg-rose-50/50" : "bg-white"}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between mb-1"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "font-semibold"
-      }, initials), " ", /*#__PURE__*/React.createElement("span", null, style.short)), typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
-        className: `shrink-0 flex items-center justify-center ${isForcedOffice ? 'text-amber-700 bg-white/60 rounded-[2px] p-[1px]' : 'opacity-80'}`,
-        title: isForcedOffice ? "Forzado oficina" : isWFH ? "Teletrabajo" : "En oficina"
-      }, isWFH ? /*#__PURE__*/React.createElement(IconHome, {
-        className: "w-3 h-3"
-      }) : /*#__PURE__*/React.createElement(IconOffice, {
-        className: `w-3 h-3 ${isForcedOffice ? 'text-amber-700' : ''}`
+        className: "text-[11px] font-semibold text-gray-700"
+      }, day.label.split(" ")[1]), /*#__PURE__*/React.createElement("span", {
+        className: `text-[10px] px-1.5 py-0.5 rounded ${coverage.present < 3 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`
+      }, coverage.present, "/6")), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-1"
+      }, filteredEmployees.map(emp => {
+        const typeKey = schedule[emp.id][day.id];
+        const style = TYPES[typeKey] || TYPES.O30;
+        const isForcedOffice = stats.forcedOfficeSet[day.id]?.has(emp.id);
+        const daysOffice = emp.officeDays.split(",").map(d => d.trim());
+        const isWFH = !daysOffice.includes(day.weekdayLetter) && typeKey !== "V" && !isForcedOffice;
+        const initials = emp.name.split(" ").map(part => part[0]).join("").toUpperCase().slice(0, 2);
+        return /*#__PURE__*/React.createElement("button", {
+          key: `${day.id}-${emp.id}`,
+          type: "button",
+          onClick: () => handleCellClick(emp, day),
+          className: `w-full text-left text-[10px] px-1.5 py-1 rounded flex items-center justify-between gap-1 overflow-hidden ${style.color} ${style.text} hover:brightness-110 transition-colors`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center gap-1 truncate"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "font-semibold"
+        }, initials), " ", /*#__PURE__*/React.createElement("span", null, style.short)), typeKey !== "V" && /*#__PURE__*/React.createElement("div", {
+          className: `shrink-0 flex items-center justify-center ${isForcedOffice ? 'text-amber-700 bg-white/60 rounded-[2px] p-[1px]' : 'opacity-80'}`,
+          title: isForcedOffice ? "Forzado oficina" : isWFH ? "Teletrabajo" : "En oficina"
+        }, isWFH ? /*#__PURE__*/React.createElement(IconHome, {
+          className: "w-3 h-3"
+        }) : /*#__PURE__*/React.createElement(IconOffice, {
+          className: `w-3 h-3 ${isForcedOffice ? 'text-amber-700' : ''}`
+        })));
       })));
-    })));
-  }))))))), /*#__PURE__*/React.createElement("footer", {
-    className: "mt-8 text-center text-gray-500 text-sm"
-  }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
-    isOpen: !!selectedAlertDayId,
-    onClose: () => setSelectedAlertDayId(null),
-    dayId: selectedAlertDayId
-  }));
+    }))))))), /*#__PURE__*/React.createElement("footer", {
+      className: "mt-8 text-center text-gray-500 text-sm"
+    }, /*#__PURE__*/React.createElement("p", null, "Creado por David Ramos (Dept. Sistemas)")), /*#__PURE__*/React.createElement(AlertDetailModal, {
+      isOpen: !!selectedAlertDayId,
+      onClose: () => setSelectedAlertDayId(null),
+      dayId: selectedAlertDayId
+    }));
+  };
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(/*#__PURE__*/React.createElement(App, null));
 };
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(/*#__PURE__*/React.createElement(App, null));

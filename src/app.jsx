@@ -2111,13 +2111,16 @@ const generateSchedule = (year, vacationPlan) => {
             if (wDays.some(d => sched[emp.id][d.id] === "V" || sched[emp.id][d.id] === "O30")) continue;
             const snap = JSON.parse(JSON.stringify(sched));
             wDays.forEach(d => { sched[emp.id][d.id] = "O30"; });
-            let ok = true;
+            var ok = true;
             for (const d of wDays) {
               const o30s = EMPLOYEES.filter(e => sched[e.id][d.id] === "O30");
               if (o30s.length > 3) {
                 const donor = o30s.filter(e => e.id !== emp.id).sort((a,b) => counts[b.id] - counts[a.id])[0];
-                if (donor && counts[donor.id] > 6) { sched[donor.id][d.id] = "O40"; } else { ok = false; break; }
-              }
+                if (donor && counts[donor.id] > 6) { 
+                  sched[donor.id][d.id] = "O40"; 
+                } else { 
+                  ok = false; break; 
+                }
               }
             }
             if (ok) {
@@ -4328,3 +4331,6 @@ const App = () => {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
+
+};
+};
