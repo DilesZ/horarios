@@ -926,6 +926,7 @@ const generateSchedule = (year, vacationPlan) => {
   });
   const isValidCoverage = (daysInWeek, currentSchedule) => {
     return daysInWeek.every(day => {
+      if (day.isHoliday) return true;
       let valid = true;
       let group1HasOffice = false;
       let group2HasOffice = false;
@@ -989,6 +990,7 @@ const generateSchedule = (year, vacationPlan) => {
   const countForcedDays = (currentSchedule, allDays) => {
     let count = 0;
     for (const day of allDays) {
+      if (day.isHoliday) continue;
       let group1HasOffice = false,
         group2HasOffice = false;
       let group1Covering = 0,
@@ -1212,6 +1214,7 @@ const generateSchedule = (year, vacationPlan) => {
         if (preservesOfficeCoverage(emp.id, weekDays, schedule)) {
           selected.push(emp);
           weekDays.forEach(day => {
+            if (day.isHoliday) return;
             if (schedule[emp.id][day.id] !== "V") {
               schedule[emp.id][day.id] = "O30";
             }
@@ -1222,6 +1225,7 @@ const generateSchedule = (year, vacationPlan) => {
     }
     if (anchor) {
       weekDays.forEach(day => {
+        if (day.isHoliday) return;
         if (schedule[anchor.id][day.id] !== "V") {
           schedule[anchor.id][day.id] = "O42";
         }
@@ -1232,6 +1236,7 @@ const generateSchedule = (year, vacationPlan) => {
       if (anchor && emp.id === anchor.id) return;
       if (selected.includes(emp)) return;
       weekDays.forEach(day => {
+        if (day.isHoliday) return;
         if (schedule[emp.id][day.id] === "V" || schedule[emp.id][day.id] === "O30") {
           return;
         }
@@ -1251,6 +1256,7 @@ const generateSchedule = (year, vacationPlan) => {
       });
     });
     weekDays.forEach(day => {
+      if (day.isHoliday) return;
       if (day.weekdayLetter === "V") return;
       const lateGroupMembers = getShiftGroupMemberNames(lateGroup);
       const hasO42 = EMPLOYEES.some(emp => schedule[emp.id][day.id] === "O42");
@@ -1271,7 +1277,7 @@ const generateSchedule = (year, vacationPlan) => {
         return officeDays.includes(day.weekdayLetter);
       });
       const currentO42Count = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O42").length;
-      if (!hasO42InOffice && currentO42Count < 3) {
+      if (!hasO42InOffice && currentO42Count < 3 && !day.isHoliday) {
         const candidates = EMPLOYEES.filter(emp => {
           if (schedule[emp.id][day.id] === "V") return false;
           const officeDays = emp.officeDays.split(",").map(d => d.trim());
@@ -1294,7 +1300,7 @@ const generateSchedule = (year, vacationPlan) => {
       }
     });
     weekDays.forEach(day => {
-      if (day.weekdayLetter !== "V") return;
+      if (day.weekdayLetter !== "V" || day.isHoliday) return;
       const hasO40InOffice = EMPLOYEES.some(e => {
         if (schedule[e.id][day.id] !== "O40") return false;
         return e.officeDays.includes("V");
@@ -1345,7 +1351,7 @@ const generateSchedule = (year, vacationPlan) => {
         const isInOffice = empOfficeDays.includes(day.weekdayLetter);
         const currentIntensiveCount = EMPLOYEES.filter(e => schedule[e.id][day.id] === "O30").length;
         if (currentIntensiveCount >= 3) continue;
-        if (!isInOffice) {
+        if (!isInOffice && !day.isHoliday) {
           schedule[emp.id][day.id] = "O30";
           if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
             schedule[emp.id][day.id] = "O40";
@@ -1363,7 +1369,7 @@ const generateSchedule = (year, vacationPlan) => {
           const otherOfficeDays = other.officeDays.split(",").map(d => d.trim());
           return otherOfficeDays.includes(day.weekdayLetter);
         });
-        if (otherGroupHasO40) {
+        if (otherGroupHasO40 && !day.isHoliday) {
           schedule[emp.id][day.id] = "O30";
           if (countForcedDays(schedule, days) > MAX_FORCED_OFFICE_DAYS) {
             schedule[emp.id][day.id] = "O40";
@@ -1474,6 +1480,7 @@ const generateSchedule = (year, vacationPlan) => {
           if (forced > MAX_FORCED_OFFICE_DAYS) return;
         }
         daysInWeek.forEach(day => {
+          if (day.isHoliday) return;
           schedule[emp.id][day.id] = "O30";
         });
         currentIntensiveWeeks[emp.id] += 1;
@@ -1535,6 +1542,7 @@ const generateSchedule = (year, vacationPlan) => {
             continue;
           }
           daysInWeek.forEach(day => {
+            if (day.isHoliday) return;
             if (schedule[enrique.id][day.id] !== "V") {
               schedule[enrique.id][day.id] = "O30";
             }
@@ -1548,6 +1556,8 @@ const generateSchedule = (year, vacationPlan) => {
     const kike = findEmp("Kike");
     if (kike) {
       criticalDays.forEach(dayId => {
+        const dayEntry = days.find(d => d.id === dayId);
+        if (dayEntry?.isHoliday) return;
         const current = schedule[kike.id][dayId];
         if (!current || current === "V") return;
         schedule[kike.id][dayId] = "O42";
