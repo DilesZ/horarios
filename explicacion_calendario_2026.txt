@@ -1,0 +1,170 @@
+Resumen de lo realizado
+
+- Construcción de un dashboard web (HTML + React 18 + Tailwind) para junio–septiembre 2026 (lunes a viernes), con vista tipo Gantt por integrante.
+- Carga de vacaciones reales por días para los 6 integrantes y cálculo diario de cobertura.
+- Lógica de turnos: alternancia semanal del grupo de tarde (18h) y asignación automática de O42 para garantizar cobertura hasta las 18h todos los días.
+- Límite de intensivas (O30): máximo 3 personas por día, con reparto rotativo y preferencia interna equilibrada.
+- Exclusión de intensiva en semanas donde el empleado tiene vacaciones (evita solapamiento semana de intensiva con vacaciones).
+- Alertas: cobertura mínima de 3 personas, ausencia de 18h, más de 3 intensivas, falta de presencia en oficina por grupos.
+- Interactividad: modal por día, filtro por integrante, y botón de “Resetear Plan” para recalcular con la última lógica.
+
+Condiciones aplicadas
+
+- Cobertura 18h (L–J): obligatorio que haya al menos un O42 (18:00).
+- Viernes: solo es necesario cubrir hasta las 17:00; el turno O42 termina a las 14:00 y se garantiza al menos un O40 en oficina ese día.
+- Alternancia semanal del turno de tarde (18h):
+  - Semana par (índice de semana 0, 2, 4…): Grupo A tarda.
+  - Semana impar (índice 1, 3, 5…): Grupo B tarda.
+- Máximo 3 personas en intensiva (30h) por día.
+- No asignar intensiva a empleados en semanas con vacaciones (L–V) para evitar solapamiento.
+- Presencia por grupos:
+  - Siempre al menos 1 de entre {Enrique, Luis, David} en oficina.
+  - Siempre al menos 1 de entre {Jose, Ariel, Kike} en oficina.
+  - Si falta alguno, se marca “O” para forzar presencia en oficina según disponibilidad.
+- Días en oficina fijos (teletrabajo/oficina) respetados por integrante.
+- Rango cubierto: junio–septiembre 2026, lunes a viernes.
+
+Detalles técnicos del algoritmo
+
+- Días generados con weekIndex semanal (incrementa los lunes).
+- Asignación base:
+  - Grupo en tarde → O42 todos los días de esa semana.
+  - Grupo no tarde → O40 por defecto.
+- Intensivas (O30):
+  - Selección entre los no tarde y no vacaciones.
+  - Rotación determinista (por id + weekIndex) para distribuir de forma estable.
+- Máximo 3 por día; el resto quedan en O40.
+- Garantía de 18h:
+  - Lunes a Jueves: si no queda O42 en un día, se reasigna automáticamente un disponible a O42.
+  - Viernes: no se exige O42; se garantiza al menos un O40 en oficina para cubrir hasta las 17:00.
+- Alertas:
+  - Cálculo diario de present/shift18hCount (solo L–J)/intensiveCount y presencia por grupos para pintar alertas.
+
+Uso
+
+- Instalar dependencias con `npm install`.
+- Construir el proyecto con `npm run build`.
+- Abrir `dist/index.html` en el navegador o iniciar un servidor local (`npx serve dist`).
+- Filtro por integrante en el selector (arriba a la derecha).
+- Botón “Resetear Plan” para regenerar la planificación con la lógica actual.
+- Click en una celda para ver detalles del día y del integrante.
+- (Opcional) Abrir `calendario_2026.html` para acceder a la versión estática antigua.
+
+Teletrabajo fijo (actualizado)
+
+- Kike: teletrabajo Jueves (oficina L, M, X, V)
+- Jose: teletrabajo Martes (oficina L, X, J, V)
+- Ariel: teletrabajo Miércoles (oficina L, M, J, V)
+- Enrique: teletrabajo Lunes, Martes y Viernes (oficina X, J)
+- Luis: teletrabajo Miércoles, Jueves y Viernes (oficina L, M)
+- David: teletrabajo Lunes, Martes y Miércoles (oficina J, V)
+
+Impacto en condiciones de oficina por grupos
+
+- Con los días fijos de teletrabajo anteriores y las vacaciones cargadas, el sistema mantiene que siempre haya al menos:
+  - 1 de {Enrique, Luis, David} en oficina
+  - 1 de {Jose, Ariel, Kike} en oficina
+- Si en algún día faltara presencia por vacaciones concurrentes, se fuerza “O” en ese día (visible en la celda y contabilizado en “Días con forzado oficina (O)” del panel).
+- Actualmente, la planificación garantiza 18h todos los días (al menos un O42 diario).
+
+Semanas de intensiva (objetivo y limitaciones)
+
+- Objetivo: intentar que cada integrante alcance al menos 7 semanas de intensiva.
+- Restricciones: máximo 2 intensivas por día; rango junio–septiembre ~17 semanas; capacidad total ≈ 34 semanas intensiva (2 por semana).
+- Con 6 integrantes y 34 semanas disponibles, el promedio teórico ≈ 5.7 semanas por integrante; no es posible que todos tengan ≥7 simultáneamente con el límite de 2 por día.
+- Nueva estrategia aplicada para alcanzar ≥7: asignación semanal amplia de intensiva (O30) a todos los integrantes disponibles excepto un “ancla” de tarde (O42) por semana y grupo, manteniendo siempre al menos un O42 diario. No se asigna intensiva en semanas con vacaciones del integrante.
+- Resultado: distribución que eleva las semanas intensiva de cada integrante; pueden aparecer más de 2 intensivas por día, manteniendo aún así cobertura 18h y presencia por grupos.
+
+Contadores por integrante (dashboard)
+
+- Semanas de intensiva: se cuentan semanas completas con O30 (L–V) para el integrante.
+- Horas totales en el periodo: suma diaria por tipo (O30=6h, O40=8h, O42=9h, V=0h).
+
+Permitir hasta 3 intensivas diarias
+
+- Se permite un máximo de 3 personas en intensiva (O30) por día, siempre con al menos un O42 diario y presencia por grupos garantizada.
+- Reparto semanal: selección de hasta 3 integrantes (sin vacaciones esa semana y con menos semanas acumuladas) excluyendo el “ancla” de tarde (O42).
+- Se mantiene tope de 7 semanas intensiva por integrante: nadie supera 7; se usa la mayor capacidad (3/día) para acercar a todos al objetivo mínimo 7.
+
+Cobertura adicional cuando hay vacaciones en turno de 40h
+
+- Si hay vacaciones en el grupo no-tarde (turno de 40h) en una semana, se reserva al menos un integrante de ese grupo en O40 toda la semana (no intensiva) para cubrir el turno de 40h.
+- Este ajuste evita que el grupo no-tarde quede sin O40 por exceso de intensivas cuando falta alguien por vacaciones.
+
+Cobertura específica de los viernes
+
+- Los viernes, el turno de 42h finaliza a las 14:00. Para asegurar presencia en oficina más allá de esa hora, se garantiza que al menos un integrante esté en 40h (O40) y en oficina ese día.
+- Si no hay ningún O40 en oficina por configuración de días fijos, se fuerza presencia en oficina (“O”) asignando O40 a un integrante que no tiene viernes como día de oficina (prioridad: Luis si disponible).
+- Caso ejemplar: el viernes 26/06/2026 se fuerza “O” para Luis para cubrir la tarde.
+
+Validaciones estrictas de integridad semanal (actualización)
+
+- Se incorpora una capa de reglas estrictas que invalida cualquier planificación no íntegra por semana operativa.
+- Regla 1: la jornada intensiva (O30) solo es válida cuando ocupa la semana operativa completa del integrante. No se permiten días sueltos de O30.
+- Regla 2: no se permite mezclar jornadas de 40h (O40) y 42h (O42) en la misma semana para un mismo integrante.
+- Regla 3: no se permiten combinaciones de múltiples tipos de jornada en una misma semana para un mismo integrante.
+- Se añaden mensajes de error específicos por regla para bloquear exportación y aceptar únicamente estados válidos.
+- Se añade normalización automática de semanas no conformes en la generación del plan para llevar la semana a un único tipo válido.
+- Se añade auditoría estricta con:
+  - Resumen por regla (conteo de incidencias).
+  - Listado de incidencias detectadas.
+  - Listado de correcciones automáticas aplicadas.
+- El dashboard persistido por año guarda también el resultado de auditoría estricta.
+
+Mejoras de comodidad visual (actualización)
+
+- El menú de exportación queda oculto por defecto y solo aparece al pulsar el botón “Exportar” del encabezado.
+- El botón de exportación del encabezado actúa como selector de panel (abrir/cerrar), evitando ruido visual constante.
+- La descarga real se ejecuta desde un botón dedicado dentro del panel de exportación (“Descargar archivo”).
+- El bloque de detalles de equidad también queda oculto por defecto y solo se muestra al pulsar “Ver equidad”.
+- Se añaden acciones rápidas de “Ocultar” en ambos paneles para cerrar sin desplazarse.
+
+Mejoras de comodidad visual (segunda iteración)
+
+- El gestor de vacaciones queda oculto por defecto y se abre desde un botón superior “Ver vacaciones”.
+- La barra de acciones superior pasa a modo sticky para mantener accesos rápidos visibles durante el scroll.
+- Se añade selector de densidad de tabla:
+  - Vista cómoda (espaciado amplio).
+  - Vista compacta (más filas visibles).
+- Se añade filtro rápido por nombre de integrante.
+- Se añade resaltado visual de fila y columna activa al mover el cursor por la matriz de turnos.
+- Se refuerza el contraste de colores de turnos (30h/40h/42h/Vacaciones) con paleta más oscura.
+- Se elimina la leyenda rápida horizontal sticky de la vista matriz para limpiar la interfaz.
+
+Mejoras de visualización y responsive (tercera iteración)
+
+- Se elimina la visualización de detalles de equidad en la interfaz (botón y panel), manteniendo sus cálculos internos para lógica y validaciones.
+- Se añade un selector de modo de visualización:
+  - Vista matriz (clásica).
+  - Vista calendario (4 meses, lunes a viernes), diseñada para evitar scroll lateral.
+- La vista calendario muestra cada mes en tarjetas responsivas y cada día incluye el estado por integrante en formato compacto.
+- Se mejora la adaptación móvil reduciendo padding general y priorizando bloques verticales en lugar de tablas anchas.
+
+Rectificaciones de reglas de intensiva (marzo 2026)
+
+- Se blinda la ventana de intensiva: O30 solo se permite del 15/06 al 18/09, sin excepciones por integrante.
+- Se aplica la restricción temporal en todas las fases del algoritmo (asignación inicial, compensaciones y rebalanceos posteriores).
+- Se refuerza el límite diario de intensivas en todos los ajustes finales para que nunca superen 3 personas por día.
+- Se añade test automático específico que valida que ninguna asignación O30 quede fuera del rango 15/06–18/09.
+
+Rectificación adicional en la app principal (src/app.jsx)
+
+- Se alinea la misma regla estricta en la fuente principal de interfaz (`src/app.jsx`) para evitar divergencias con `app.js`.
+- Se añaden pruebas automáticas ejecutando también la lógica desde `src/app.jsx` para validar:
+- Ventana obligatoria de O30 entre 15/06 y 18/09.
+- Máximo de 3 personas en intensiva por día.
+
+Actualización de ventana intensiva y test de regresión duro
+
+- Se amplía la ventana de intensiva hasta el 18/09 (rango final: 15/06–18/09) para facilitar más semanas intensivas por integrante.
+- Se mantiene el límite estricto de máximo 3 personas en intensiva por día.
+- Se añade un test de regresión duro que falla mostrando detalle de:
+- Fecha + integrante si aparece O30 fuera del rango 15/06–18/09.
+- Fecha + listado de integrantes si un día supera 3 personas en O30.
+
+Mejora de reparto para perfiles bajos (Luis/Ariel)
+
+- Se refuerza la fase final de reequilibrio para intentar recuperar semanas intensivas en perfiles por debajo del objetivo, priorizando Luis y Ariel.
+- Se permite convertir semanas candidatas en O30 cuando cumplen ventana 15/06–18/09 y tope diario de 3 intensivas.
+- Se incorpora una validación automática de mejora mínima para evitar volver al escenario con Luis por debajo de 5 semanas.
+- Ajuste adicional: se fuerza la búsqueda de combinación válida para que Ariel alcance 6 semanas intensivas en la versión de interfaz principal.
