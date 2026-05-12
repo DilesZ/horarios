@@ -2328,15 +2328,15 @@ const generateSchedule = (year, vacationPlan) => {
         applyUniversalHardening(sched);
       }
       ensureMinSixWeeksAllFinal(sched);
-      // Fix known coverage gaps (may temporarily break 6-week min)
+      // Fix coverage gaps and atomically replace lost O30 weeks
       const wmFix = buildWeeksMap(days);
+      const lostRep = {}; // empId_wi -> true (needs replacement O30 in a different week)
+      const fixedWeeksSet = new Set();
       Object.keys(wmFix).forEach(wiStr => {
         const wDays = wmFix[wiStr];
         for (const day of wDays.filter(d => d.weekdayLetter !== "V")) {
           if (EMPLOYEES.some(e => sched[e.id][day.id] === "O42" && e.officeDays.split(",").map(x=>x.trim()).includes(day.weekdayLetter))) continue;
-          let fixed = false;
           for (const allowO30 of [false, true]) {
-            if (fixed) break;
             const candidates = EMPLOYEES.filter(e => {
               if (sched[e.id][day.id] === "V") return false;
               if (!e.officeDays.split(",").map(x=>x.trim()).includes(day.weekdayLetter)) return false;
@@ -2345,16 +2345,16 @@ const generateSchedule = (year, vacationPlan) => {
             }).sort((a, b) => countWeeksByEmp_Local(sched, b.id) - countWeeksByEmp_Local(sched, a.id));
             const pick = candidates[0];
             if (pick) {
+              const hadO30 = sched[pick.id][day.id] === "O30";
               wDays.forEach(d2 => { if (sched[pick.id][d2.id] !== "V") sched[pick.id][d2.id] = "O42"; });
-              fixed = true; break;
+              if (hadO30) { lostRep[pick.id + '_' + wiStr] = true; fixedWeeksSet.add(parseInt(wiStr)); }
+              break;
             }
           }
         }
         const fridayDay = wDays.find(d => d.weekdayLetter === "V");
         if (fridayDay && !EMPLOYEES.some(e => sched[e.id][fridayDay.id] === "O40" && e.officeDays.includes("V"))) {
-          let fixed = false;
           for (const allowO30 of [false, true]) {
-            if (fixed) break;
             const candidates = EMPLOYEES.filter(e => {
               if (sched[e.id][fridayDay.id] === "V") return false;
               if (!e.officeDays.includes("V")) return false;
@@ -2363,14 +2363,37 @@ const generateSchedule = (year, vacationPlan) => {
             }).sort((a, b) => countWeeksByEmp_Local(sched, b.id) - countWeeksByEmp_Local(sched, a.id));
             const pick = candidates[0];
             if (pick) {
-              if (sched[pick.id][fridayDay.id] === "O30") {
+              const hadO30 = sched[pick.id][fridayDay.id] === "O30";
+              if (hadO30) {
                 wDays.forEach(d2 => { if (sched[pick.id][d2.id] !== "V") sched[pick.id][d2.id] = "O40"; });
+                lostRep[pick.id + '_' + wiStr] = true;
+                fixedWeeksSet.add(parseInt(wiStr));
               } else {
                 wDays.forEach(d2 => { if (sched[pick.id][d2.id] !== "V" && sched[pick.id][d2.id] !== "O30") sched[pick.id][d2.id] = "O40"; });
               }
-              fixed = true; break;
+              break;
             }
           }
+        }
+      });
+      // Replace lost O30 weeks atomically, avoiding the fixed weeks
+      Object.keys(lostRep).forEach(key => {
+        const [empIdStr, lostWi] = key.split('_');
+        const empId = parseInt(empIdStr, 10);
+        const emp = EMPLOYEES.find(e => e.id === empId);
+        if (!emp) return;
+        if (countWeeksByEmp_Local(sched, empId) >= 6) return;
+        const wIdxs = Object.keys(wmFix).map(Number).sort((a,b) => a-b).filter(wi => !fixedWeeksSet.has(wi));
+        for (const wi of wIdxs) {
+          if (countWeeksByEmp_Local(sched, empId) >= 6) break;
+          const wDays = wmFix[wi];
+          if (!wDays.every(d => isIntensivePeriod(d.id))) continue;
+          if (vacWeeksByEmp[empId].has(wi)) continue;
+          if (wDays.some(d => sched[empId][d.id] === "V")) continue;
+          if (wDays.every(d => sched[empId][d.id] === "O30")) continue;
+          if (wDays.some(d => EMPLOYEES.filter(e => sched[e.id][d.id] === "O30").length >= 3)) continue;
+          wDays.forEach(d => { if (sched[empId][d.id] !== "V") sched[empId][d.id] = "O30"; });
+          break;
         }
       });
       // Restore edge week alternation for all employees
